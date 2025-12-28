@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import {auth, getUserProfileFromFirestore, setUserProfileInFirestore} from "./firebase-init.js";
 import {showMessageBox} from "./utils.js";
 import {HARD_CODED_ADMIN_UID} from "./constants.js";
@@ -736,5 +735,4 @@ export async function initializePage(pageName, requireAuth = false) {
         showMessageBox('Failed to initialize page', true);
         return false;
     }
->>>>>>> 45bdfcda71152709c7beaa1a0cffd06a95a5cec7
 }

@@ -1,4 +1,3 @@
-
 export const APP_CONFIG = {
     name: 'Arcator',
     version: '1.0.0',
