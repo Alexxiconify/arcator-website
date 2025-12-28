@@ -1,64 +1,10 @@
-export function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replaceAll(/[&<>"']/g, function (char) {
-        return map[char];
-    });
-}
-
-export function sanitizeHandle(input) {
-    if (typeof input !== 'string') {
-        return '';
-    }
-    return input.toLowerCase().replaceAll(/[^a-z0-9_-]/g, '');
-
-}
-
-
+const escapeMap = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
 const emojiMap = {
-    'smile': '😊',
-    'happy': '😄',
-    'joy': '😂',
-    'laugh': '🤣',
-    'thumbsup': '👍',
-    'thumbsdown': '👎',
-    'heart': '❤️',
-    'fire': '🔥',
-    'thinking': '🤔',
-    'clap': '👏',
-    'rocket': '🚀'
+    smile: '😊', happy: '😄', joy: '😂', laugh: '🤣', thumbsup: '👍',
+    thumbsdown: '👎', heart: '❤️', fire: '🔥', thinking: '🤔', clap: '👏', rocket: '🚀'
 };
 
-export function parseMentions(text) {
-
-
-    const mentionRegex = /@([a-zA-Z0-9_]+)/g;
-
-    return text.replaceAll(mentionRegex, (match, username) => {
-
-        return `<a href="/user/${username}" class="mention" title="View ${username}'s profile">@${username}</a>`;
-    });
-}
-
-export function parseEmojis(text) {
-
-
-    const emojiRegex = /:([a-zA-Z0-9_]+):/g;
-
-    return text.replaceAll(emojiRegex, (match, emojiName) => {
-        const unicodeEmoji = emojiMap[emojiName.toLowerCase()];
-
-        if (unicodeEmoji) {
-
-            return `<span class="custom-emoji" role="img" aria-label="${emojiName}">${unicodeEmoji}</span>`;
-        } else {
-
-            return match;
-        }
-    });
-}
+export const escapeHtml = text => text.replaceAll(/[&<>"']/g, c => escapeMap[c]);
+export const sanitizeHandle = input => (typeof input === 'string' ? input.toLowerCase().replaceAll(/[^a-z0-9_-]/g, '') : '');
+export const parseMentions = text => text.replaceAll(/@([a-zA-Z0-9_]+)/g, (_, u) => `<a href="/user/${u}" class="mention" title="View ${u}'s profile">@${u}</a>`);
+export const parseEmojis = text => text.replaceAll(/:([a-zA-Z0-9_]+):/g, (m, n) => emojiMap[n.toLowerCase()] ? `<span class="custom-emoji" role="img" aria-label="${n}">${emojiMap[n.toLowerCase()]}</span>` : m);
