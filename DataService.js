@@ -1,4 +1,4 @@
-import { db, COLLECTIONS, collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp } from '../firebase-init.js';
+import { db, COLLECTIONS, collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp } from './firebase-init.js';
 
 const DataService = {
     async getForums(opts = {}) {

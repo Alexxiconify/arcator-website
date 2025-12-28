@@ -4,7 +4,7 @@ import {
     signOut, sendPasswordResetEmail, updateProfile,
     GoogleAuthProvider, GithubAuthProvider,
     doc, getDoc, setDoc, updateDoc, serverTimestamp
-} from '../firebase-init.js';
+} from './firebase-init.js';
 
 function generateProfilePic(name) {
     const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'];
