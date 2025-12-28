@@ -1,12 +1,7 @@
-import {auth, getUserProfileFromFirestore, setUserProfileInFirestore} from "./firebase-init.js";
+import {auth, getUserProfileFromFirestore, setUserProfileInFirestore, DEFAULT_PROFILE_PIC} from "./firebase-init.js";
 import {showMessageBox} from "./utils.js";
 import {HARD_CODED_ADMIN_UID} from "./constants.js";
 import {themeManager} from "./theme-manager.js";
-
-const ASSETS = {
-    DEFAULT_USER: './defaultuser.png',
-    DEFAULT_HERO: './creativespawn.png'
-};
 
 const navbarHTML = `
 <nav class="navbar">
@@ -121,7 +116,7 @@ export async function loadNavbar(user, userProfile) {
     if (!userSection) return;
 
     if (user) {
-        const photoURL = userProfile?.photoURL || user.photoURL || ASSETS.DEFAULT_USER;
+        const photoURL = userProfile?.photoURL || user.photoURL || DEFAULT_PROFILE_PIC;
         const displayName = userProfile?.displayName || user.displayName || user.email || 'User';
         userSection.innerHTML = `
             <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition" onclick="location.href='./users.html'">

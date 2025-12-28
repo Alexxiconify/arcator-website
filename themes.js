@@ -1,12 +1,4 @@
-import {auth, COLLECTIONS, db, getDocs, query} from "./firebase-init.js";
-import {
-    addDoc,
-    collection,
-    deleteDoc,
-    doc,
-    serverTimestamp,
-    where
-} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import {auth, addDoc, collection, COLLECTIONS, db, deleteDoc, doc, getDocs, query, serverTimestamp, where} from "./firebase-init.js";
 
 let availableThemesCache = [];
 const THEME_CACHE_KEY = "arcator_user_theme_preference";
@@ -325,8 +317,6 @@ export function applyTheme(themeId, themeProperties) {
 
   return true;
 }
-
-auth.currentUser = undefined;
 
 export async function saveCustomTheme(themeData) {
   try {

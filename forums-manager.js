@@ -1,5 +1,5 @@
 import {
-    addDoc, auth, collection, COLLECTIONS, db, deleteDoc, doc, getDoc, getDocs,
+    addDoc, auth, collection, COLLECTIONS, db, DEFAULT_PROFILE_PIC, deleteDoc, doc, getDoc, getDocs,
     getUserProfileFromFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where
 } from './firebase-init.js';
 import {showMessageBox} from './utils.js';
@@ -7,7 +7,7 @@ import {initializePage, loadNavbar} from './core.js';
 import {themeManager} from './theme-manager.js';
 import {HARD_CODED_ADMIN_UID} from './constants.js';
 
-const ASSETS = {DEFAULT_USER: './defaultuser.png'};
+
 const BTN_STYLE = 'background:none;border:none;color:var(--color-accent);cursor:pointer;padding:0;font-size:0.9rem;text-decoration:none;margin-right:0.75rem;';
 const INPUT_STYLE = 'background:transparent !important;border:1px solid var(--color-accent);color:var(--color-text);padding:0.5rem;border-radius:0.375rem;width:100%;';
 
