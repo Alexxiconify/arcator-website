@@ -2,793 +2,277 @@ import {auth, COLLECTIONS, db, doc, getDoc, getUserProfileFromFirestore, setDoc,
 import {themeManager} from "./theme-manager.js";
 import {showMessageBox} from './utils.js';
 
-
-const DEFAULT_USER_SETTINGS = {
-    preferences: {
-        fontSize: '16px',
-        fontFamily: 'Inter, sans-serif',
-        backgroundPattern: 'none',
-        headingSizeMultiplier: '1.6',
-        lineHeight: '1.6',
-        letterSpacing: '0px',
-        backgroundOpacity: '50'
-    },
-    accessibility: {
-        highContrast: false,
-        largeCursor: false,
-        focusIndicators: true,
-        colorblindFriendly: false,
-        reducedMotion: false,
-        disableAnimations: false,
-        keyboardNavigation: true,
-        skipLinks: true,
-        textToSpeech: false,
-        readingGuide: false,
-        syntaxHighlighting: true,
-        wordSpacing: '0'
-    },
-    communication: {
-        dmPermissions: 'everyone',
-        mentionPermissions: 'everyone'
-    },
-    notifications: {
-        emailNotifications: true,
-        inAppNotifications: true,
-        announcementNotifications: true,
-        communityNotifications: true,
-        securityNotifications: true,
-        maintenanceNotifications: true,
-        frequency: 'immediate'
-    },
-    privacy: {
-        profileVisibility: true,
-        activityVisibility: true,
-        analyticsConsent: false,
-        dataRetention: '90'
-    },
-    advanced: {
-        lowBandwidthMode: false,
-        disableImages: false,
-        minimalUi: false,
-        debugMode: false,
-        showPerformanceMetrics: false,
-        enableExperimentalFeatures: false,
-        customCSS: '',
-        keyboardShortcuts: 'enabled',
-        disabledShortcuts: []
-    }
+const DEFAULT_SETTINGS = {
+    preferences: {fontSize:'16px',fontFamily:'Inter, sans-serif',backgroundPattern:'none',headingSizeMultiplier:'1.6',lineHeight:'1.6',letterSpacing:'0px',backgroundOpacity:'50'},
+    accessibility: {highContrast:false,largeCursor:false,focusIndicators:true,colorblindFriendly:false,reducedMotion:false,disableAnimations:false,keyboardNavigation:true,skipLinks:true,textToSpeech:false,readingGuide:false,syntaxHighlighting:true,wordSpacing:'0'},
+    communication: {dmPermissions:'everyone',mentionPermissions:'everyone'},
+    notifications: {emailNotifications:true,inAppNotifications:true,announcementNotifications:true,communityNotifications:true,securityNotifications:true,maintenanceNotifications:true,frequency:'immediate'},
+    privacy: {profileVisibility:true,activityVisibility:true,analyticsConsent:false,dataRetention:'90'},
+    advanced: {lowBandwidthMode:false,disableImages:false,minimalUi:false,debugMode:false,showPerformanceMetrics:false,enableExperimentalFeatures:false,customCSS:'',keyboardShortcuts:'enabled',disabledShortcuts:[]}
 };
 
+const $ = id => document.getElementById(id);
+
 export class SettingsManager {
-
-    usedJSHeapSize;
-
-    totalJSHeapSize;
     currentSettings = null;
-
-    // prefer class field declarations to satisfy linters
     isInitialized = false;
-    lastFrameTime = 0;
-    frameCount = 0;
-    lastFPS = 0;
-    performanceMetricsInterval = null;
 
     async init() {
         if (this.isInitialized) return;
-
         const user = auth.currentUser;
-        if (user) {
-            await this.loadSettings(user.uid);
-        }
-
+        if (user) await this.loadSettings(user.uid);
         this.isInitialized = true;
         this.setupEventListeners();
     }
 
-    async loadUserProfile(uid) {
-        if (!uid) return null;
-
-        try {
-            const docRef = doc(db, COLLECTIONS.USER_PROFILES, uid);
-            const snapshot = await getDoc(docRef);
-            return snapshot.exists() ? snapshot.data() : null;
-        } catch (error) {
-            this.handleError(error, 'Load User Profile');
-            return null;
-        }
-    }
-
     async loadSettings(uid) {
         if (!uid) return null;
-
         try {
-            // Only load from Firestore for logged-in users - no caching
             const userProfile = await getUserProfileFromFirestore(uid);
             if (!userProfile) return null;
-
-            const settingsRef = doc(db, 'user_settings', uid);
-            const settingsDoc = await getDoc(settingsRef);
-
-            this.currentSettings = {
-                ...DEFAULT_USER_SETTINGS,
-                ...userProfile,
-                ...(settingsDoc.exists() ? settingsDoc.data() : {})
-            };
-
+            const settingsDoc = await getDoc(doc(db, 'user_settings', uid));
+            this.currentSettings = {...DEFAULT_SETTINGS, ...userProfile, ...(settingsDoc.exists() ? settingsDoc.data() : {})};
             this.applySettingsToForm(this.currentSettings);
             await this.applyPreferencesToPage(this.currentSettings);
             return this.currentSettings;
-        } catch (error) {
-            this.handleError(error, 'Load Settings');
-            return null;
-        }
+        } catch (e) { this.handleError(e, 'Load Settings'); return null; }
     }
 
-    applySettingsToForm(settings) {
-
-        if (settings.displayName) {
-            document.getElementById('display-name-input').value = settings.displayName;
-        }
-        if (settings.handle) {
-            document.getElementById('handle-input').value = settings.handle;
-        }
-        if (settings.email) {
-            document.getElementById('email-input').value = settings.email;
-        }
-
-
-        document.getElementById('email-notifications').checked = settings.notifications?.emailNotifications ?? true;
-        document.getElementById('inapp-notifications').checked = settings.notifications?.inAppNotifications ?? true;
-        document.getElementById('announcement-notifications').checked = settings.notifications?.announcementNotifications ?? true;
-        document.getElementById('community-notifications').checked = settings.notifications?.communityNotifications ?? true;
-        document.getElementById('maintenance-notifications').checked = settings.notifications?.maintenanceNotifications ?? true;
-
-
-        document.getElementById('profile-visibility').checked = settings.privacy?.profileVisibility ?? true;
-        document.getElementById('activity-visibility').checked = settings.privacy?.activityVisibility ?? true;
-        document.getElementById('data-retention').value = settings.privacy?.dataRetention ?? '90';
-
-
-        document.getElementById('high-contrast').checked = settings.accessibility?.highContrast ?? false;
-        document.getElementById('font-size').value = settings.accessibility?.fontSize ?? 'medium';
-        document.getElementById('reduced-motion').checked = settings.accessibility?.reducedMotion ?? false;
-        document.getElementById('screen-reader').checked = settings.accessibility?.screenReader ?? false;
-
-
-        document.getElementById('dm-permissions').value = settings.communication?.dmPermissions ?? 'everyone';
-        document.getElementById('mention-permissions').value = settings.communication?.mentionPermissions ?? 'everyone';
-
-
-        document.getElementById('low-bandwidth').checked = settings.advanced?.lowBandwidth ?? false;
-        document.getElementById('debug-mode').checked = settings.advanced?.debugMode ?? false;
-        document.getElementById('keyboard-shortcuts').checked = settings.advanced?.keyboardShortcuts ?? true;
-        document.getElementById('experimental-features').checked = settings.advanced?.experimentalFeatures ?? false;
-        document.getElementById('custom-css').value = settings.advanced?.customCSS ?? '';
+    applySettingsToForm(s) {
+        const set = (id, val, checkbox = false) => { const el = $(id); if (el) checkbox ? el.checked = !!val : el.value = val ?? ''; };
+        set('display-name-input', s.displayName);
+        set('handle-input', s.handle);
+        set('email-input', s.email);
+        set('email-notifications', s.notifications?.emailNotifications ?? true, true);
+        set('inapp-notifications', s.notifications?.inAppNotifications ?? true, true);
+        set('announcement-notifications', s.notifications?.announcementNotifications ?? true, true);
+        set('community-notifications', s.notifications?.communityNotifications ?? true, true);
+        set('maintenance-notifications', s.notifications?.maintenanceNotifications ?? true, true);
+        set('profile-visibility', s.privacy?.profileVisibility ?? true, true);
+        set('activity-visibility', s.privacy?.activityVisibility ?? true, true);
+        set('data-retention', s.privacy?.dataRetention ?? '90');
+        set('high-contrast', s.accessibility?.highContrast ?? false, true);
+        set('font-size', s.accessibility?.fontSize ?? 'medium');
+        set('reduced-motion', s.accessibility?.reducedMotion ?? false, true);
+        set('screen-reader', s.accessibility?.screenReader ?? false, true);
+        set('dm-permissions', s.communication?.dmPermissions ?? 'everyone');
+        set('mention-permissions', s.communication?.mentionPermissions ?? 'everyone');
+        set('low-bandwidth', s.advanced?.lowBandwidth ?? false, true);
+        set('debug-mode', s.advanced?.debugMode ?? false, true);
+        set('keyboard-shortcuts', s.advanced?.keyboardShortcuts ?? true, true);
+        set('experimental-features', s.advanced?.experimentalFeatures ?? false, true);
+        set('custom-css', s.advanced?.customCSS ?? '');
     }
 
-
-    getDefaultSettings() {
-        return DEFAULT_USER_SETTINGS;
-    }
+    getDefaultSettings() { return DEFAULT_SETTINGS; }
 
     async saveProfile() {
         const user = auth.currentUser;
-        if (!user) {
-            showMessageBox('You must be logged in to save profile settings.', true);
-            return false;
-        }
-
+        if (!user) { showMessageBox('You must be logged in to save profile settings.', true); return false; }
         try {
-            const displayName = document.getElementById('display-name-input')?.value?.trim();
-            const handle = document.getElementById('handle-input')?.value?.trim();
-            const email = document.getElementById('email-input')?.value?.trim();
-            const photoURL = document.getElementById('profile-picture-url-input')?.value?.trim();
-
-            if (!displayName) {
-                showMessageBox('Display name is required.', true);
-                return false;
-            }
-
-            const updates = {
-                displayName,
-                handle,
-                email,
-                photoURL,
-                lastUpdated: new Date().toISOString()
-            };
-
-            const docRef = doc(db, COLLECTIONS.USER_PROFILES, user.uid);
-            await updateDoc(docRef, updates);
+            const displayName = $('display-name-input')?.value?.trim();
+            if (!displayName) { showMessageBox('Display name is required.', true); return false; }
+            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.uid), {
+                displayName, handle: $('handle-input')?.value?.trim(), email: $('email-input')?.value?.trim(),
+                photoURL: $('profile-picture-url-input')?.value?.trim(), lastUpdated: new Date().toISOString()
+            });
             showMessageBox('Profile updated successfully!');
             return true;
-        } catch (error) {
-            this.handleError(error, 'Save Profile');
-            return false;
-        }
+        } catch (e) { this.handleError(e, 'Save Profile'); return false; }
+    }
+
+    async saveSection(name, getData) {
+        const user = auth.currentUser;
+        if (!user) { showMessageBox(`You must be logged in to save ${name}.`, true); return false; }
+        try {
+            const data = getData();
+            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.uid), {[name.toLowerCase()]: data, lastUpdated: new Date().toISOString()});
+            showMessageBox(`${name} saved successfully!`);
+            return true;
+        } catch (e) { this.handleError(e, `Save ${name}`); return false; }
     }
 
     async savePreferences() {
-        const user = auth.currentUser;
-        if (!user) {
-            showMessageBox('You must be logged in to save preferences.', true);
-            return false;
-        }
-
-        try {
-            const preferences = {
-                fontSize: document.getElementById('font-size-select')?.value,
-                fontFamily: document.getElementById('font-family-select')?.value,
-                backgroundPattern: document.getElementById('background-pattern-select')?.value,
-                headingSizeMultiplier: document.getElementById('heading-size-multiplier')?.value,
-                lineHeight: document.getElementById('line-height-select')?.value,
-                letterSpacing: document.getElementById('letter-spacing-select')?.value,
-                backgroundOpacity: document.getElementById('background-opacity-range')?.value
-            };
-
-            const docRef = doc(db, COLLECTIONS.USER_PROFILES, user.uid);
-            await updateDoc(docRef, {preferences, lastUpdated: new Date().toISOString()});
-
-            // Apply preferences to page immediately after saving
-            await this.applyPreferencesToPage({preferences});
-            showMessageBox('Preferences saved successfully!');
-            return true;
-        } catch (error) {
-            this.handleError(error, 'Save Preferences');
-            return false;
-        }
+        return this.saveSection('Preferences', () => ({
+            fontSize: $('font-size-select')?.value, fontFamily: $('font-family-select')?.value,
+            backgroundPattern: $('background-pattern-select')?.value, headingSizeMultiplier: $('heading-size-multiplier')?.value,
+            lineHeight: $('line-height-select')?.value, letterSpacing: $('letter-spacing-select')?.value,
+            backgroundOpacity: $('background-opacity-range')?.value
+        }));
     }
 
     async saveNotifications() {
-        const user = auth.currentUser;
-        if (!user) {
-            showMessageBox('You must be logged in to save notification settings.', true);
-            return false;
-        }
-
-        try {
-            const notificationSettings = {
-                emailNotifications: document.getElementById('email-notifications-checkbox')?.checked,
-                inAppNotifications: document.getElementById('inapp-notifications-checkbox')?.checked,
-                announcementNotifications: document.getElementById('announcement-notifications-checkbox')?.checked,
-                communityNotifications: document.getElementById('community-notifications-checkbox')?.checked,
-                securityNotifications: document.getElementById('security-notifications-checkbox')?.checked,
-                maintenanceNotifications: document.getElementById('maintenance-notifications-checkbox')?.checked,
-                frequency: document.getElementById('notification-frequency-select')?.value
-            };
-
-            const docRef = doc(db, COLLECTIONS.USER_PROFILES, user.uid);
-            await updateDoc(docRef, {notificationSettings, lastUpdated: new Date().toISOString()});
-
-            showMessageBox('Notification settings saved successfully!');
-            return true;
-        } catch (error) {
-            this.handleError(error, 'Save Notifications');
-            return false;
-        }
+        return this.saveSection('Notifications', () => ({
+            emailNotifications: $('email-notifications-checkbox')?.checked, inAppNotifications: $('inapp-notifications-checkbox')?.checked,
+            announcementNotifications: $('announcement-notifications-checkbox')?.checked, communityNotifications: $('community-notifications-checkbox')?.checked,
+            securityNotifications: $('security-notifications-checkbox')?.checked, maintenanceNotifications: $('maintenance-notifications-checkbox')?.checked,
+            frequency: $('notification-frequency-select')?.value
+        }));
     }
 
     async savePrivacy() {
-        const user = auth.currentUser;
-        if (!user) {
-            showMessageBox('You must be logged in to save privacy settings.', true);
-            return false;
-        }
-
-        try {
-            const privacySettings = {
-                profileVisibility: document.getElementById('profile-visibility-checkbox')?.checked,
-                activityVisibility: document.getElementById('activity-visibility-checkbox')?.checked,
-                analyticsConsent: document.getElementById('analytics-consent-checkbox')?.checked,
-                dataRetention: document.getElementById('data-retention-select')?.value
-            };
-
-            const docRef = doc(db, COLLECTIONS.USER_PROFILES, user.uid);
-            await updateDoc(docRef, {privacySettings, lastUpdated: new Date().toISOString()});
-
-            showMessageBox('Privacy settings saved successfully!');
-            return true;
-        } catch (error) {
-            this.handleError(error, 'Save Privacy Settings');
-            return false;
-        }
+        return this.saveSection('Privacy', () => ({
+            profileVisibility: $('profile-visibility-checkbox')?.checked, activityVisibility: $('activity-visibility-checkbox')?.checked,
+            analyticsConsent: $('analytics-consent-checkbox')?.checked, dataRetention: $('data-retention-select')?.value
+        }));
     }
 
     async saveAccessibility() {
-        const user = auth.currentUser;
-        if (!user) {
-            showMessageBox('You must be logged in to save accessibility settings.', true);
-            return false;
-        }
-
-        try {
-            const accessibilitySettings = {
-                highContrast: document.getElementById('high-contrast-checkbox')?.checked,
-                largeCursor: document.getElementById('large-cursor-checkbox')?.checked,
-                focusIndicators: document.getElementById('focus-indicators-checkbox')?.checked,
-                colorblindFriendly: document.getElementById('colorblind-friendly-checkbox')?.checked,
-                reducedMotion: document.getElementById('reduced-motion-checkbox')?.checked,
-                disableAnimations: document.getElementById('disable-animations-checkbox')?.checked,
-                keyboardNavigation: document.getElementById('keyboard-navigation-checkbox')?.checked,
-                skipLinks: document.getElementById('skip-links-checkbox')?.checked,
-                textToSpeech: document.getElementById('text-to-speech-checkbox')?.checked,
-                readingGuide: document.getElementById('reading-guide-checkbox')?.checked,
-                syntaxHighlighting: document.getElementById('syntax-highlighting-checkbox')?.checked,
-                wordSpacing: document.getElementById('word-spacing-checkbox')?.checked
-            };
-
-            const docRef = doc(db, COLLECTIONS.USER_PROFILES, user.uid);
-            await updateDoc(docRef, {accessibilitySettings, lastUpdated: new Date().toISOString()});
-
-            await this.applyAccessibilitySettings(accessibilitySettings);
-            showMessageBox('Accessibility settings saved successfully!');
-            return true;
-        } catch (error) {
-            this.handleError(error, 'Save Accessibility Settings');
-            return false;
-        }
+        const data = {
+            highContrast: $('high-contrast-checkbox')?.checked, largeCursor: $('large-cursor-checkbox')?.checked,
+            focusIndicators: $('focus-indicators-checkbox')?.checked, colorblindFriendly: $('colorblind-friendly-checkbox')?.checked,
+            reducedMotion: $('reduced-motion-checkbox')?.checked, disableAnimations: $('disable-animations-checkbox')?.checked,
+            keyboardNavigation: $('keyboard-navigation-checkbox')?.checked, skipLinks: $('skip-links-checkbox')?.checked,
+            textToSpeech: $('text-to-speech-checkbox')?.checked, readingGuide: $('reading-guide-checkbox')?.checked,
+            syntaxHighlighting: $('syntax-highlighting-checkbox')?.checked, wordSpacing: $('word-spacing-checkbox')?.checked
+        };
+        const result = await this.saveSection('Accessibility', () => data);
+        if (result) await this.applyAccessibilitySettings(data);
+        return result;
     }
 
     async saveAdvanced() {
-        const user = auth.currentUser;
-        if (!user) {
-            showMessageBox('You must be logged in to save advanced settings.', true);
-            return false;
-        }
+        const data = {
+            lowBandwidthMode: $('low-bandwidth-mode-checkbox')?.checked, disableImages: $('disable-images-checkbox')?.checked,
+            minimalUi: $('minimal-ui-checkbox')?.checked, debugMode: $('debug-mode-checkbox')?.checked,
+            showPerformanceMetrics: $('show-performance-metrics-checkbox')?.checked, enableExperimentalFeatures: $('enable-experimental-features-checkbox')?.checked,
+            customCSS: $('custom-css-textarea')?.value, keyboardShortcuts: $('keyboard-shortcuts-toggle')?.value,
+            disabledShortcuts: Array.from(document.querySelectorAll('.shortcut-disable-btn.disabled')).map(b => b.getAttribute('data-shortcut')).filter(Boolean)
+        };
+        const result = await this.saveSection('Advanced', () => data);
+        if (result) await this.applyAdvancedSettings(data);
+        return result;
+    }
 
+    async applyUserSettings(s) {
+        if (!s) return;
         try {
-            const advancedSettings = {
-                lowBandwidthMode: document.getElementById('low-bandwidth-mode-checkbox')?.checked,
-                disableImages: document.getElementById('disable-images-checkbox')?.checked,
-                minimalUi: document.getElementById('minimal-ui-checkbox')?.checked,
-                debugMode: document.getElementById('debug-mode-checkbox')?.checked,
-                showPerformanceMetrics: document.getElementById('show-performance-metrics-checkbox')?.checked,
-                enableExperimentalFeatures: document.getElementById('enable-experimental-features-checkbox')?.checked,
-                customCSS: document.getElementById('custom-css-textarea')?.value,
-                keyboardShortcuts: document.getElementById('keyboard-shortcuts-toggle')?.value,
-                disabledShortcuts: Array.from(document.querySelectorAll('.shortcut-disable-btn.disabled'))
-                    .map(btn => btn.getAttribute('data-shortcut'))
-                    .filter(Boolean)
-            };
-
-            const docRef = doc(db, COLLECTIONS.USER_PROFILES, user.uid);
-            await updateDoc(docRef, {advancedSettings, lastUpdated: new Date().toISOString()});
-
-            await this.applyAdvancedSettings(advancedSettings);
-            showMessageBox('Advanced settings saved successfully!');
+            if (s.themePreference) await themeManager.applyTheme(s.themePreference);
+            if (s.preferences) this.applyPreferences(s.preferences);
+            if (s.accessibilitySettings) await this.applyAccessibilitySettings(s.accessibilitySettings);
+            if (s.advancedSettings) await this.applyAdvancedSettings(s.advancedSettings);
+            this.currentSettings = s;
             return true;
-        } catch (error) {
-            this.handleError(error, 'Save Advanced Settings');
-            return false;
-        }
+        } catch (e) { this.handleError(e, 'Apply User Settings'); return false; }
     }
 
-    async applyUserSettings(settings) {
-        if (!settings) return;
-
-        try {
-
-            if (settings.themePreference) {
-                await themeManager.applyTheme(settings.themePreference);
-            }
-
-
-            if (settings.preferences) {
-                this.applyPreferences(settings.preferences);
-            }
-
-
-            if (settings.accessibilitySettings) {
-                await this.applyAccessibilitySettings(settings.accessibilitySettings);
-            }
-
-
-            if (settings.advancedSettings) {
-                await this.applyAdvancedSettings(settings.advancedSettings);
-            }
-
-            this.currentSettings = settings;
-            return true;
-        } catch (error) {
-            this.handleError(error, 'Apply User Settings');
-            return false;
-        }
-    }
-
-    applyPreferences(preferences) {
-        if (!preferences) return;
-
+    applyPreferences(p) {
+        if (!p) return;
         const root = document.documentElement;
-
-
-        if (preferences.fontSize) root.style.setProperty('--base-font-size', preferences.fontSize);
-        if (preferences.fontFamily) root.style.setProperty('--font-family', preferences.fontFamily);
-        if (preferences.letterSpacing) root.style.setProperty('--letter-spacing', preferences.letterSpacing);
-        if (preferences.lineHeight) root.style.setProperty('--line-height', preferences.lineHeight);
-
-
-        if (preferences.backgroundPattern) {
-            document.body.style.backgroundImage = preferences.backgroundPattern === 'none'
-                ? 'none'
-                : `url(assets/patterns/${preferences.backgroundPattern})`;
-        }
-        if (preferences.backgroundOpacity) {
-            root.style.setProperty('--bg-opacity', preferences.backgroundOpacity + '%');
-        }
-
-
-        if (preferences.headingSizeMultiplier) {
-            const multiplier = Number.parseFloat(preferences.headingSizeMultiplier);
-            ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].forEach((tag, index) => {
-                const size = (1 + (6 - index) * 0.2) * multiplier;
-                root.style.setProperty(`--${tag}-size`, `${size}rem`);
-            });
+        if (p.fontSize) root.style.setProperty('--base-font-size', p.fontSize);
+        if (p.fontFamily) root.style.setProperty('--font-family', p.fontFamily);
+        if (p.letterSpacing) root.style.setProperty('--letter-spacing', p.letterSpacing);
+        if (p.lineHeight) root.style.setProperty('--line-height', p.lineHeight);
+        if (p.backgroundPattern) document.body.style.backgroundImage = p.backgroundPattern === 'none' ? 'none' : `url(assets/patterns/${p.backgroundPattern})`;
+        if (p.backgroundOpacity) root.style.setProperty('--bg-opacity', p.backgroundOpacity + '%');
+        if (p.headingSizeMultiplier) {
+            const m = parseFloat(p.headingSizeMultiplier);
+            ['h1','h2','h3','h4','h5','h6'].forEach((t, i) => root.style.setProperty(`--${t}-size`, `${(1 + (6 - i) * 0.2) * m}rem`));
         }
     }
 
-    async applyPreferencesToPage(settings) {
-        if (!settings) return;
-
-        const root = document.documentElement;
-        const prefs = settings.preferences;
-
-        if (!prefs) return;
-
-        // Apply font size
-        if (prefs.fontSize) {
-            root.style.setProperty('--font-size-base', prefs.fontSize);
-        }
-
-        // Apply font family
-        if (prefs.fontFamily) {
-            root.style.setProperty('--font-family', prefs.fontFamily);
-        }
-
-        // Apply heading size multiplier
-        if (prefs.headingSizeMultiplier) {
-            root.style.setProperty('--heading-size-multiplier', prefs.headingSizeMultiplier);
-        }
-
-        // Apply line height
-        if (prefs.lineHeight) {
-            root.style.setProperty('--line-height', prefs.lineHeight);
-        }
-
-        // Apply letter spacing
-        if (prefs.letterSpacing) {
-            root.style.setProperty('--letter-spacing', prefs.letterSpacing);
-        }
-
-        // Apply background pattern
-        if (prefs.backgroundPattern && prefs.backgroundPattern !== 'none') {
-            root.style.setProperty('--background-pattern', `url('${prefs.backgroundPattern}')`);
-        }
-
-        // Apply background opacity
-        if (prefs.backgroundOpacity) {
-            root.style.setProperty('--background-opacity', prefs.backgroundOpacity + '%');
-        }
+    async applyPreferencesToPage(s) {
+        if (!s?.preferences) return;
+        const {preferences: p} = s, root = document.documentElement;
+        if (p.fontSize) root.style.setProperty('--font-size-base', p.fontSize);
+        if (p.fontFamily) root.style.setProperty('--font-family', p.fontFamily);
+        if (p.headingSizeMultiplier) root.style.setProperty('--heading-size-multiplier', p.headingSizeMultiplier);
+        if (p.lineHeight) root.style.setProperty('--line-height', p.lineHeight);
+        if (p.letterSpacing) root.style.setProperty('--letter-spacing', p.letterSpacing);
+        if (p.backgroundPattern && p.backgroundPattern !== 'none') root.style.setProperty('--background-pattern', `url('${p.backgroundPattern}')`);
+        if (p.backgroundOpacity) root.style.setProperty('--background-opacity', p.backgroundOpacity + '%');
     }
 
-    async applyAccessibilitySettings(settings) {
-        if (!settings) return;
-
+    async applyAccessibilitySettings(s) {
+        if (!s) return;
         const root = document.documentElement;
-
-
-        root.classList.toggle('high-contrast', settings.highContrast);
-
-
-        root.classList.toggle('large-cursor', settings.largeCursor);
-
-
-        root.classList.toggle('focus-visible', settings.focusIndicators);
-
-
-        root.classList.toggle('colorblind-friendly', settings.colorblindFriendly);
-
-
-        root.classList.toggle('reduced-motion', settings.reducedMotion);
-
-
-        root.classList.toggle('no-animations', settings.disableAnimations);
-
-
-        this.toggleSkipLinks(settings.skipLinks);
-
-
-        this.toggleTextToSpeech(settings.textToSpeech);
-
-
-        this.toggleReadingGuide(settings.readingGuide);
-
-
-        this.toggleSyntaxHighlighting(settings.syntaxHighlighting);
-
-
-        if (settings.wordSpacing) {
-            root.style.setProperty('--word-spacing', settings.wordSpacing + 'px');
-        }
+        root.classList.toggle('high-contrast', s.highContrast);
+        root.classList.toggle('large-cursor', s.largeCursor);
+        root.classList.toggle('focus-visible', s.focusIndicators);
+        root.classList.toggle('colorblind-friendly', s.colorblindFriendly);
+        root.classList.toggle('reduced-motion', s.reducedMotion);
+        root.classList.toggle('no-animations', s.disableAnimations);
+        this.toggleSkipLinks(s.skipLinks);
+        this.toggleTextToSpeech(s.textToSpeech);
+        this.toggleReadingGuide(s.readingGuide);
+        this.toggleSyntaxHighlighting(s.syntaxHighlighting);
+        if (s.wordSpacing) root.style.setProperty('--word-spacing', s.wordSpacing + 'px');
     }
 
-    async applyAdvancedSettings(settings) {
-        if (!settings) return;
-
+    async applyAdvancedSettings(s) {
+        if (!s) return;
         const root = document.documentElement;
-
-
-        root.classList.toggle('low-bandwidth-mode', settings.lowBandwidthMode);
-        root.classList.toggle('minimal-ui', settings.minimalUi);
-        root.classList.toggle('debug-mode', settings.debugMode);
-
-
-        if (settings.disableImages) {
-            document.querySelectorAll('img').forEach(img => {
-                img.loading = 'lazy';
-                if (!img.hasAttribute('data-src')) {
-                    img.setAttribute('data-src', img.src);
-                    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-                }
-            });
+        root.classList.toggle('low-bandwidth-mode', s.lowBandwidthMode);
+        root.classList.toggle('minimal-ui', s.minimalUi);
+        root.classList.toggle('debug-mode', s.debugMode);
+        if (s.disableImages) {
+            document.querySelectorAll('img').forEach(img => { img.loading = 'lazy'; if (!img.dataset.src) { img.dataset.src = img.src; img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; } });
         } else {
-            document.querySelectorAll('img[data-src]').forEach(img => {
-                img.src = img.getAttribute('data-src');
-                img.removeAttribute('data-src');
-            });
+            document.querySelectorAll('img[data-src]').forEach(img => { img.src = img.dataset.src; delete img.dataset.src; });
         }
-
-
-        await this.applyCustomCSS(settings.customCSS);
-
-        root.classList.toggle('experimental-features', settings.enableExperimentalFeatures);
-
-        if (settings.disabledShortcuts) {
-            settings.disabledShortcuts.forEach(shortcut => {
-                const btn = document.querySelector(`[data-shortcut="${shortcut}"]`);
-                if (btn) {
-                    btn.classList.add('disabled');
-                    btn.setAttribute('aria-disabled', 'true');
-                }
-            });
-        }
+        await this.applyCustomCSS(s.customCSS);
+        root.classList.toggle('experimental-features', s.enableExperimentalFeatures);
+        s.disabledShortcuts?.forEach(sc => { const btn = document.querySelector(`[data-shortcut="${sc}"]`); if (btn) { btn.classList.add('disabled'); btn.setAttribute('aria-disabled', 'true'); } });
     }
 
+    initializeKeyboardShortcuts() { document.addEventListener('keydown', this.handleKeyboardShortcut); }
+    disableKeyboardShortcuts() { document.removeEventListener('keydown', this.handleKeyboardShortcut); }
 
-    initializeKeyboardShortcuts() {
-        document.addEventListener('keydown', this.handleKeyboardShortcut);
+    handleKeyboardShortcut = (e) => {
+        if (e.target.matches('input, textarea, [contenteditable]')) return;
+        const shortcut = this.getActiveShortcuts().find(s => s.key === e.key && s.ctrl === e.ctrlKey && s.alt === e.altKey && s.shift === e.shiftKey);
+        if (shortcut) { e.preventDefault(); this.executeShortcut(shortcut); }
     }
 
-    disableKeyboardShortcuts() {
-        document.removeEventListener('keydown', this.handleKeyboardShortcut);
-    }
-
-    handleKeyboardShortcut(event) {
-
-        if (event.target.matches('input, textarea, [contenteditable]')) return;
-
-        const shortcuts = this.getActiveShortcuts();
-        const shortcut = shortcuts.find(s => this.matchesShortcut(event, s));
-
-        if (shortcut) {
-            event.preventDefault();
-            this.executeShortcut(shortcut);
-        }
-    }
-
-    matchesShortcut(event, shortcut) {
-        return shortcut.key === event.key &&
-            shortcut.ctrl === event.ctrlKey &&
-            shortcut.alt === event.altKey &&
-            shortcut.shift === event.shiftKey;
-    }
-
-    executeShortcut(shortcut) {
-        switch (shortcut.action) {
-            case 'toggleTheme':
-                themeManager.toggleTheme();
-                break;
-            case 'toggleSidebar':
-                document.documentElement.classList.toggle('sidebar-collapsed');
-                break;
-            case 'toggleFullscreen':
-                if (document.fullscreenElement) {
-                    document.exitFullscreen();
-                } else {
-                    document.documentElement.requestFullscreen();
-                }
-                break;
-
-        }
+    executeShortcut(s) {
+        if (s.action === 'toggleTheme') themeManager.toggleTheme();
+        else if (s.action === 'toggleSidebar') document.documentElement.classList.toggle('sidebar-collapsed');
+        else if (s.action === 'toggleFullscreen') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
     }
 
     getActiveShortcuts() {
-        // Only apply shortcuts for logged-in users who have explicitly enabled them
-        if (!auth.currentUser) return [];
-
-        // Use currentSettings loaded from Firestore, not localStorage
-        if (this.currentSettings?.advanced?.keyboardShortcuts === 'disabled') {
-            return [];
-        }
-
-        const defaultShortcuts = [
-            {key: 'd', ctrl: true, alt: false, shift: false, action: 'toggleTheme'},
-            {key: 'b', ctrl: true, alt: false, shift: false, action: 'toggleSidebar'},
-            {key: 'f', ctrl: true, alt: false, shift: false, action: 'toggleFullscreen'}
-        ];
-
-        return this.currentSettings?.advanced?.disabledShortcuts
-            ? defaultShortcuts.filter(s => !this.currentSettings.advanced.disabledShortcuts.includes(s.action))
-            : defaultShortcuts;
+        if (!auth.currentUser || this.currentSettings?.advanced?.keyboardShortcuts === 'disabled') return [];
+        const defaults = [{key:'d',ctrl:true,alt:false,shift:false,action:'toggleTheme'},{key:'b',ctrl:true,alt:false,shift:false,action:'toggleSidebar'},{key:'f',ctrl:true,alt:false,shift:false,action:'toggleFullscreen'}];
+        return this.currentSettings?.advanced?.disabledShortcuts ? defaults.filter(s => !this.currentSettings.advanced.disabledShortcuts.includes(s.action)) : defaults;
     }
 
     async applyCustomCSS(css) {
         if (!css) return;
-
-        const styleId = 'user-custom-css';
-        let styleSheet = document.getElementById(styleId);
-
-        if (!styleSheet) {
-            styleSheet = document.createElement('style');
-            styleSheet.id = styleId;
-            document.head.appendChild(styleSheet);
-        }
-
-        styleSheet.innerHTML = css;
+        let el = $('user-custom-css');
+        if (!el) { el = document.createElement('style'); el.id = 'user-custom-css'; document.head.appendChild(el); }
+        el.innerHTML = css;
     }
 
-    toggleSkipLinks(enabled) {
-        const skipLink = document.getElementById('skip-to-content-link');
-        if (enabled) {
-            skipLink.setAttribute('href', '#main-content');
-            skipLink.style.display = 'block';
-        } else {
-            skipLink.removeAttribute('href');
-            skipLink.style.display = 'none';
-        }
+    toggleSkipLinks(enabled) { const el = $('skip-to-content-link'); if (el) { el.style.display = enabled ? 'block' : 'none'; enabled ? el.setAttribute('href', '#main-content') : el.removeAttribute('href'); } }
+    toggleReadingGuide(enabled) { const el = $('reading-guide'); if (el) el.style.display = enabled ? 'block' : 'none'; }
+    toggleTextToSpeech(enabled) { document.documentElement.classList.toggle('text-to-speech-enabled', !!enabled); if (enabled && window.speechSynthesis) { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance('Text to speech enabled')); } }
+    toggleSyntaxHighlighting(enabled) { document.querySelectorAll('pre code').forEach(b => b.classList.toggle('syntax-highlight', enabled)); }
+
+    handleError(e, ctx) {
+        console.error(`Error in ${ctx}:`, e);
+        showMessageBox(e?.code === 'permission-denied' ? 'Insufficient permissions to access Firestore.' : `An error occurred: ${e?.message ?? e}`, true);
     }
 
-
-    toggleReadingGuide(enabled) {
-        const guide = document.getElementById('reading-guide');
-        if (enabled) {
-            guide.style.display = 'block';
-        } else {
-            guide.style.display = 'none';
-        }
-    }
-
-    toggleTextToSpeech(enabled) {
-        // Simple TTS toggle: enable/disable a CSS class and store preference (no heavy TTS engine included)
-        const root = document.documentElement;
-        root.classList.toggle('text-to-speech-enabled', !!enabled);
-        // If enabling and browser supports speechSynthesis, set a short welcome to verify
-        if (enabled && window.speechSynthesis) {
-            const utter = new SpeechSynthesisUtterance('Text to speech enabled');
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(utter);
-        }
-    }
-
-    toggleSyntaxHighlighting(enabled) {
-        const codeBlocks = document.querySelectorAll('pre code');
-        codeBlocks.forEach(block => {
-            if (enabled) {
-                block.classList.add('syntax-highlight');
-            } else {
-                block.classList.remove('syntax-highlight');
-            }
-        });
-    }
-
-    handleError(error, context) {
-        console.error(`Error in ${context}:`, error);
-        // Provide a clearer message for Firestore permission problems
-        if (error?.code === 'permission-denied') {
-            showMessageBox('Insufficient permissions to access Firestore. Some features are disabled.', true);
-        } else {
-            showMessageBox(`An error occurred: ${error?.message ?? String(error)}`, true);
-        }
-    }
-
-    async saveSettings(sectionId, settings) {
+    async saveSettings(section, settings) {
         const user = auth.currentUser;
-        if (!user) {
-            showMessageBox('You must be logged in to save settings', true);
-            return false;
-        }
-
-        try {
-            const settingsRef = doc(db, 'user_settings', user.uid);
-            await setDoc(settingsRef, {[sectionId]: settings}, {merge: true});
-
-            showMessageBox('Settings saved successfully!');
-            return true;
-        } catch (error) {
-            console.error('Error saving settings:', error);
-            showMessageBox('Failed to save settings: ' + error.message, true);
-            return false;
-        }
+        if (!user) { showMessageBox('You must be logged in to save settings', true); return false; }
+        try { await setDoc(doc(db, 'user_settings', user.uid), {[section]: settings}, {merge: true}); showMessageBox('Settings saved!'); return true; }
+        catch (e) { console.error('saveSettings:', e); showMessageBox('Failed: ' + e.message, true); return false; }
     }
 
     setupEventListeners() {
-
-        document.getElementById('profile-settings-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const settings = {
-                displayName: document.getElementById('display-name-input').value,
-                handle: document.getElementById('handle-input').value,
-                email: document.getElementById('email-input').value
-            };
-            await this.saveSettings('profile', settings);
-        });
-
-
-        document.getElementById('notification-settings-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const settings = {
-                emailNotifications: document.getElementById('email-notifications').checked,
-                inAppNotifications: document.getElementById('inapp-notifications').checked,
-                announcementNotifications: document.getElementById('announcement-notifications').checked,
-                communityNotifications: document.getElementById('community-notifications').checked,
-                maintenanceNotifications: document.getElementById('maintenance-notifications').checked
-            };
-            await this.saveSettings('notifications', settings);
-        });
-
-
-        document.getElementById('privacy-settings-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const settings = {
-                profileVisibility: document.getElementById('profile-visibility').checked,
-                activityVisibility: document.getElementById('activity-visibility').checked,
-                dataRetention: document.getElementById('data-retention').value
-            };
-            await this.saveSettings('privacy', settings);
-        });
-
-
-        document.getElementById('accessibility-settings-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const settings = {
-                highContrast: document.getElementById('high-contrast').checked,
-                fontSize: document.getElementById('font-size').value,
-                reducedMotion: document.getElementById('reduced-motion').checked,
-                screenReader: document.getElementById('screen-reader').checked
-            };
-            await this.saveSettings('accessibility', settings);
-        });
-
-
-        document.getElementById('communication-settings-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const settings = {
-                dmPermissions: document.getElementById('dm-permissions').value,
-                mentionPermissions: document.getElementById('mention-permissions').value
-            };
-            await this.saveSettings('communication', settings);
-        });
-
-
-        document.getElementById('advanced-settings-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const settings = {
-                lowBandwidth: document.getElementById('low-bandwidth').checked,
-                debugMode: document.getElementById('debug-mode').checked,
-                keyboardShortcuts: document.getElementById('keyboard-shortcuts').checked,
-                experimentalFeatures: document.getElementById('experimental-features').checked,
-                customCSS: document.getElementById('custom-css').value
-            };
-            await this.saveSettings('advanced', settings);
-        });
+        const forms = [
+            ['profile-settings-form', () => ({displayName: $('display-name-input').value, handle: $('handle-input').value, email: $('email-input').value}), 'profile'],
+            ['notification-settings-form', () => ({emailNotifications: $('email-notifications').checked, inAppNotifications: $('inapp-notifications').checked, announcementNotifications: $('announcement-notifications').checked, communityNotifications: $('community-notifications').checked, maintenanceNotifications: $('maintenance-notifications').checked}), 'notifications'],
+            ['privacy-settings-form', () => ({profileVisibility: $('profile-visibility').checked, activityVisibility: $('activity-visibility').checked, dataRetention: $('data-retention').value}), 'privacy'],
+            ['accessibility-settings-form', () => ({highContrast: $('high-contrast').checked, fontSize: $('font-size').value, reducedMotion: $('reduced-motion').checked, screenReader: $('screen-reader').checked}), 'accessibility'],
+            ['communication-settings-form', () => ({dmPermissions: $('dm-permissions').value, mentionPermissions: $('mention-permissions').value}), 'communication'],
+            ['advanced-settings-form', () => ({lowBandwidth: $('low-bandwidth').checked, debugMode: $('debug-mode').checked, keyboardShortcuts: $('keyboard-shortcuts').checked, experimentalFeatures: $('experimental-features').checked, customCSS: $('custom-css').value}), 'advanced']
+        ];
+        forms.forEach(([id, getData, section]) => $(id)?.addEventListener('submit', async e => { e.preventDefault(); await this.saveSettings(section, getData()); }));
     }
 }
 
 export const settingsManager = new SettingsManager();
-
-
-export function initializeKeyboardShortcuts() {
-    settingsManager.initializeKeyboardShortcuts();
-}
-
-export function disableKeyboardShortcuts() {
-    settingsManager.disableKeyboardShortcuts();
-}
+export const initializeKeyboardShortcuts = () => settingsManager.initializeKeyboardShortcuts();
+export const disableKeyboardShortcuts = () => settingsManager.disableKeyboardShortcuts();
