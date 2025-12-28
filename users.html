@@ -1,391 +1,143 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
 <head>
-    <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>User Account - Arcator</title>
-    <link href="./master.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account - Arcator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
-
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js" type="module"></script>
-
-    <script src="./firebase-init.js" type="module"></script>
-    <script src="./settings-manager.js" type="module"></script>
-    <script src="./user-main.js" type="module"></script>
-    <style>
-        .hero-banner {
-            background: url("./creativespawn.png") center/cover no-repeat;
-            min-height: 250px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        .hero-banner::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1;
-        }
-
-        .hero-content {
-            z-index: 2;
-            text-align: center;
-            color: #ffffff;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-        }
-    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body class="antialiased">
+<body x-data="userStore">
+<div id="navbar-placeholder"></div>
 
-<div id="navbar-placeholder">
-    <nav class="navbar">
-        <div class="container navbar-content">
-            <div class="flex items-center gap-4">
-                <a class="text-xl font-bold no-underline" href="./index.html">Arcator</a>
-                <div class="flex items-center gap-4">
-                    <a class="nav-link" href="./index.html">Home</a>
-                    <a class="nav-link" href="./games.html">Games</a>
-                    <a class="nav-link" href="./forms.html">Forms</a>
-                    <a class="nav-link" href="./pages.html">Pages</a>
-                    <a class="nav-link" href="./about.html">About</a>
-                    <a class="nav-link" href="./mod.html">Admin</a>
-                </div>
-            </div>
-            <div class="flex items-center gap-4" id="user-section">
-                <div class="sign-in-prompt">Loading…</div>
-            </div>
-        </div>
-    </nav>
-</div>
-
-<section class="hero-banner">
-    <img alt="Hero" class="hero-image" src="./creativespawn.png">
+<section class="hero-section">
+    <img src="./creativespawn.png" alt="Hero" loading="lazy">
     <div class="hero-overlay"></div>
     <div class="hero-content">
-        <h1>User Profile</h1>
-        <p>Manage your account settings and preferences</p>
+        <h1 class="display-4 fw-bold mb-3">User Profile</h1>
+        <p class="lead">Manage your account settings and preferences</p>
     </div>
 </section>
 
-<main class="container mx-auto px-4 py-8">
-    <!-- Authentication and settings sections are rendered by the script below -->
-    <div class="hidden" id="auth-section"></div>
-    <div class="hidden" id="settings-section"></div>
+<main class="container py-5">
+    <!-- Auth Section -->
+    <div x-show="!user" class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Sign In</h4>
+                    <form @submit.prevent="login">
+                        <div class="mb-3"><input type="email" class="form-control" placeholder="Email" x-model="loginForm.email" required></div>
+                        <div class="mb-3"><input type="password" class="form-control" placeholder="Password" x-model="loginForm.password" required></div>
+                        <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
+                    </form>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-secondary" @click="loginGoogle">Sign in with Google</button>
+                        <button class="btn btn-outline-secondary" @click="loginGithub">Sign in with GitHub</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Section -->
+    <div x-show="user" class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Profile Settings</h4>
+                    <button class="btn btn-outline-danger btn-sm" @click="logout">Sign Out</button>
+                </div>
+                <div class="card-body">
+                    <form @submit.prevent="saveProfile">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="form-label">Display Name</label><input class="form-control" x-model="settings.displayName"></div>
+                            <div class="col-md-6"><label class="form-label">Handle</label><input class="form-control" x-model="settings.handle"></div>
+                            <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" x-model="settings.email"></div>
+                            <div class="col-md-6"><label class="form-label">Photo URL</label><input class="form-control" x-model="settings.photoURL"></div>
+                            <div class="col-md-6"><label class="form-label">Discord</label><input class="form-control" x-model="settings.discordURL"></div>
+                            <div class="col-md-6"><label class="form-label">GitHub</label><input class="form-control" x-model="settings.githubURL"></div>
+                            <div class="col-md-6">
+                                <label class="form-label">Theme</label>
+                                <select class="form-select" x-model="settings.themePreference" @change="applyTheme">
+                                    <option value="dark">Dark</option>
+                                    <option value="light">Light</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Font Size</label>
+                                <select class="form-select" x-model="settings.fontScaling">
+                                    <option value="small">Small</option>
+                                    <option value="normal">Normal</option>
+                                    <option value="large">Large</option>
+                                </select>
+                            </div>
+                        </div>
+                        <hr class="my-4">
+                        <h5>Notifications</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.emailNotifications"><label class="form-check-label">Email</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.pushNotifications"><label class="form-check-label">Push</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.discordNotifications"><label class="form-check-label">Discord</label></div></div>
+                        </div>
+                        <h5>Privacy</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.profileVisible"><label class="form-check-label">Profile Visible</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.activityTracking"><label class="form-check-label">Activity Tracking</label></div></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save All Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </main>
 
 <div id="footer-placeholder"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
-    import {
-        GithubAuthProvider,
-        GoogleAuthProvider,
-        signInWithEmailAndPassword,
-        signInWithPopup
-    } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-    import {doc, getDoc, setDoc} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
-    import {auth, db, COLLECTIONS} from "./firebase-init.js";
-    import {themeManager} from "./theme-manager.js";
-    import {showMessageBox} from "./utils.js";
-    import {initializePage, loadFooter} from "./core.js";
+    import AuthService from './services/AuthService.js';
+    import { initPage } from './services/UIService.js';
 
-    // Minimal inline DOM for auth and settings to avoid large HTML inlined here.
-    const authSection = document.getElementById('auth-section');
-    const settingsSection = document.getElementById('settings-section');
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('userStore', () => ({
+            user: null,
+            loginForm: { email: '', password: '' },
+            settings: { displayName: '', handle: '', email: '', photoURL: '', discordURL: '', githubURL: '', themePreference: 'dark', fontScaling: 'normal', emailNotifications: true, pushNotifications: true, discordNotifications: false, profileVisible: true, activityTracking: true },
 
-    authSection.innerHTML = `
-      <div class="max-w-md mx-auto bg-secondary rounded-lg shadow-lg p-6">
-        <form id="login-form" class="space-y-4">
-          <h2 class="text-2xl font-bold mb-4">Sign In</h2>
-          <div class="auth-input-field">
-            <label for="login-email">Email</label>
-            <input autocomplete="email" class="form-input" id="login-email" name="email" required type="email"/>
-          </div>
-          <div class="auth-input-field">
-            <label for="login-password">Password</label>
-            <input autocomplete="current-password" class="form-input" id="login-password" name="password" required type="password"/>
-          </div>
-          <button class="btn-primary w-full" id="login-btn" type="submit">Sign In</button>
-          <div class="flex items-center justify-center space-x-4 mt-4">
-            <button class="btn-secondary" id="google-signin" type="button">Sign in with Google</button>
-            <button class="btn-secondary" id="github-signin" type="button">Sign in with GitHub</button>
-          </div>
-        </form>
-      </div>
-    `;
+            async init() {
+                await initPage(AuthService);
+                AuthService.onAuthChange(({ user, profile }) => {
+                    this.user = user;
+                    if (profile) Object.assign(this.settings, { displayName: profile.displayName || '', handle: profile.handle || '', email: profile.email || '', photoURL: profile.photoURL || '', discordURL: profile.discordURL || '', githubURL: profile.githubURL || '', themePreference: profile.themePreference || 'dark', fontScaling: profile.fontScaling || 'normal', emailNotifications: profile.emailNotifications ?? true, pushNotifications: profile.pushNotifications ?? true, discordNotifications: profile.discordNotifications ?? false, profileVisible: profile.profileVisible ?? true, activityTracking: profile.activityTracking ?? true });
+                });
+            },
 
-    settingsSection.innerHTML = `
-      <div id="settings-shell" class="max-w-4xl mx-auto">
-        <form id="profile-settings-form" class="settings-card p-6 bg-card rounded-lg shadow-lg mb-6">
-          <h3 class="text-2xl font-semibold mb-6">Profile Settings</h3>
+            async login() {
+                try {
+                    await AuthService.login(this.loginForm.email, this.loginForm.password);
+                    Swal.fire('Success', 'Logged in', 'success');
+                } catch (e) { Swal.fire('Error', e.message, 'error'); }
+            },
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label>Display Name</label>
-              <input id="display-name-input" class="form-input w-full" />
-            </div>
-            <div>
-              <label>Handle</label>
-              <input id="handle-input" class="form-input w-full" />
-            </div>
-            <div>
-              <label>Email</label>
-              <input id="email-input" class="form-input w-full" />
-            </div>
-            <div>
-              <label>Photo URL</label>
-              <input id="photo-url-input" class="form-input w-full" />
-            </div>
-            <div>
-              <label>Discord URL</label>
-              <input id="discord-url-input" class="form-input w-full" />
-            </div>
-            <div>
-              <label>GitHub URL</label>
-              <input id="github-url-input" class="form-input w-full" />
-            </div>
-            <div>
-              <label>Font Scaling</label>
-              <select id="font-scaling-input" class="form-input w-full">
-                <option value="small">Small</option>
-                <option value="normal">Normal</option>
-                <option value="large">Large</option>
-              </select>
-            </div>
-            <div>
-              <label>Notification Frequency</label>
-              <select id="notification-frequency-input" class="form-input w-full">
-                <option value="immediate">Immediate</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="never">Never</option>
-              </select>
-            </div>
-            <div>
-              <label>Data Retention (days)</label>
-              <input id="data-retention-input" type="number" class="form-input w-full" value="365" />
-            </div>
-            <div>
-              <label>Keyboard Shortcuts</label>
-              <select id="keyboard-shortcuts-input" class="form-input w-full">
-                <option value="enabled">Enabled</option>
-                <option value="disabled">Disabled</option>
-              </select>
-            </div>
-          </div>
+            async loginGoogle() { try { await AuthService.loginWithGoogle(); } catch (e) { Swal.fire('Error', e.message, 'error'); } },
+            async loginGithub() { try { await AuthService.loginWithGithub(); } catch (e) { Swal.fire('Error', e.message, 'error'); } },
+            async logout() { await AuthService.logout(); Swal.fire('Signed out', '', 'info'); },
 
-          <div class="mt-6 space-y-3">
-            <div class="flex items-center">
-              <input id="email-notifications-input" type="checkbox" class="form-checkbox" />
-              <label for="email-notifications-input" class="ml-2">Email Notifications</label>
-            </div>
-            <div class="flex items-center">
-              <input id="discord-notifications-input" type="checkbox" class="form-checkbox" />
-              <label for="discord-notifications-input" class="ml-2">Discord Notifications</label>
-            </div>
-            <div class="flex items-center">
-              <input id="push-notifications-input" type="checkbox" class="form-checkbox" />
-              <label for="push-notifications-input" class="ml-2">Push Notifications</label>
-            </div>
-            <div class="flex items-center">
-              <input id="profile-visible-input" type="checkbox" class="form-checkbox" />
-              <label for="profile-visible-input" class="ml-2">Profile Visible</label>
-            </div>
-            <div class="flex items-center">
-              <input id="activity-tracking-input" type="checkbox" class="form-checkbox" />
-              <label for="activity-tracking-input" class="ml-2">Activity Tracking</label>
-            </div>
-            <div class="flex items-center">
-              <input id="third-party-sharing-input" type="checkbox" class="form-checkbox" />
-              <label for="third-party-sharing-input" class="ml-2">Third Party Sharing</label>
-            </div>
-            <div class="flex items-center">
-              <input id="high-contrast-input" type="checkbox" class="form-checkbox" />
-              <label for="high-contrast-input" class="ml-2">High Contrast</label>
-            </div>
-            <div class="flex items-center">
-              <input id="reduced-motion-input" type="checkbox" class="form-checkbox" />
-              <label for="reduced-motion-input" class="ml-2">Reduced Motion</label>
-            </div>
-            <div class="flex items-center">
-              <input id="screen-reader-input" type="checkbox" class="form-checkbox" />
-              <label for="screen-reader-input" class="ml-2">Screen Reader Mode</label>
-            </div>
-            <div class="flex items-center">
-              <input id="focus-indicators-input" type="checkbox" class="form-checkbox" />
-              <label for="focus-indicators-input" class="ml-2">Focus Indicators</label>
-            </div>
-            <div class="flex items-center">
-              <input id="debug-mode-input" type="checkbox" class="form-checkbox" />
-              <label for="debug-mode-input" class="ml-2">Debug Mode</label>
-            </div>
-          </div>
+            applyTheme() { document.documentElement.setAttribute('data-bs-theme', this.settings.themePreference); },
 
-          <div class="mt-6 p-4 bg-surface rounded">
-            <label>Custom CSS</label>
-            <textarea id="custom-css-input" class="form-input w-full h-32 font-mono"></textarea>
-          </div>
-
-          <div class="mt-6"><button class="btn-primary" id="save-profile-btn">Save All Changes</button></div>
-        </form>
-      </div>
-    `;
-
-    function showSection(isSignedIn) {
-        if (isSignedIn) {
-            authSection.classList.add('hidden');
-            settingsSection.classList.remove('hidden');
-        } else {
-            settingsSection.classList.add('hidden');
-            authSection.classList.remove('hidden');
-        }
-    }
-
-    function setupEventListeners() {
-        const loginForm = document.getElementById('login-form');
-        const googleSignInBtn = document.getElementById('google-signin');
-        const githubSignInBtn = document.getElementById('github-signin');
-        const saveProfileBtn = document.getElementById('save-profile-btn');
-
-        loginForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                showMessageBox('Logged in successfully!');
-            } catch (error) {
-                console.error('Login error:', error);
-                showMessageBox(error.message, true);
+            async saveProfile() {
+                try {
+                    await AuthService.updateProfile(this.user.uid, this.settings);
+                    Swal.fire('Saved', 'Settings updated', 'success');
+                } catch (e) { Swal.fire('Error', e.message, 'error'); }
             }
-        });
-
-        googleSignInBtn?.addEventListener('click', async () => {
-            try {
-                const provider = new GoogleAuthProvider();
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error('Google sign-in error:', error);
-                showMessageBox(error.message, true);
-            }
-        });
-
-        githubSignInBtn?.addEventListener('click', async () => {
-            try {
-                const provider = new GithubAuthProvider();
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error('GitHub sign-in error:', error);
-                showMessageBox(error.message, true);
-            }
-        });
-
-        saveProfileBtn?.addEventListener('click', async (e) => {
-            e.preventDefault();
-            const user = auth.currentUser;
-            if (!user) {
-                showMessageBox('Please sign in first', true);
-                return;
-            }
-            const updates = {
-                displayName: document.getElementById('display-name-input').value,
-                handle: document.getElementById('handle-input').value,
-                email: document.getElementById('email-input').value,
-                photoURL: document.getElementById('photo-url-input').value,
-                discordURL: document.getElementById('discord-url-input').value,
-                githubURL: document.getElementById('github-url-input').value,
-                fontScaling: document.getElementById('font-scaling-input').value,
-                notificationFrequency: document.getElementById('notification-frequency-input').value,
-                dataRetention: document.getElementById('data-retention-input').value,
-                keyboardShortcuts: document.getElementById('keyboard-shortcuts-input').value,
-                emailNotifications: document.getElementById('email-notifications-input').checked,
-                discordNotifications: document.getElementById('discord-notifications-input').checked,
-                pushNotifications: document.getElementById('push-notifications-input').checked,
-                profileVisible: document.getElementById('profile-visible-input').checked,
-                activityTracking: document.getElementById('activity-tracking-input').checked,
-                thirdPartySharing: document.getElementById('third-party-sharing-input').checked,
-                highContrast: document.getElementById('high-contrast-input').checked,
-                reducedMotion: document.getElementById('reduced-motion-input').checked,
-                screenReader: document.getElementById('screen-reader-input').checked,
-                focusIndicators: document.getElementById('focus-indicators-input').checked,
-                debugMode: document.getElementById('debug-mode-input').checked,
-                customCSS: document.getElementById('custom-css-input').value,
-                lastUpdated: new Date().toISOString()
-            };
-            try {
-                const userRef = doc(db, COLLECTIONS.USER_PROFILES, user.uid);
-                await setDoc(userRef, updates, {merge: true});
-                showMessageBox('All settings updated successfully');
-            } catch (error) {
-                console.error('Error saving profile', error);
-                showMessageBox('Failed to save settings', true);
-            }
-        });
-    }
-
-    const init = async () => {
-        try {
-            await Promise.all([initializePage('users'), themeManager.init()]);
-            await loadFooter();
-            setupEventListeners();
-
-            auth.onAuthStateChanged(async (user) => {
-                showSection(!!user);
-                if (user) {
-                    try {
-                        const userRef = doc(db, COLLECTIONS.USER_PROFILES, user.uid);
-                        const userDoc = await getDoc(userRef);
-                        const data = userDoc.exists() ? userDoc.data() : {};
-
-                        // Text inputs
-                        document.getElementById('display-name-input').value = data.displayName || user.displayName || '';
-                        document.getElementById('handle-input').value = data.handle || '';
-                        document.getElementById('email-input').value = data.email || user.email || '';
-                        document.getElementById('photo-url-input').value = data.photoURL || user.photoURL || '';
-                        document.getElementById('discord-url-input').value = data.discordURL || '';
-                        document.getElementById('github-url-input').value = data.githubURL || '';
-
-                        // Selects
-                        document.getElementById('font-scaling-input').value = data.fontScaling || 'normal';
-                        document.getElementById('notification-frequency-input').value = data.notificationFrequency || 'immediate';
-                        document.getElementById('data-retention-input').value = data.dataRetention || '365';
-                        document.getElementById('keyboard-shortcuts-input').value = data.keyboardShortcuts || 'enabled';
-
-                        // Checkboxes
-                        document.getElementById('email-notifications-input').checked = data.emailNotifications ?? true;
-                        document.getElementById('discord-notifications-input').checked = data.discordNotifications ?? false;
-                        document.getElementById('push-notifications-input').checked = data.pushNotifications ?? true;
-                        document.getElementById('profile-visible-input').checked = data.profileVisible ?? true;
-                        document.getElementById('activity-tracking-input').checked = data.activityTracking ?? true;
-                        document.getElementById('third-party-sharing-input').checked = data.thirdPartySharing ?? false;
-                        document.getElementById('high-contrast-input').checked = data.highContrast ?? false;
-                        document.getElementById('reduced-motion-input').checked = data.reducedMotion ?? false;
-                        document.getElementById('screen-reader-input').checked = data.screenReader ?? false;
-                        document.getElementById('focus-indicators-input').checked = data.focusIndicators ?? false;
-                        document.getElementById('debug-mode-input').checked = data.debugMode ?? false;
-
-                        // Textarea
-                        document.getElementById('custom-css-input').value = data.customCSS || '';
-                    } catch (err) {
-                        console.error('Error loading profile', err);
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Page initialization error:', error);
-            showMessageBox('Failed to initialize page', true);
-        }
-    };
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init().catch(err => console.error(err));
-    }
+        }));
+    });
 </script>
 </body>
 </html>

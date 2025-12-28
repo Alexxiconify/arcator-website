@@ -1,69 +1,57 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
 <head>
-    <meta charset="utf-8">
-    <meta content="width=device-width,initial-scale=1" name="viewport">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Page - Arcator</title>
-    <link href="./master.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="./styles.css" rel="stylesheet">
+    <link href="./favicon.png" rel="icon" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-<body class="antialiased">
+<body>
 <div id="navbar-placeholder"></div>
 
-<section class="hero-banner">
-    <img alt="Hero" class="hero-image" src="./creativespawn.png">
+<section class="hero-section">
+    <img src="./creativespawn.png" alt="Hero" loading="lazy">
     <div class="hero-overlay"></div>
     <div class="hero-content">
-        <h1 class="text-4xl font-bold" id="page-title">Page</h1>
+        <h1 class="display-4 fw-bold mb-3" id="page-title">Page</h1>
     </div>
 </section>
 
-<main class="container mx-auto px-4 py-8">
-    <div class="prose" id="page-content"></div>
+<main class="container py-5">
+    <div class="card">
+        <div class="card-body prose" id="page-content">Loading...</div>
+    </div>
 </main>
 
 <div id="footer-placeholder"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
-    import {db, COLLECTIONS} from './firebase-init.js';
-    import {getDoc, doc} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
-    import {initializePage, loadFooter} from './core.js';
-    import {themeManager} from './theme-manager.js';
-    import {showMessageBox} from './utils.js';
+    import AuthService from './services/AuthService.js';
+    import DataService from './services/DataService.js';
+    import { initPage } from './services/UIService.js';
 
-    function getQueryParam(name) {
-        const url = new URL(window.location.href);
-        return url.searchParams.get(name);
-    }
-
-    async function loadPageById(id) {
-        try {
-            const ref = doc(db, COLLECTIONS.PAGES, id);
-            const snap = await getDoc(ref);
-            if (!snap.exists()) {
-                document.getElementById('page-content').innerHTML = '<p>Page not found.</p>';
-                return;
-            }
-            const data = snap.data();
-            document.getElementById('page-title').textContent = data.title || 'Untitled';
-            document.getElementById('page-content').innerHTML = data.content || '<p>No content</p>';
-        } catch (err) {
-            console.error('Error loading page', err);
-            showMessageBox('Failed to load page', true);
-        }
-    }
-
+    const id = new URL(location.href).searchParams.get('id');
+    
     async function init() {
-        try {
-            await initializePage('page');
-            await themeManager.init();
-            await loadFooter();
-            const id = getQueryParam('id');
-            if (id) await loadPageById(id);
-        } catch (err) {
-            console.error('Error initializing page view', err);
+        await initPage(AuthService);
+        if (!id) {
+            document.getElementById('page-content').innerHTML = '<p class="text-danger">No page ID provided</p>';
+            return;
         }
+        const page = await DataService.getPage(id);
+        if (!page) {
+            document.getElementById('page-content').innerHTML = '<p class="text-danger">Page not found</p>';
+            return;
+        }
+        document.getElementById('page-title').textContent = page.title || 'Untitled';
+        const content = page.content || '';
+        document.getElementById('page-content').innerHTML = DOMPurify.sanitize(marked.parse(content));
     }
-
     init();
 </script>
 </body>

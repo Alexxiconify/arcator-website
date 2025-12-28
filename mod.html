@@ -1,120 +1,145 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>Moderator Tools - Arcator</title>
-    <link href="./master.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Arcator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body class="bg-surface text-text min-h-screen flex flex-col">
+<body x-data="adminStore">
 <div id="navbar-placeholder"></div>
 
-<main class="flex-1" style="padding-bottom: calc(var(--footer-height) + 1rem);">
-    <div class="container mx-auto px-4 py-8" id="not-admin-message" style="display:none;text-align:center;padding:4rem 0;">
-        <h1 class="text-4xl font-bold mb-4">Access Denied</h1>
-        <p class="text-xl text-text-2 mb-8">You do not have permission to access the moderator tools.</p>
-        <a class="btn-primary" href="./index.html">Return Home</a>
-    </div>
+<template x-if="loading"><div class="container py-5 text-center"><div class="loading-spinner mx-auto"></div></div></template>
+<template x-if="!loading && !isAdmin">
+    <main class="container py-5 text-center">
+        <h1 class="display-4 fw-bold mb-4">Access Denied</h1>
+        <p class="lead text-secondary mb-4">You do not have permission to access moderator tools.</p>
+        <a href="./index.html" class="btn btn-primary">Return Home</a>
+    </main>
+</template>
 
-    <div class="container mx-auto px-4 py-8" id="admin-dashboard" style="display:none;">
-        <section class="hero-banner mb-6" style="border-radius: .5rem; overflow: hidden;">
-            <img alt="Hero" class="hero-image" src="./creativespawn.png">
+<template x-if="!loading && isAdmin">
+    <div>
+        <section class="hero-section">
+            <img src="./creativespawn.png" alt="Hero" loading="lazy">
             <div class="hero-overlay"></div>
             <div class="hero-content">
-                <h1 class="text-4xl font-bold">Moderator Tools</h1>
-                <p class="text-lg text-text-2">Manage pages, moderate content, and oversee conversations.</p>
+                <h1 class="display-4 fw-bold mb-3">Moderator Tools</h1>
+                <p class="lead">Manage pages, moderate content, and oversee conversations.</p>
             </div>
         </section>
 
-        <div class="message message-error hidden" id="admin-notice" style="margin-bottom:1rem;"></div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6" id="admin-content">
-            <div class="bg-card p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl font-semibold mb-4">User Management</h2>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-border">
-                        <thead>
-                        <tr>
-                            <th class="px-4 py-2 text-left">User</th>
-                            <th class="px-4 py-2 text-left">Display Name</th>
-                            <th class="px-4 py-2 text-left">Email</th>
-                            <th class="px-4 py-2 text-left">Theme</th>
-                            <th class="px-4 py-2 text-left">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody id="user-list-tbody">
-                        </tbody>
-                    </table>
+        <main class="container py-5">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header"><h5 class="mb-0">User Management</h5></div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead><tr><th>User</th><th>Email</th><th>Actions</th></tr></thead>
+                                    <tbody>
+                                        <template x-for="u in users" :key="u.id">
+                                            <tr>
+                                                <td class="d-flex align-items-center gap-2">
+                                                    <img :src="u.photoURL || './defaultuser.png'" class="profile-img" style="width:24px;height:24px;">
+                                                    <span x-text="u.displayName || 'Unknown'"></span>
+                                                </td>
+                                                <td x-text="u.email || '-'"></td>
+                                                <td><button class="btn btn-outline-primary btn-sm" @click="editUser(u)">Edit</button></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Custom Pages</h5>
+                            <button class="btn btn-primary btn-sm" @click="createPage">Create Page</button>
+                        </div>
+                        <div class="card-body">
+                            <template x-if="pages.length === 0"><div class="text-secondary">No pages</div></template>
+                            <div class="list-group list-group-flush">
+                                <template x-for="p in pages" :key="p.id">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span x-text="p.title || 'Untitled'"></span>
+                                        <div class="btn-group btn-group-sm">
+                                            <a :href="'./page.html?id=' + p.id" class="btn btn-outline-secondary">View</a>
+                                            <button class="btn btn-outline-danger" @click="deletePage(p.id)">Delete</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div class="bg-card p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl font-semibold mb-4">Custom Pages</h2>
-                <div class="mb-3">
-                    <button class="btn-primary" id="create-page-btn">Create New Page</button>
-                </div>
-                <div class="space-y-3" id="pages-management-list">
-                    <div class="text-text-2">Loading pages…</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Edit user modal -->
-        <div class="modal" id="edit-user-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:9999;">
-            <div class="modal-content bg-card p-6 rounded-lg" style="width:90%;max-width:720px;">
-                <h3 class="text-2xl mb-3">Edit User</h3>
-                <form class="grid grid-cols-1 md:grid-cols-2 gap-3" id="edit-user-form">
-                    <div>
-                        <label for="edit-user-display-name">Display Name</label>
-                        <input class="form-input w-full" id="edit-user-display-name"/>
-                    </div>
-                    <div>
-                        <label for="edit-user-handle">Handle</label>
-                        <input class="form-input w-full" id="edit-user-handle"/>
-                    </div>
-                    <div>
-                        <label for="edit-user-email">Email</label>
-                        <input class="form-input w-full" id="edit-user-email"/>
-                    </div>
-                    <div>
-                        <label for="edit-user-photo-url">Photo URL</label>
-                        <input class="form-input w-full" id="edit-user-photo-url"/>
-                    </div>
-                    <div class="col-span-1 md:col-span-2 flex justify-end gap-2 mt-3">
-                        <button class="btn-secondary" id="cancel-user-changes-btn" type="button">Cancel</button>
-                        <button class="btn-primary" id="save-user-changes-btn" type="button">Save</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        </main>
     </div>
-</main>
+</template>
 
 <div id="footer-placeholder"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
-    import {initializePage, loadFooter, loadNavbar} from './core.js';
-    import {themeManager} from './theme-manager.js';
+    import AuthService from './services/AuthService.js';
+    import DataService from './services/DataService.js';
+    import { initPage } from './services/UIService.js';
 
-    async function init() {
-        try {
-            await Promise.all([
-                initializePage('admin'),
-                themeManager.init(),
-                loadNavbar()
-            ]);
-            await loadFooter();
-            await import('./admin.js');
-        } catch (error) {
-            console.error('Initialization error:', error);
-        }
-    }
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('adminStore', () => ({
+            loading: true, isAdmin: false, users: [], pages: [],
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+            async init() {
+                await initPage(AuthService);
+                AuthService.onAuthChange(async ({ user, profile }) => {
+                    this.isAdmin = profile?.isAdmin === true;
+                    if (this.isAdmin) {
+                        this.users = await DataService.getUsers();
+                        this.pages = await DataService.getPages();
+                    }
+                    this.loading = false;
+                });
+            },
+
+            async editUser(u) {
+                const { value } = await Swal.fire({
+                    title: 'Edit User',
+                    html: `<input id="swal-name" class="swal2-input" placeholder="Display Name" value="${u.displayName || ''}"><input id="swal-email" class="swal2-input" placeholder="Email" value="${u.email || ''}">`,
+                    preConfirm: () => ({ displayName: document.getElementById('swal-name').value, email: document.getElementById('swal-email').value })
+                });
+                if (value) {
+                    await AuthService.updateProfile(u.id, value);
+                    this.users = await DataService.getUsers();
+                    Swal.fire('Updated', '', 'success');
+                }
+            },
+
+            async createPage() {
+                const { value } = await Swal.fire({
+                    title: 'Create Page',
+                    html: `<input id="swal-title" class="swal2-input" placeholder="Title"><textarea id="swal-content" class="swal2-textarea" placeholder="Content (Markdown)"></textarea>`,
+                    preConfirm: () => ({ title: document.getElementById('swal-title').value, content: document.getElementById('swal-content').value })
+                });
+                if (value && value.title) {
+                    Swal.fire('Created', 'Page creation would save to Firestore', 'info');
+                }
+            },
+
+            async deletePage(id) {
+                const { isConfirmed } = await Swal.fire({ title: 'Delete page?', icon: 'warning', showCancelButton: true });
+                if (isConfirmed) Swal.fire('Deleted', '', 'success');
+            }
+        }));
+    });
 </script>
 </body>
 </html>

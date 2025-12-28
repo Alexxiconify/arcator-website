@@ -1,0 +1,24 @@
+[data-bs-theme="dark"] {
+    --bs-body-bg: #000; --bs-body-color: #fff; --bs-secondary-bg: #0A0A0A; --bs-tertiary-bg: #111;
+    --bs-primary: #2563eb; --bs-primary-rgb: 37, 99, 235; --bs-link-color: #2563eb; --bs-link-hover-color: #1a4b91;
+    --bs-border-color: #1e3a8a; --bs-card-bg: #111; --bs-secondary-color: #A0AEC0; --bs-tertiary-color: #718096;
+    --bs-success: #059669; --bs-danger: #DC2626; --bs-warning: #D97706; --bs-form-control-bg: #1A1A1A;
+    --bs-navbar-color: #A0AEC0; --bs-navbar-hover-color: #fff; --bs-navbar-brand-color: #2563eb;
+}
+[data-bs-theme="light"] { --bs-primary: #2563eb; --bs-primary-rgb: 37, 99, 235; --bs-border-color: #1e3a8a; }
+
+.hero-section { position: relative; height: 320px; overflow: hidden; }
+.hero-section img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.45)); }
+.hero-content { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; color: #fff; }
+.hero-content h1 { text-shadow: 2px 2px 4px rgba(0,0,0,.3); }
+
+.profile-img { width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; border: 2px solid var(--bs-primary); }
+.feature-card { transition: transform .2s, box-shadow .2s; }
+.feature-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(37,99,235,.15); }
+.loading-spinner { width: 2rem; height: 2rem; border: 3px solid var(--bs-secondary-bg); border-top-color: var(--bs-primary); border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.forum-thread { border: 1px solid var(--bs-border-color); transition: background-color .2s; }
+.forum-thread:hover { background-color: var(--bs-tertiary-bg); }
+.comment { border-left: 2px solid var(--bs-primary); }

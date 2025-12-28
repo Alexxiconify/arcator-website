@@ -1,127 +1,83 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta content="width=device-width,initial-scale=1.0" name="viewport">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Games - Arcator</title>
-    <link href="./master.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
 </head>
-<body class="bg-surface text-text min-h-screen flex flex-col">
-
+<body>
 <div id="navbar-placeholder"></div>
 
-<section class="hero-banner">
-    <img alt="Hero" class="hero-image" src="./creativespawn.png">
+<section class="hero-section">
+    <img src="./creativespawn.png" alt="Hero" loading="lazy">
     <div class="hero-overlay"></div>
     <div class="hero-content">
-        <h1>Games We Play</h1>
-        <p>Join us in these amazing gaming adventures</p>
+        <h1 class="display-4 fw-bold mb-3">Games We Play</h1>
+        <p class="lead">Join us in these amazing gaming adventures</p>
     </div>
 </section>
 
-<main class="container mx-auto px-4 py-8 flex-1">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-        <div class="col-span-full">
-            <div class="bg-surface-2 rounded-lg shadow-lg p-6 border border-accent-dark">
-                <div class="flex flex-col md:flex-row gap-6">
-                    <div class="w-full md:w-1/3">
-                        <img alt="Steam Games" class="w-full rounded-lg shadow-md object-cover aspect-video"
-                             src="https://cdn.cloudflare.steamstatic.com/store/home/store_home_share.jpg">
+<main class="container py-5">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="row g-0">
+                    <div class="col-md-4">
+                        <img src="https://cdn.cloudflare.steamstatic.com/store/home/store_home_share.jpg" class="img-fluid rounded-start h-100 object-fit-cover" alt="Steam">
                     </div>
-                    <div class="flex-1">
-                        <h2 class="text-2xl font-bold mb-2">Steam Games</h2>
-                        <p class="text-text-2 mb-4">Discover thousands of games on Steam, from indie gems to AAA titles.
-                            Join our community and play together!</p>
-                        <a class="inline-block bg-accent hover:bg-accent-light text-white font-semibold py-2 px-4 rounded transition-colors" href="https://store.steampowered.com" rel="noopener noreferrer"
-                           target="_blank">
-                            Browse Steam
-                        </a>
+                    <div class="col-md-8">
+                        <div class="card-body">
+                            <h2 class="card-title">Steam Games</h2>
+                            <p class="card-text text-secondary">Discover thousands of games on Steam, from indie gems to AAA titles. Join our community!</p>
+                            <a href="https://store.steampowered.com" class="btn btn-primary" target="_blank" rel="noopener">Browse Steam</a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="bg-surface-2 rounded-lg shadow-lg p-6 border border-accent-dark">
-            <img alt="Minecraft" class="w-full rounded-lg shadow-md mb-4 object-cover aspect-video"
-                 src="https://cdn.cloudflare.steamstatic.com/steam/apps/1672970/header.jpg">
-            <h3 class="text-xl font-bold mb-2">Minecraft</h3>
-            <p class="text-text-2 mb-4">Create, explore, and survive in an infinite blocky world. Join our Minecraft
-                server and build something amazing!</p>
-            <a class="inline-block bg-accent hover:bg-accent-light text-white font-semibold py-2 px-4 rounded transition-colors"
-               href="https://www.minecraft.net" rel="noopener noreferrer"
-               target="_blank">
-                Play Minecraft
-            </a>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/1672970/header.jpg" class="card-img-top" alt="Minecraft">
+                <div class="card-body">
+                    <h5 class="card-title">Minecraft</h5>
+                    <p class="card-text text-secondary">Create, explore, and survive in an infinite blocky world.</p>
+                    <a href="https://www.minecraft.net" class="btn btn-primary" target="_blank" rel="noopener">Play</a>
+                </div>
+            </div>
         </div>
-
-        <div class="bg-surface-2 rounded-lg shadow-lg p-6 border border-accent-dark">
-            <img alt="Terraria" class="w-full rounded-lg shadow-md mb-4 object-cover aspect-video"
-                 src="https://cdn.cloudflare.steamstatic.com/steam/apps/105600/header.jpg">
-            <h3 class="text-xl font-bold mb-2">Terraria</h3>
-            <p class="text-text-2 mb-4">Dig, fight, explore, and build in this exciting 2D adventure! Join our Terraria
-                multiplayer sessions.</p>
-            <a class="inline-block bg-accent hover:bg-accent-light text-white font-semibold py-2 px-4 rounded transition-colors"
-               href="https://store.steampowered.com/app/105600/Terraria/" rel="noopener noreferrer"
-               target="_blank">
-                Play Terraria
-            </a>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/105600/header.jpg" class="card-img-top" alt="Terraria">
+                <div class="card-body">
+                    <h5 class="card-title">Terraria</h5>
+                    <p class="card-text text-secondary">Dig, fight, explore, and build in this 2D adventure!</p>
+                    <a href="https://store.steampowered.com/app/105600/Terraria/" class="btn btn-primary" target="_blank" rel="noopener">Play</a>
+                </div>
+            </div>
         </div>
-
-        <div class="bg-surface-2 rounded-lg shadow-lg p-6 border border-accent-dark">
-            <img alt="Among Us" class="w-full rounded-lg shadow-md mb-4 object-cover aspect-video"
-                 src="https://cdn.cloudflare.steamstatic.com/steam/apps/945360/header.jpg">
-            <h3 class="text-xl font-bold mb-2">Among Us</h3>
-            <p class="text-text-2 mb-4">Work together as crewmates or deceive everyone as an impostor. Join our weekly
-                Among Us game nights!</p>
-            <a class="inline-block bg-accent hover:bg-accent-light text-white font-semibold py-2 px-4 rounded transition-colors"
-               href="https://store.steampowered.com/app/945360/Among_Us/" rel="noopener noreferrer"
-               target="_blank">
-                Play Among Us
-            </a>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/945360/header.jpg" class="card-img-top" alt="Among Us">
+                <div class="card-body">
+                    <h5 class="card-title">Among Us</h5>
+                    <p class="card-text text-secondary">Work together or deceive everyone as an impostor.</p>
+                    <a href="https://store.steampowered.com/app/945360/Among_Us/" class="btn btn-primary" target="_blank" rel="noopener">Play</a>
+                </div>
+            </div>
         </div>
     </div>
 </main>
 
-<div id="footer-placeholder">
-    <footer class="footer bg-surface">
-        <div class="container py-4">
-            <div class="flex justify-between items-center">
-                <div class="flex gap-4">
-                    <a class="footer-link" href="https://bluemaps.arcator.co.uk" rel="noopener" target="_blank">Blue
-                        Maps</a>
-                    <a class="footer-link" href="https://wiki.arcator.co.uk" rel="noopener" target="_blank">Wiki</a>
-                </div>
-                <div class="text-text-2">&copy; 2025 Arcator</div>
-            </div>
-        </div>
-    </footer>
-</div>
+<div id="footer-placeholder"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
-    import {initializePage, loadFooter} from './core.js';
-    import {themeManager} from './theme-manager.js';
-    import {showMessageBox} from './utils.js';
-
-    async function init() {
-        try {
-            await Promise.all([
-                initializePage('games'),
-                themeManager.init()
-            ]);
-            await loadFooter();
-        } catch (error) {
-            console.error('Page initialization error:', error);
-            showMessageBox('Failed to initialize page', true);
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+    import AuthService from './services/AuthService.js';
+    import { initPage } from './services/UIService.js';
+    initPage(AuthService);
 </script>
 </body>
 </html>
