@@ -10,5 +10,3 @@ dist
 /node_models/
 /firestore.rules
 firestore.rules
-firebase-init.js
-constants.js
