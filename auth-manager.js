@@ -8,251 +8,127 @@ import {
     signOut,
     updateProfile
 } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-import {
-    collection,
-    doc,
-    getDoc,
-    setDoc,
-    updateDoc
-} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
-
+import {collection, doc, getDoc, setDoc, updateDoc} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 import {auth, COLLECTIONS, db, DEFAULT_THEME_NAME} from './firebase-init.js';
 import {showMessageBox} from './utils.js';
 
-
-function generateColoredProfilePic(displayName) {
-    const colors = [
-        '#2563eb', // Blue
-        '#059669', // Green
-        '#dc2626', // Red
-        '#7c3aed', // Purple
-        '#d97706', // Orange
-        '#0891b2', // Cyan
-    ];
-
-
-    const color = colors[Math.abs(Array.from(displayName).reduce((acc, char) => acc + char.codePointAt(0), 0)) % colors.length];
-
-
+// Generate colored avatar with initials
+function generateProfilePic(displayName) {
+    const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'];
+    const hash = Array.from(displayName).reduce((acc, c) => acc + c.codePointAt(0), 0);
     const canvas = document.createElement('canvas');
-    canvas.width = 200;
-    canvas.height = 200;
+    canvas.width = canvas.height = 200;
     const ctx = canvas.getContext('2d');
-
-
-    ctx.fillStyle = color;
+    ctx.fillStyle = colors[Math.abs(hash) % colors.length];
     ctx.fillRect(0, 0, 200, 200);
-
-
-    const initials = displayName
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = '#FFF';
     ctx.font = 'bold 80px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(initials, 100, 100);
-
+    ctx.fillText(displayName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), 100, 100);
     return canvas.toDataURL('image/png');
 }
 
-function generateRandomNameAndHandle() {
-    const adjectives = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'];
-    const nouns = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl'];
-    const numbers = () => Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-
-    const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-    const randomNum = numbers();
-
-    return {
-        displayName: `${randomAdjective} ${randomNoun}`,
-        handle: `${randomAdjective.toLowerCase()}${randomNoun}${randomNum}`
-    };
+// Random name generator for OAuth
+function generateRandomIdentity() {
+    const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'];
+    const noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl'];
+    const a = adj[Math.floor(Math.random() * adj.length)];
+    const n = noun[Math.floor(Math.random() * noun.length)];
+    const num = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return {displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${num}`};
 }
 
 class AuthManager {
     currentUser = null;
     authStateListeners = new Set();
-    __initial_auth_token = null;
     isInitialized = false;
-
-
+    #authToken = null;
 
     async init() {
         if (this.isInitialized) return;
-
-        auth.onAuthStateChanged(async (user) => {
+        auth.onAuthStateChanged(async user => {
             this.currentUser = user;
-            if (user) {
-                this.__initial_auth_token = await user.getIdToken();
-                await this.loadUserProfile();
-            } else {
-                this.__initial_auth_token = null;
-            }
-            this.notifyListeners();
+            this.#authToken = user ? await user.getIdToken() : null;
+            if (user) await this.loadUserProfile();
+            this.authStateListeners.forEach(cb => cb(user));
         });
-
         this.isInitialized = true;
     }
 
     async loadUserProfile() {
         if (!this.currentUser) return null;
-
         try {
-            const userRef = doc(db, COLLECTIONS.USER_PROFILES, this.currentUser.uid);
-            const docSnap = await getDoc(userRef);
-            return docSnap.exists() ? docSnap.data() : null;
-        } catch (error) {
-            console.error('Error loading user profile:', error);
+            const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, this.currentUser.uid));
+            return snap.exists() ? snap.data() : null;
+        } catch (e) {
+            console.error('loadUserProfile:', e);
             return null;
         }
     }
 
     async createAccount(email, password, displayName, handle) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-
-        const profilePicUrl = generateColoredProfilePic(displayName);
-
-
-        await updateProfile(user, {
-            displayName,
-            photoURL: profilePicUrl
-        });
-
-
-        const userProfile = {
-            uid: user.uid,
-            displayName,
-            email,
-            photoURL: profilePicUrl,
-            handle,
-            createdAt: new Date(),
-            lastLoginAt: new Date(),
-            themePreference: DEFAULT_THEME_NAME,
-            isAdmin: false
+        const {user} = await createUserWithEmailAndPassword(auth, email, password);
+        const photoURL = generateProfilePic(displayName);
+        await updateProfile(user, {displayName, photoURL});
+        const profile = {
+            uid: user.uid, displayName, email, photoURL, handle,
+            createdAt: new Date(), lastLoginAt: new Date(),
+            themePreference: DEFAULT_THEME_NAME, isAdmin: false
         };
-
-        const userRef = doc(db, COLLECTIONS.USER_PROFILES, user.uid);
-        await setDoc(userRef, userProfile);
-        return userProfile;
+        await setDoc(doc(db, COLLECTIONS.USER_PROFILES, user.uid), profile);
+        return profile;
     }
 
-    async signInWithEmailAndPassword(email, password) {
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-        await this.updateLastLogin(userCredential.user.uid);
-        return userCredential.user;
-    }
-
-    async signInWithGoogle() {
-        const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-
+    async #oauthSignIn(Provider, providerName) {
+        const result = await signInWithPopup(auth, new Provider());
         if (result._tokenResponse?.isNewUser) {
-            const randomData = generateRandomNameAndHandle();
-            const displayName = result.user.displayName || randomData.displayName;
-            const handle = randomData.handle;
-            const profilePicUrl = result.user.photoURL || generateColoredProfilePic(displayName);
-
-            const userProfile = {
-                displayName,
-                email: result.user.email || "",
-                photoURL: profilePicUrl,
-                handle,
-                themePreference: DEFAULT_THEME_NAME,
-                createdAt: new Date(),
-                lastLoginAt: new Date(),
-                provider: "google"
-            };
-
-            const profilesRef = collection(db, COLLECTIONS.USER_PROFILES);
-            await setDoc(doc(profilesRef, result.user.uid), userProfile);
+            const {displayName: randName, handle} = generateRandomIdentity();
+            const displayName = result.user.displayName || randName;
+            const photoURL = result.user.photoURL || generateProfilePic(displayName);
+            await setDoc(doc(collection(db, COLLECTIONS.USER_PROFILES), result.user.uid), {
+                displayName, email: result.user.email || '', photoURL, handle,
+                themePreference: DEFAULT_THEME_NAME, createdAt: new Date(),
+                lastLoginAt: new Date(), provider: providerName
+            });
         } else {
-            await this.updateLastLogin(result.user.uid);
+            await this.#updateLastLogin(result.user.uid);
         }
-
         return result.user;
     }
 
-    async signInWithGithub() {
-        const provider = new GithubAuthProvider();
-        const result = await signInWithPopup(auth, provider);
+    signInWithGoogle() { return this.#oauthSignIn(GoogleAuthProvider, 'google'); }
+    signInWithGithub() { return this.#oauthSignIn(GithubAuthProvider, 'github'); }
 
-        if (result._tokenResponse?.isNewUser) {
-            const randomData = generateRandomNameAndHandle();
-            const displayName = result.user.displayName || randomData.displayName;
-            const handle = randomData.handle;
-            const profilePicUrl = result.user.photoURL || generateColoredProfilePic(displayName);
-
-            const userProfile = {
-                displayName,
-                email: result.user.email || "",
-                photoURL: profilePicUrl,
-                handle,
-                themePreference: DEFAULT_THEME_NAME,
-                createdAt: new Date(),
-                lastLoginAt: new Date(),
-                provider: "github"
-            };
-
-            const profilesRef = collection(db, COLLECTIONS.USER_PROFILES);
-            await setDoc(doc(profilesRef, result.user.uid), userProfile);
-        } else {
-            await this.updateLastLogin(result.user.uid);
-        }
-
-        return result.user;
+    async signInWithEmail(email, password) {
+        const {user} = await signInWithEmailAndPassword(auth, email, password);
+        await this.#updateLastLogin(user.uid);
+        return user;
     }
 
-    async resetPassword(email) {
-        await sendPasswordResetEmail(auth, email);
+    async resetPassword(email) { await sendPasswordResetEmail(auth, email); }
+
+    async #updateLastLogin(uid) {
+        await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, uid), {lastLoginAt: new Date()});
     }
 
-    async updateLastLogin(uid) {
-        const userRef = doc(db, COLLECTIONS.USER_PROFILES, uid);
-        await updateDoc(userRef, {
-            lastLoginAt: new Date()
-        });
+    onAuthStateChanged(cb) {
+        this.authStateListeners.add(cb);
+        if (this.currentUser !== undefined) cb(this.currentUser);
+        return () => this.authStateListeners.delete(cb);
     }
 
-    onAuthStateChanged(callback) {
-        this.authStateListeners.add(callback);
-        if (this.currentUser !== undefined) {
-            callback(this.currentUser);
-        }
-        return () => this.authStateListeners.delete(callback);
-    }
-
-    notifyListeners() {
-        this.authStateListeners.forEach(callback => callback(this.currentUser));
-    }
-
-    getCurrentUser() {
-        return this.currentUser;
-    }
-
-    getAuthToken() {
-        return this.__initial_auth_token;
-    }
-
-    isAuthenticated() {
-        return !!this.currentUser;
-    }
+    getCurrentUser() { return this.currentUser; }
+    getAuthToken() { return this.#authToken; }
+    isAuthenticated() { return !!this.currentUser; }
 
     async signOut() {
         try {
             await signOut(auth);
-            this.__initial_auth_token = null;
-
+            this.#authToken = null;
             return true;
-        } catch (error) {
-            console.error('Error signing out:', error);
+        } catch (e) {
+            console.error('signOut:', e);
             return false;
         }
     }
@@ -260,90 +136,42 @@ class AuthManager {
 
 export const authManager = new AuthManager();
 
-
+// Convenience wrappers with user feedback
 export async function signIn(email, password) {
-    try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        return userCredential.user;
-    } catch (error) {
-        console.error('Sign in error:', error);
-        showMessageBox(error.message, true);
-        throw error;
-    }
+    try { return (await signInWithEmailAndPassword(auth, email, password)).user; }
+    catch (e) { showMessageBox(e.message, true); throw e; }
 }
 
 export async function signUp(email, password) {
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        return userCredential.user;
-    } catch (error) {
-        console.error('Sign up error:', error);
-        showMessageBox(error.message, true);
-        throw error;
-    }
+    try { return (await createUserWithEmailAndPassword(auth, email, password)).user; }
+    catch (e) { showMessageBox(e.message, true); throw e; }
 }
 
 export async function googleSignIn() {
-    try {
-        const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        return result.user;
-    } catch (error) {
-        console.error('Google sign in error:', error);
-        showMessageBox(error.message, true);
-        throw error;
-    }
+    try { return (await signInWithPopup(auth, new GoogleAuthProvider())).user; }
+    catch (e) { showMessageBox(e.message, true); throw e; }
 }
 
 export async function githubSignIn() {
-    try {
-        const provider = new GithubAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        return result.user;
-    } catch (error) {
-        console.error('GitHub sign in error:', error);
-        showMessageBox(error.message, true);
-        throw error;
-    }
+    try { return (await signInWithPopup(auth, new GithubAuthProvider())).user; }
+    catch (e) { showMessageBox(e.message, true); throw e; }
 }
 
 export async function signOutUser() {
-    try {
-        await signOut(auth);
-
-        showMessageBox('Signed out successfully');
-    } catch (error) {
-        console.error('Sign out error:', error);
-        showMessageBox(error.message, true);
-        throw error;
-    }
+    try { await signOut(auth); showMessageBox('Signed out successfully'); }
+    catch (e) { showMessageBox(e.message, true); throw e; }
 }
 
 export async function resetPassword(email) {
-    try {
-        await sendPasswordResetEmail(auth, email);
-        showMessageBox('Password reset email sent');
-    } catch (error) {
-        console.error('Password reset error:', error);
-        showMessageBox(error.message, true);
-        throw error;
-    }
+    try { await sendPasswordResetEmail(auth, email); showMessageBox('Password reset email sent'); }
+    catch (e) { showMessageBox(e.message, true); throw e; }
 }
 
 export async function updateUserProfile(displayName, photoURL) {
+    const user = auth.currentUser;
+    if (!user) throw new Error('No user signed in');
     try {
-        const user = auth.currentUser;
-        if (!user) throw new Error('No user signed in');
-
-        await updateProfile(user, {
-            displayName: displayName || user.displayName,
-            photoURL: photoURL || user.photoURL
-        });
-
+        await updateProfile(user, {displayName: displayName || user.displayName, photoURL: photoURL || user.photoURL});
         showMessageBox('Profile updated successfully');
-    } catch (error) {
-        console.error('Profile update error:', error);
-        showMessageBox(error.message, true);
-        throw error;
-    }
+    } catch (e) { showMessageBox(e.message, true); throw e; }
 }
