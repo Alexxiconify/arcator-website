@@ -6,6 +6,7 @@
     --bs-navbar-color: #A0AEC0; --bs-navbar-hover-color: #fff; --bs-navbar-brand-color: #2563eb;
 }
 [data-bs-theme="light"] { --bs-primary: #2563eb; --bs-primary-rgb: 37, 99, 235; --bs-border-color: #1e3a8a; }
+.vh-60 { min-height: 60vh; }
 
 .hero-section { position: relative; height: 320px; overflow: hidden; }
 .hero-section img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }

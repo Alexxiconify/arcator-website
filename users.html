@@ -54,22 +54,22 @@
                 <div class="card-body">
                     <form @submit.prevent="saveProfile">
                         <div class="row g-3">
-                            <div class="col-md-6"><label class="form-label">Display Name</label><input class="form-control" x-model="settings.displayName"></div>
-                            <div class="col-md-6"><label class="form-label">Handle</label><input class="form-control" x-model="settings.handle"></div>
-                            <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" x-model="settings.email"></div>
-                            <div class="col-md-6"><label class="form-label">Photo URL</label><input class="form-control" x-model="settings.photoURL"></div>
-                            <div class="col-md-6"><label class="form-label">Discord</label><input class="form-control" x-model="settings.discordURL"></div>
-                            <div class="col-md-6"><label class="form-label">GitHub</label><input class="form-control" x-model="settings.githubURL"></div>
+                            <div class="col-md-6"><label class="form-label" for="displayName">Display Name</label><input id="displayName" class="form-control" x-model="settings.displayName"></div>
+                            <div class="col-md-6"><label class="form-label" for="handle">Handle</label><input id="handle" class="form-control" x-model="settings.handle"></div>
+                            <div class="col-md-6"><label class="form-label" for="email">Email</label><input id="email" class="form-control" x-model="settings.email"></div>
+                            <div class="col-md-6"><label class="form-label" for="photoURL">Photo URL</label><input id="photoURL" class="form-control" x-model="settings.photoURL"></div>
+                            <div class="col-md-6"><label class="form-label" for="discordURL">Discord</label><input id="discordURL" class="form-control" x-model="settings.discordURL"></div>
+                            <div class="col-md-6"><label class="form-label" for="githubURL">GitHub</label><input id="githubURL" class="form-control" x-model="settings.githubURL"></div>
                             <div class="col-md-6">
                                 <label class="form-label">Theme</label>
-                                <select class="form-select" x-model="settings.themePreference" @change="applyTheme">
+                                <select id="theme" class="form-select" x-model="settings.themePreference" @change="applyTheme" aria-label="Theme">
                                     <option value="dark">Dark</option>
                                     <option value="light">Light</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Font Size</label>
-                                <select class="form-select" x-model="settings.fontScaling">
+                                <select id="fontScaling" class="form-select" x-model="settings.fontScaling" aria-label="Font Size">
                                     <option value="small">Small</option>
                                     <option value="normal">Normal</option>
                                     <option value="large">Large</option>
@@ -79,14 +79,14 @@
                         <hr class="my-4">
                         <h5>Notifications</h5>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.emailNotifications"><label class="form-check-label">Email</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.pushNotifications"><label class="form-check-label">Push</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.discordNotifications"><label class="form-check-label">Discord</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input id="emailNotif" class="form-check-input" type="checkbox" x-model="settings.emailNotifications"><label class="form-check-label" for="emailNotif">Email</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input id="pushNotif" class="form-check-input" type="checkbox" x-model="settings.pushNotifications"><label class="form-check-label" for="pushNotif">Push</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input id="discordNotif" class="form-check-input" type="checkbox" x-model="settings.discordNotifications"><label class="form-check-label" for="discordNotif">Discord</label></div></div>
                         </div>
                         <h5>Privacy</h5>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.profileVisible"><label class="form-check-label">Profile Visible</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" x-model="settings.activityTracking"><label class="form-check-label">Activity Tracking</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input id="profileVisible" class="form-check-input" type="checkbox" x-model="settings.profileVisible"><label class="form-check-label" for="profileVisible">Profile Visible</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input id="activityTracking" class="form-check-input" type="checkbox" x-model="settings.activityTracking"><label class="form-check-label" for="activityTracking">Activity Tracking</label></div></div>
                         </div>
                         <button type="submit" class="btn btn-primary">Save All Changes</button>
                     </form>
