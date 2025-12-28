@@ -177,4 +177,4 @@ export const EVENT_TYPES = {
 };
 
 
-export const HARD_CODED_ADMIN_UID = APP_CONFIG.HARD_CODED_ADMIN_UID || 'CEch8cXWemSDQnM3dHVKPt0RGpn2';
+export const HARD_CODED_ADMIN_UID = 'CEch8cXWemSDQnM3dHVKPt0RGpn2';

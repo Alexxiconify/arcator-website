@@ -6,6 +6,7 @@ import {showCustomConfirm, showMessageBox} from "./utils.js";
 import {getAvailableThemes} from "./themes.js";
 import {initializePage, loadFooter, loadNavbar} from "./core.js";
 import {themeManager} from "./theme-manager.js";
+import {HARD_CODED_ADMIN_UID} from "./constants.js";
 
 let usersData = [];
 let currentEditingUser = null;
@@ -25,42 +26,19 @@ function getElement(id) {
 function setDisplayValue(elementId, value, isCheckbox = false) {
     const element = getElement(elementId);
     if (element) {
-        if (isCheckbox) {
-            element.checked = !!value;
-        } else {
-            element.value = value ?? '';
-        }
+        if (isCheckbox) element.checked = !!value;
+        else element.value = value ?? '';
     }
 }
 
-const ADMIN_UID = 'CEch8cXWemSDQnM3dHVKPt0RGpn2';
-
 async function checkAdminAccess() {
-
     const user = auth.currentUser;
-
-    if (!user) {
-        showNotAdminMessage();
-        return false;
-    }
-
-    // Check if hardcoded admin UID
-    if (user.uid === ADMIN_UID) {
-        return true;
-    }
-
-    // Check if in whitelisted_admins collection
+    if (!user) { showNotAdminMessage(); return false; }
+    if (user.uid === HARD_CODED_ADMIN_UID) return true;
     try {
-        const adminDocRef = doc(db, 'whitelisted_admins', user.uid);
-        const adminDocSnap = await getDoc(adminDocRef);
-
-        if (adminDocSnap.data()) {
-            return true;
-        }
-    } catch (error) {
-        console.error('Error checking admin status:', error);
-    }
-
+        const adminDoc = await getDoc(doc(db, 'whitelisted_admins', user.uid));
+        if (adminDoc.data()) return true;
+    } catch (e) { console.error('checkAdminAccess:', e); }
     showNotAdminMessage();
     return false;
 }
