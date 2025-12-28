@@ -1,15 +1,9 @@
 import {
-    createUserWithEmailAndPassword,
-    GithubAuthProvider,
-    GoogleAuthProvider,
-    sendPasswordResetEmail,
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    signOut,
-    updateProfile
-} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-import {collection, doc, getDoc, setDoc, updateDoc} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
-import {auth, COLLECTIONS, db, DEFAULT_THEME_NAME} from './firebase-init.js';
+    auth, collection, COLLECTIONS, createUserWithEmailAndPassword, db, DEFAULT_THEME_NAME, doc, getDoc,
+    GithubAuthProvider, GoogleAuthProvider, sendPasswordResetEmail, setDoc, signInWithEmailAndPassword,
+    signInWithPopup, signOut, updateDoc, updateProfile
+} from './firebase-init.js';
+import {showMessageBox} from './utils.js';
 import {showMessageBox} from './utils.js';
 
 // Generate colored avatar with initials

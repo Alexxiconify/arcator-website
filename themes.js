@@ -304,6 +304,12 @@ export function applyTheme(themeId, themeProperties) {
   const root = document.documentElement;
   const colors = themeProperties.colors;
 
+  Object.entries(colors).forEach(([key, value]) => {
+    if (typeof key === 'string' && typeof value === 'string') {
+      root.style.setProperty(key, value);
+    }
+  });
+
   if (themeProperties.backgroundPattern) {
     root.className = root.className.replace(/pattern-\w+/g, '');
     root.classList.add(`pattern-${themeProperties.backgroundPattern}`);

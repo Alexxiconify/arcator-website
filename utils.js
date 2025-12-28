@@ -1,5 +1,3 @@
-
-
 const messageQueue = [];
 let messageTimeout = null;
 

@@ -132,7 +132,7 @@ class ForumsManager {
             if (d.id === auth.currentUser?.uid) return;
             const u = d.data();
             if (d.id.toLowerCase().includes(q) || (u.displayName || '').toLowerCase().includes(q) || (u.handle || '').toLowerCase().includes(q)) {
-                results.push({ id: d.id, displayName: u.displayName || u.email || 'User', handle: u.handle || '', photoURL: u.photoURL || ASSETS.DEFAULT_USER });
+                results.push({ id: d.id, displayName: u.displayName || u.email || 'User', handle: u.handle || '', photoURL: u.photoURL || DEFAULT_PROFILE_PIC });
             }
         });
         return results;
@@ -213,7 +213,7 @@ class ForumsManager {
         const comments = await Promise.all(list.docs.map(async d => {
             const data = d.data();
             const author = data.authorId ? await getUserProfileFromFirestore(data.authorId) : null;
-            return { ...data, id: d.id, replies: [], authorName: author?.displayName || 'Anonymous', authorHandle: author?.handle || null, authorPhoto: author?.photoURL || ASSETS.DEFAULT_USER };
+            return { ...data, id: d.id, replies: [], authorName: author?.displayName || 'Anonymous', authorHandle: author?.handle || null, authorPhoto: author?.photoURL || DEFAULT_PROFILE_PIC };
         }));
         const map = new Map(comments.map(c => [c.id, c]));
         const roots = [];
@@ -380,7 +380,7 @@ class ForumsManager {
                 const data = d.data(), other = data.participants.find(p => p !== auth.currentUser.uid);
                 let p = other ? (this.profilesCache.get(other) || await getUserProfileFromFirestore(other)) : this.userProfile;
                 if (other && !this.profilesCache.has(other)) this.profilesCache.set(other, p);
-                return { id: d.id, name: other ? (p?.displayName || 'User') : 'My Notes', photo: p?.photoURL || ASSETS.DEFAULT_USER, active: d.id === this.currentDMId };
+                return { id: d.id, name: other ? (p?.displayName || 'User') : 'My Notes', photo: p?.photoURL || DEFAULT_PROFILE_PIC, active: d.id === this.currentDMId };
             }));
             list.innerHTML = items.map(i => `<div class="dm-item ${i.active ? 'active' : ''}" data-dm-id="${i.id}" style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem;"><img src="${i.photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;"><span>${i.name}</span></div>`).join('');
         });
@@ -411,7 +411,7 @@ class ForumsManager {
                 const msg = d.data(), isMine = msg.sender === auth.currentUser.uid;
                 let profile = self.profilesCache.get(msg.sender) || await getUserProfileFromFirestore(msg.sender);
                 if (!self.profilesCache.has(msg.sender)) self.profilesCache.set(msg.sender, profile);
-                return { id: d.id, ...msg, isMine, photo: profile?.photoURL || ASSETS.DEFAULT_USER };
+                return { id: d.id, ...msg, isMine, photo: profile?.photoURL || DEFAULT_PROFILE_PIC };
             }));
 
             container.innerHTML = messages.map(m => {
