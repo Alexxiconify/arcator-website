@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Moderator Tools - Arcator</title>
+    <link href="./master.css" rel="stylesheet">
+    <link href="./favicon.png" rel="icon" type="image/png">
+</head>
+<body class="bg-surface text-text min-h-screen flex flex-col">
+<div id="navbar-placeholder"></div>
+
+<main class="flex-1" style="padding-bottom: calc(var(--footer-height) + 1rem);">
+    <div class="container mx-auto px-4 py-8" id="not-admin-message" style="display:none;text-align:center;padding:4rem 0;">
+        <h1 class="text-4xl font-bold mb-4">Access Denied</h1>
+        <p class="text-xl text-text-2 mb-8">You do not have permission to access the moderator tools.</p>
+        <a class="btn-primary" href="./index.html">Return Home</a>
+    </div>
+
+    <div class="container mx-auto px-4 py-8" id="admin-dashboard" style="display:none;">
+        <section class="hero-banner mb-6" style="border-radius: .5rem; overflow: hidden;">
+            <img alt="Hero" class="hero-image" src="./creativespawn.png">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h1 class="text-4xl font-bold">Moderator Tools</h1>
+                <p class="text-lg text-text-2">Manage pages, moderate content, and oversee conversations.</p>
+            </div>
+        </section>
+
+        <div class="message message-error hidden" id="admin-notice" style="margin-bottom:1rem;"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6" id="admin-content">
+            <div class="bg-card p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">User Management</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-border">
+                        <thead>
+                        <tr>
+                            <th class="px-4 py-2 text-left">User</th>
+                            <th class="px-4 py-2 text-left">Display Name</th>
+                            <th class="px-4 py-2 text-left">Email</th>
+                            <th class="px-4 py-2 text-left">Theme</th>
+                            <th class="px-4 py-2 text-left">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="user-list-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-card p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Custom Pages</h2>
+                <div class="mb-3">
+                    <button class="btn-primary" id="create-page-btn">Create New Page</button>
+                </div>
+                <div class="space-y-3" id="pages-management-list">
+                    <div class="text-text-2">Loading pages…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit user modal -->
+        <div class="modal" id="edit-user-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:9999;">
+            <div class="modal-content bg-card p-6 rounded-lg" style="width:90%;max-width:720px;">
+                <h3 class="text-2xl mb-3">Edit User</h3>
+                <form class="grid grid-cols-1 md:grid-cols-2 gap-3" id="edit-user-form">
+                    <div>
+                        <label for="edit-user-display-name">Display Name</label>
+                        <input class="form-input w-full" id="edit-user-display-name"/>
+                    </div>
+                    <div>
+                        <label for="edit-user-handle">Handle</label>
+                        <input class="form-input w-full" id="edit-user-handle"/>
+                    </div>
+                    <div>
+                        <label for="edit-user-email">Email</label>
+                        <input class="form-input w-full" id="edit-user-email"/>
+                    </div>
+                    <div>
+                        <label for="edit-user-photo-url">Photo URL</label>
+                        <input class="form-input w-full" id="edit-user-photo-url"/>
+                    </div>
+                    <div class="col-span-1 md:col-span-2 flex justify-end gap-2 mt-3">
+                        <button class="btn-secondary" id="cancel-user-changes-btn" type="button">Cancel</button>
+                        <button class="btn-primary" id="save-user-changes-btn" type="button">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="footer-placeholder"></div>
+<script type="module">
+    import {initializePage, loadFooter, loadNavbar} from './core.js';
+    import {themeManager} from './theme-manager.js';
+
+    async function init() {
+        try {
+            await Promise.all([
+                initializePage('admin'),
+                themeManager.init(),
+                loadNavbar()
+            ]);
+            await loadFooter();
+            await import('./admin.js');
+        } catch (error) {
+            console.error('Initialization error:', error);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+</script>
+</body>
+</html>

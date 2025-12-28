@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Arcator</title>
+    <link href="./master.css" rel="stylesheet">
+    <link href="./favicon.png" rel="icon" type="image/png">
+</head>
+<body class="bg-main text-text-primary font-sans leading-normal antialiased">
+
+<div id="navbar-placeholder">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <div class="flex items-center gap-4">
+                <a class="text-xl font-bold no-underline" href="./index.html">Arcator</a>
+                <div class="flex items-center gap-4">
+                    <a class="nav-link" href="./index.html">Home</a>
+                    <a class="nav-link" href="./games.html">Games</a>
+                    <a class="nav-link" href="./forms.html">Forms</a>
+                    <a class="nav-link" href="./pages.html">Pages</a>
+                    <a class="nav-link" href="./about.html">About</a>
+                    <a class="nav-link" href="./mod.html">Admin</a>
+                </div>
+            </div>
+            <div class="flex items-center gap-4" id="user-section">
+                <div class="sign-in-prompt">Loading…</div>
+            </div>
+        </div>
+    </nav>
+</div>
+
+<section class="hero-section hero-banner">
+    <img alt="Hero" class="hero-image" src="./creativespawn.png">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <h1 class="text-5xl font-bold mb-4">Welcome to Arcator</h1>
+        <p class="text-xl text-text-secondary">Your hub for community, creativity, and connection.</p>
+    </div>
+</section>
+
+<main class="container flex-1">
+
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+        <div class="bg-secondary p-6 rounded-lg shadow-lg feature-card">
+            <h2 class="text-2xl font-semibold text-text-header mb-2">Dynamic Themes</h2>
+            <p class="text-text-secondary">Personalize your experience with a variety of themes.</p>
+        </div>
+        <div class="bg-secondary p-6 rounded-lg shadow-lg feature-card">
+            <h2 class="text-2xl font-semibold text-text-header mb-2">User Management</h2>
+            <p class="text-text-secondary">Admins can easily manage user profiles and settings.</p>
+        </div>
+        <div class="bg-secondary p-6 rounded-lg shadow-lg feature-card">
+            <h2 class="text-2xl font-semibold text-text-header mb-2">Interactive Forms</h2>
+            <p class="text-text-secondary">Create and manage custom forms for various purposes.</p>
+        </div>
+    </section>
+
+    <section class="text-center">
+        <h2 class="text-3xl font-bold text-text-header mb-4">Join Our Community</h2>
+        <p class="text-lg text-text-secondary mb-6">Sign up today to start connecting with others!</p>
+        <a class="btn-primary btn-blue text-white" href="./users.html">Get Started</a>
+    </section>
+</main>
+
+<div id="footer-placeholder">
+    <footer class="footer bg-surface">
+        <div class="container py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex gap-4">
+                    <a class="footer-link" href="https://bluemaps.arcator.co.uk" rel="noopener" target="_blank">Blue
+                        Maps</a>
+                    <a class="footer-link" href="https://wiki.arcator.co.uk" rel="noopener" target="_blank">Wiki</a>
+                </div>
+                <div class="text-text-2">&copy; 2025 Arcator</div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<script type="module">
+    import {loadNavbar, loadFooter} from "./core.js";
+    import {themeManager} from "./theme-manager.js";
+    import {handleError} from "./utils.js";
+    import {auth, getUserProfileFromFirestore, firebaseReadyPromise} from "./firebase-init.js";
+
+    const init = async () => {
+        const loadingSpinner = document.getElementById('loading-spinner');
+
+        try {
+            loadingSpinner?.classList.remove('hidden');
+
+            await firebaseReadyPromise;
+
+            await themeManager.init();
+
+            auth.onAuthStateChanged(async user => {
+                try {
+                    const profile = user ? await getUserProfileFromFirestore(user.uid) : null;
+                    await loadNavbar(user, profile);
+
+                    const theme = profile?.themePreference || 'dark';
+                    await themeManager.applyTheme({id: theme, name: theme, variables: {}});
+                } catch (error) {
+                    handleError(error, 'Auth State Change');
+                }
+            });
+
+            await loadFooter();
+
+        } catch (error) {
+            handleError(error, 'Page Initialization');
+        } finally {
+            loadingSpinner?.classList.add('hidden');
+        }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Include your project-specific ignores in this file
+# Read about how to use .gitignore: https://help.github.com/articles/ignoring-files
+# Useful .gitignore templates: https://github.com/github/gitignore s
+node_modules
+dist
+.cache
+/.cursor/
+/.idea/
+/.dev/
+/node_models/
+/firestore.rules
+firestore.rules

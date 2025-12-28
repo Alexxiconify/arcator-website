@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width,initial-scale=1" name="viewport">
+    <title>Page - Arcator</title>
+    <link href="./master.css" rel="stylesheet">
+</head>
+<body class="antialiased">
+<div id="navbar-placeholder"></div>
+
+<section class="hero-banner">
+    <img alt="Hero" class="hero-image" src="./creativespawn.png">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <h1 class="text-4xl font-bold" id="page-title">Page</h1>
+    </div>
+</section>
+
+<main class="container mx-auto px-4 py-8">
+    <div class="prose" id="page-content"></div>
+</main>
+
+<div id="footer-placeholder"></div>
+
+<script type="module">
+    import {db, COLLECTIONS} from './firebase-init.js';
+    import {getDoc, doc} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+    import {initializePage, loadFooter} from './core.js';
+    import {themeManager} from './theme-manager.js';
+    import {showMessageBox} from './utils.js';
+
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
+    }
+
+    async function loadPageById(id) {
+        try {
+            const ref = doc(db, COLLECTIONS.PAGES, id);
+            const snap = await getDoc(ref);
+            if (!snap.exists()) {
+                document.getElementById('page-content').innerHTML = '<p>Page not found.</p>';
+                return;
+            }
+            const data = snap.data();
+            document.getElementById('page-title').textContent = data.title || 'Untitled';
+            document.getElementById('page-content').innerHTML = data.content || '<p>No content</p>';
+        } catch (err) {
+            console.error('Error loading page', err);
+            showMessageBox('Failed to load page', true);
+        }
+    }
+
+    async function init() {
+        try {
+            await initializePage('page');
+            await themeManager.init();
+            await loadFooter();
+            const id = getQueryParam('id');
+            if (id) await loadPageById(id);
+        } catch (err) {
+            console.error('Error initializing page view', err);
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>

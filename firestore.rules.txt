@@ -1,0 +1,217 @@
+<<<<<<< HEAD
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.uid == 'CEch8cXWemSDQnM3dHVKPt0RGpn2' ||
+        exists(/databases/$(database)/documents/whitelisted_admins/$(request.auth.uid))
+      );
+    }
+
+    // Top-level legacy user profiles (public read, owner write)
+    match /user_profiles/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Also allow a /users collection for lookups (public read)
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Pages (support both `pages` and `temp_pages` under artifacts project)
+    match /artifacts/{project}/public/data/{pagesCollection}/{pageId} {
+      allow read: if pagesCollection in ['pages', 'temp_pages'];
+      allow write: if isAdmin() && pagesCollection in ['pages', 'temp_pages'];
+    }
+
+    // Themes (themes and custom_themes)
+    match /artifacts/{project}/public/data/{themesCollection}/{themeId} {
+      allow read: if themesCollection in ['themes', 'custom_themes'];
+      allow write: if isAdmin() && themesCollection in ['themes', 'custom_themes'];
+    }
+
+    // Forms / Threads: public read, signed-in users can create; only authors can edit/delete
+    match /artifacts/{project}/public/data/forms/{threadId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+
+      // Submissions/comments under a thread
+      match /submissions/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // Conversations (DMs) - Legacy Path: allow any signed-in user to read/write
+    match /artifacts/{project}/public/data/conversations/{conversationId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Messages - Legacy Path: allow any signed-in user to read/write
+    match /artifacts/{project}/public/data/messages/{messageId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // DMs stored under artifacts/<project>/users/<userId>/dms/<dmId> (Old User-Nested)
+    match /artifacts/{project}/users/{userId}/dms/{dmId} {
+      allow read, write: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // --- NEW ROOT COLLECTIONS for simplified access ---
+
+    // Forms (Forums) - Root level
+    match /forms/{threadId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+
+      match /submissions/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // Conversations (DMs) - Root level: allow any signed-in user
+    match /conversations/{conversationId} {
+      allow read, write: if isSignedIn();
+      
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // Messages - Root level (legacy/fallback): allow any signed-in user
+    match /messages/{messageId} {
+      allow read, write: if isSignedIn();
+    }
+
+
+  }
+}
+=======
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.uid == 'CEch8cXWemSDQnM3dHVKPt0RGpn2' ||
+        exists(/databases/$(database)/documents/whitelisted_admins/$(request.auth.uid))
+      );
+    }
+
+    // Top-level legacy user profiles (public read, owner write)
+    match /user_profiles/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Also allow a /users collection for lookups (public read)
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Pages (support both `pages` and `temp_pages` under artifacts project)
+    match /artifacts/{project}/public/data/{pagesCollection}/{pageId} {
+      allow read: if pagesCollection in ['pages', 'temp_pages'];
+      allow write: if isAdmin() && pagesCollection in ['pages', 'temp_pages'];
+    }
+
+    // Themes (themes and custom_themes)
+    match /artifacts/{project}/public/data/{themesCollection}/{themeId} {
+      allow read: if themesCollection in ['themes', 'custom_themes'];
+      allow write: if isAdmin() && themesCollection in ['themes', 'custom_themes'];
+    }
+
+    // Forms / Threads: public read, signed-in users can create; only authors can edit/delete
+    match /artifacts/{project}/public/data/forms/{threadId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+
+      // Submissions/comments under a thread
+      match /submissions/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // Conversations (DMs) - Legacy Path: allow any signed-in user to read/write
+    match /artifacts/{project}/public/data/conversations/{conversationId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Messages - Legacy Path: allow any signed-in user to read/write
+    match /artifacts/{project}/public/data/messages/{messageId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // DMs stored under artifacts/<project>/users/<userId>/dms/<dmId> (Old User-Nested)
+    match /artifacts/{project}/users/{userId}/dms/{dmId} {
+      allow read, write: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // --- NEW ROOT COLLECTIONS for simplified access ---
+
+    // Forms (Forums) - Root level
+    match /forms/{threadId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+
+      match /submissions/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // Conversations (DMs) - Root level: allow any signed-in user
+    match /conversations/{conversationId} {
+      allow read, write: if isSignedIn();
+      
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // Messages - Root level (legacy/fallback): allow any signed-in user
+    match /messages/{messageId} {
+      allow read, write: if isSignedIn();
+    }
+
+
+  }
+}
+>>>>>>> 45bdfcda71152709c7beaa1a0cffd06a95a5cec7
