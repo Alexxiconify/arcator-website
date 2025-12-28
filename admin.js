@@ -1,20 +1,11 @@
 import {
-    addDoc,
-    auth,
-    collection,
-    COLLECTIONS,
-    db,
-    doc,
-    getDoc,
-    getDocs,
-    getUserProfileFromFirestore,
-    onSnapshot
+    addDoc, auth, collection, COLLECTIONS, db, deleteDoc, doc, getDoc, getDocs,
+    getUserProfileFromFirestore, onSnapshot, updateDoc
 } from "./firebase-init.js";
 import {showCustomConfirm, showMessageBox} from "./utils.js";
 import {getAvailableThemes} from "./themes.js";
 import {initializePage, loadFooter, loadNavbar} from "./core.js";
 import {themeManager} from "./theme-manager.js";
-import {deleteDoc, updateDoc} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 let usersData = [];
 let currentEditingUser = null;

@@ -1,51 +1,9 @@
-export function getEmailJSStatus() {
-    console.log("getEmailJSStatus called");
-    return {serviceId: "", templateId: "", publicKey: ""};
-}
-
-export function getSMTPServerStatus() {
-    console.log("getSMTPServerStatus called");
-    return {host: "", port: "", secure: false, username: "", password: ""};
-}
-
-export function initializeEmailJS() {
-    console.log("initializeEmailJS called");
-}
-
-export function initializeSMTPIntegration() {
-    console.log("initializeSMTPIntegration called");
-}
-
-export function saveCredentials(type, credentials) {
-    console.log(`saveCredentials called for ${type}`, credentials);
-}
-
-export function sendEmailViaSMTP(to, subject, body) {
-    console.log(`sendEmailViaSMTP called to ${to} with subject ${subject}`);
-    if (body) console.debug("Email body:", body);
-
-    void body;
-    return Promise.resolve();
-}
-
-export function testEmailJSConnection() {
-    console.log("testEmailJSConnection called");
-    return Promise.resolve(true);
-}
-
-export function testSMTPServerConnection() {
-    console.log("testSMTPServerConnection called");
-    return Promise.resolve(true);
-}
-
-
-export default {
-    getEmailJSStatus,
-    getSMTPServerStatus,
-    initializeEmailJS,
-    initializeSMTPIntegration,
-    saveCredentials,
-    sendEmailViaSMTP,
-    testEmailJSConnection,
-    testSMTPServerConnection,
-};
+// Stub implementations for email integration - replace with actual logic when needed
+export const getEmailJSStatus = () => ({serviceId: '', templateId: '', publicKey: ''});
+export const getSMTPServerStatus = () => ({host: '', port: '', secure: false, username: '', password: ''});
+export const initializeEmailJS = () => {};
+export const initializeSMTPIntegration = () => {};
+export const saveCredentials = (type, credentials) => console.log('saveCredentials:', type, credentials);
+export const sendEmailViaSMTP = (to, subject) => Promise.resolve(console.log('sendEmail:', to, subject));
+export const testEmailJSConnection = () => Promise.resolve(true);
+export const testSMTPServerConnection = () => Promise.resolve(true);

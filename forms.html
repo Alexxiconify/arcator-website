@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,12 +15,12 @@
     <img alt="Hero" class="hero-image" src="./creativespawn.png">
     <div class="hero-overlay"></div>
     <div class="hero-content">
-        <h1>Forums & Messages</h1>
+        <h1>Forums &amp; Messages</h1>
         <p>Community discussions and conversations</p>
     </div>
 </section>
 
-<main class="container mx-auto px-4 py-8" style="padding-bottom: calc(var(--footer-height) + 1rem); flex: 1 0 auto; min-height: 0; max-width: 1000px;">
+<main class="container mx-auto px-4 py-8 forums-main">
     <div class="tabs">
         <button class="tab-btn active" id="forums-tab-btn">Forums</button>
         <button class="tab-btn" id="messages-tab-btn">Messages</button>
@@ -30,29 +29,25 @@
     <!-- Forums Tab -->
     <div class="tab-content active" id="forums-tab">
         <div class="mb-8 flex justify-between items-center">
-            <h2 style="margin: 0; font-size: 1.5rem;">Forums</h2>
-            <button id="create-thread-btn"
-                    style="background:none;border:none;color:var(--color-accent);cursor:pointer;padding:0;font-size:1rem;">
-                Create Thread
-            </button>
+            <h2 class="section-title">Forums</h2>
+            <button class="link-btn" id="create-thread-btn">Create Thread</button>
         </div>
 
         <div class="create-form" id="create-thread-form">
-            <h3 style="margin-top: 0; margin-bottom: 1rem;">Create New Thread</h3>
+            <h3 class="form-subtitle">Create New Thread</h3>
             <form id="new-thread-form">
                 <div>
                     <label for="thread-title">Title</label>
-                    <input id="thread-title" required style="background:transparent !important;" type="text">
+                    <input class="input-transparent" id="thread-title" required type="text">
                 </div>
                 <div>
                     <label for="thread-description">Description</label>
-                    <textarea id="thread-description" required rows="4"
-                              style="background:transparent !important;"></textarea>
+                    <textarea class="input-transparent" id="thread-description" required rows="4"></textarea>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-grid-2col">
                     <div>
                         <label for="thread-category">Category</label>
-                        <select id="thread-category" required style="background:transparent !important;">
+                        <select class="input-transparent" id="thread-category" required>
                             <option value="">Select category...</option>
                             <option value="announcements">Announcements</option>
                             <option value="gaming">Gaming</option>
@@ -63,28 +58,22 @@
                     </div>
                     <div>
                         <label for="thread-tags">Tags (comma-separated)</label>
-                        <input id="thread-tags" style="background:transparent !important;" type="text">
+                        <input class="input-transparent" id="thread-tags" type="text">
                     </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                    <button id="cancel-thread-btn" style="background:none;border:none;color:var(--color-text-2);cursor:pointer;padding:0;font-size:0.9rem;margin-right:1rem;"
-                            type="button">
-                        Cancel
-                    </button>
-                    <button style="background:none;border:none;color:var(--color-accent);cursor:pointer;padding:0;font-size:0.9rem;font-weight:600;"
-                            type="submit">
-                        Post
-                    </button>
+                <div class="form-actions">
+                    <button class="link-btn-secondary" id="cancel-thread-btn" type="button">Cancel</button>
+                    <button class="link-btn-submit" type="submit">Post</button>
                 </div>
             </form>
         </div>
 
         <div id="forums-list">
-            <div style="text-align:center;padding:2rem;color:var(--color-text-2);">
-                <div style="display:inline-block;animation:pulse 2s infinite;">
-                    <div style="width:100%;height:100px;background:var(--color-surface-3);border-radius:0.375rem;margin-bottom:1rem;"></div>
-                    <div style="width:100%;height:100px;background:var(--color-surface-3);border-radius:0.375rem;margin-bottom:1rem;"></div>
-                    <div style="width:100%;height:100px;background:var(--color-surface-3);border-radius:0.375rem;"></div>
+            <div class="skeleton-loader">
+                <div class="skeleton-pulse">
+                    <div class="skeleton-block"></div>
+                    <div class="skeleton-block"></div>
+                    <div class="skeleton-block"></div>
                 </div>
             </div>
         </div>
@@ -92,31 +81,21 @@
 
     <!-- Messages Tab -->
     <div class="tab-content" id="messages-tab">
-        <h2 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.5rem;">Messages</h2>
-        <div style="margin-bottom: 1.5rem;">
-            <button id="create-message-btn"
-                    style="background:none;border:none;color:var(--color-accent);cursor:pointer;padding:0;font-size:1rem;">
-                New Message
-            </button>
+        <h2 class="section-title-messages">Messages</h2>
+        <div class="action-wrapper">
+            <button class="link-btn" id="create-message-btn">New Message</button>
         </div>
 
-        <div class="create-form" id="create-message-form" style="display:none;">
-            <h3 style="margin-top: 0; margin-bottom: 1rem;">Start New Conversation</h3>
-            <div style="margin-bottom: 1rem;">
+        <div class="create-form" id="create-message-form">
+            <h3 class="form-subtitle">Start New Conversation</h3>
+            <div class="field-group">
                 <label for="recipient-search">Search User (ID, Name, or @DisplayName)</label>
-                <input id="recipient-search" placeholder="Enter user ID, name, or @displayname..." style="width:100%;padding:0.75rem;border:1px solid var(--color-accent);background:transparent !important;color:var(--color-text);border-radius:0.375rem;font-family:inherit;font-size:0.9rem;margin-bottom:0.5rem;"
-                       type="text">
-                <div id="search-results" style="display:none;max-height:200px;overflow-y:auto;background:var(--color-surface-3);border:1px solid var(--color-accent);border-radius:0.375rem;margin-top:0.5rem;"></div>
+                <input class="search-input" id="recipient-search" placeholder="Enter user ID, name, or @displayname..." type="text">
+                <div class="search-results-dropdown" id="search-results"></div>
             </div>
-            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button id="cancel-message-btn" style="background:none;border:none;color:var(--color-text-2);cursor:pointer;padding:0;font-size:0.9rem;margin-right:1rem;"
-                        type="button">
-                    Cancel
-                </button>
-                <button disabled id="start-conversation-btn" style="background:none;border:none;color:var(--color-accent);cursor:pointer;padding:0;font-size:0.9rem;"
-                        type="button">
-                    Start Conversation
-                </button>
+            <div class="form-actions">
+                <button class="link-btn-secondary" id="cancel-message-btn" type="button">Cancel</button>
+                <button class="link-btn" disabled id="start-conversation-btn" type="button">Start Conversation</button>
             </div>
         </div>
 
@@ -125,14 +104,10 @@
             <div class="dm-messages">
                 <div class="dm-header" id="dm-header">Select a conversation</div>
                 <div class="dm-body" id="dm-body"></div>
-                <div class="dm-form" id="dm-form" style="display: none;">
-                    <label for="dm-input" style="display:none;"></label>
-                    <input id="dm-input" placeholder="Type a message..." style="background:transparent !important;"
-                           type="text">
-                    <button id="dm-send-btn"
-                            style="background:none;border:none;color:var(--color-accent);cursor:pointer;padding:0.5rem;font-weight:600;">
-                        Send
-                    </button>
+                <div class="dm-form" id="dm-form">
+                    <label class="sr-only" for="dm-input">Message</label>
+                    <input class="input-transparent" id="dm-input" placeholder="Type a message..." type="text">
+                    <button class="link-btn-send" id="dm-send-btn">Send</button>
                 </div>
             </div>
         </div>
@@ -143,110 +118,4 @@
 
 <script type="module" src="./forums-manager.js"></script>
 </body>
-=======
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>Forums - Arcator</title>
-    <link href="./master.css" rel="stylesheet">
-    <link href="./forums.css" rel="stylesheet">
-    <link href="./favicon.png" rel="icon" type="image/png">
-</head>
-<body class="bg-surface text-text">
-<div id="navbar-placeholder"></div>
-
-<section class="hero-banner">
-    <img alt="Hero" class="hero-image" src="./creativespawn.png">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-        <h1>Forums & Messages</h1>
-        <p>Community discussions and conversations</p>
-    </div>
-</section>
-
-<main class="container mx-auto px-4 py-8">
-
-    <div class="bg-surface-2 rounded-lg p-4 mb-8" role="tablist">
-        <div class="flex gap-4 border-b border-accent-dark">
-            <button aria-controls="forms-panel"
-                    aria-selected="true"
-                    class="tab-button px-4 py-2 text-lg font-medium border-b-2 border-transparent hover:border-accent-light"
-                    data-tab="forms"
-                    role="tab">
-                Forms
-            </button>
-            <button aria-controls="dms-panel"
-                    aria-selected="false"
-                    class="tab-button px-4 py-2 text-lg font-medium border-b-2 border-transparent hover:border-accent-light"
-                    data-tab="dms"
-                    role="tab">
-                Messages
-            </button>
-        </div>
-
-        <div class="py-4" id="forms-panel" role="tabpanel">
-            <div id="forms-list">
-
-            </div>
-        </div>
-
-        <div class="py-4 hidden" id="dms-panel" role="tabpanel">
-            <div class="flex h-[600px]">
-
-                <div class="w-1/3 border-r border-accent-dark">
-                    <div class="p-4 border-b border-accent-dark">
-                        <button class="btn-primary w-full" id="new-chat-btn">New Conversation</button>
-                    </div>
-                    <div class="overflow-y-auto h-[calc(100%-64px)]" id="dm-list">
-
-                    </div>
-                </div>
-
-                <div class="flex-1 flex flex-col">
-                    <div class="p-2 border-b border-accent-dark" id="participant-list"></div>
-                    <div class="flex-1 overflow-y-auto p-4" id="messages-container"></div>
-                    <form class="p-4 border-t border-accent-dark" id="message-form">
-                        <div class="flex gap-2 relative">
-                            <div class="flex-1 relative">
-                                <label for="message-input">
-
-                                </label><input autocomplete="off"
-                                               class="flex-1 bg-surface-2 border border-accent rounded px-3 py-2 w-full"
-                                               id="message-input"
-                                               placeholder="Type a message... (use @ to mention users)"
-                                               type="text">
-                                <div class="mention-suggestions hidden absolute top-full left-0 mt-1 w-full"
-                                     id="mention-suggestions"></div>
-                            </div>
-                            <button class="btn-primary" type="submit">Send</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-                 id="new-chat-modal">
-                <div class="bg-surface p-6 rounded-lg shadow-xl w-full max-w-md">
-                    <h3 class="text-xl font-bold mb-4">New Conversation</h3>
-                    <div class="mb-4">
-                        <label for="recipient-input"></label><input class="w-full bg-surface-2 border border-accent rounded px-3 py-2"
-                                                                    id="recipient-input"
-                                                                    placeholder="Search users..."
-                                                                    type="text">
-                        <div class="mt-2" id="recipient-suggestions"></div>
-                    </div>
-                    <div class="flex flex-wrap gap-2 mb-4" id="selected-recipients"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</main>
-
-<div id="footer-placeholder"></div>
-
-<script type="module" src="./forums-manager.js"></script>
-</body>
->>>>>>> 45bdfcda71152709c7beaa1a0cffd06a95a5cec7
 </html>
