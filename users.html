@@ -57,10 +57,17 @@
                 </div>
                 <div class="card-body">
                     <form id="settings-form">
-                        <h5 class="mb-3">Profile</h5>
+                        <div class="d-flex align-items-center gap-4 mb-4">
+                            <img id="profile-pic" src="./defaultuser.png" class="rounded-circle border border-primary profile-pic-preview" alt="Profile Preview">
+                            <div class="flex-grow-1">
+                                <h5 class="mb-3">Profile</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-6"><label class="form-label" for="displayName">Display Name</label><input id="displayName" class="form-control" autocomplete="name"></div>
+                                    <div class="col-md-6"><label class="form-label" for="handle">Handle</label><input id="handle" class="form-control" autocomplete="username"></div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6"><label class="form-label" for="displayName">Display Name</label><input id="displayName" class="form-control" autocomplete="name"></div>
-                            <div class="col-md-6"><label class="form-label" for="handle">Handle</label><input id="handle" class="form-control" autocomplete="username"></div>
                             <div class="col-md-6"><label class="form-label" for="email">Email</label><input id="email" class="form-control" autocomplete="email"></div>
                             <div class="col-md-6"><label class="form-label" for="photoURL">Photo URL</label><input id="photoURL" class="form-control" autocomplete="photo"></div>
                         </div>
@@ -68,32 +75,56 @@
                         <hr>
                         <h5 class="mb-3">Linked Accounts (OAuth)</h5>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6 col-lg-4">
-                                <div class="p-2 border rounded d-flex align-items-center gap-2">
-                                    <span id="google-status" class="badge bg-secondary">Not Linked</span>
-                                    <span class="flex-grow-1">Google <small id="google-info" class="text-muted d-none"></small></span>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" id="link-google-btn">Link</button>
+                            <!-- Google -->
+                            <div class="col-12 col-md-6">
+                                <div class="p-3 border rounded bg-dark-subtle">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span id="google-status" class="badge bg-secondary">Not Linked</span>
+                                            <span class="fw-bold">Google</span>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="link-google-btn">Link</button>
+                                    </div>
+                                    <small id="google-info" class="text-muted d-block text-truncate"></small>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-lg-4">
-                                <div class="p-2 border rounded d-flex align-items-center gap-2">
-                                    <span id="github-status" class="badge bg-secondary">Not Linked</span>
-                                    <span class="flex-grow-1">GitHub <small id="github-info" class="text-muted d-none"></small></span>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" id="link-github-btn">Link</button>
+                            <!-- GitHub -->
+                            <div class="col-12 col-md-6">
+                                <div class="p-3 border rounded bg-dark-subtle">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span id="github-status" class="badge bg-secondary">Not Linked</span>
+                                            <span class="fw-bold">GitHub</span>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="link-github-btn">Link</button>
+                                    </div>
+                                    <small id="github-info" class="text-muted d-block text-truncate"></small>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-lg-4">
-                                <div class="p-2 border rounded d-flex align-items-center gap-2">
-                                    <span id="discord-status" class="badge bg-secondary">Not Linked</span>
-                                    <span class="flex-grow-1">Discord <small id="discord-info" class="text-muted d-none"></small></span>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" id="link-discord-btn">Link</button>
+                            <!-- Discord -->
+                            <div class="col-12 col-md-6">
+                                <div class="p-3 border rounded bg-dark-subtle">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span id="discord-status" class="badge bg-secondary">Not Linked</span>
+                                            <span class="fw-bold">Discord</span>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="link-discord-btn">Link</button>
+                                    </div>
+                                    <small id="discord-info" class="text-muted d-block text-truncate"></small>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-lg-4">
-                                <div class="p-2 border rounded d-flex align-items-center gap-2">
-                                    <span id="twitter-status" class="badge bg-secondary">Not Linked</span>
-                                    <span class="flex-grow-1">Twitter <small id="twitter-info" class="text-muted d-none"></small></span>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" id="link-twitter-btn">Link</button>
+                            <!-- Twitter -->
+                            <div class="col-12 col-md-6">
+                                <div class="p-3 border rounded bg-dark-subtle">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span id="twitter-status" class="badge bg-secondary">Not Linked</span>
+                                            <span class="fw-bold">Twitter</span>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="link-twitter-btn">Link</button>
+                                    </div>
+                                    <small id="twitter-info" class="text-muted d-block text-truncate"></small>
                                 </div>
                             </div>
                         </div>
@@ -101,17 +132,23 @@
                         <h5 class="mb-3">Manual Connections</h5>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="form-label" for="discordId">Discord User ID</label>
-                                <input id="discordId" class="form-control" placeholder="123456789012345678">
-                                <div class="form-text">Required for Discord notifications</div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img id="manual-discord-pic" src="./defaultuser.png" class="rounded border manual-pic-preview" alt="Discord Preview">
+                                    <div class="flex-grow-1">
+                                        <label class="form-label" for="discordId">Discord User ID</label>
+                                        <input id="discordId" class="form-control" placeholder="123456789012345678">
+                                    </div>
+                                </div>
+                                <div class="form-text ms-5">Required for Discord notifications</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="discordURL">Discord Profile URL</label>
-                                <input id="discordURL" class="form-control" placeholder="https://discord.com/users/...">
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label" for="githubURL">GitHub Profile URL</label>
-                                <input id="githubURL" class="form-control" placeholder="https://github.com/username">
+                                <div class="d-flex align-items-center gap-3">
+                                    <img id="manual-github-pic" src="./defaultuser.png" class="rounded border manual-pic-preview" alt="GitHub Preview">
+                                    <div class="flex-grow-1">
+                                        <label class="form-label" for="githubURL">GitHub Profile URL</label>
+                                        <input id="githubURL" class="form-control" placeholder="https://github.com/username">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         

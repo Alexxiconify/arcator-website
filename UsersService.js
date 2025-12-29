@@ -37,9 +37,19 @@ function populateSettings(profile) {
     setVal('handle', profile.handle);
     setVal('email', profile.email);
     setVal('photoURL', profile.photoURL);
-    setVal('discordURL', profile.discordURL);
+    const pic = document.getElementById('profile-pic');
+    if (pic) pic.src = profile.photoURL || './defaultuser.png';
+    
     setVal('discordId', profile.discordId);
+    const discordPic = document.getElementById('manual-discord-pic');
+    if (discordPic) discordPic.src = profile.discordPic || './defaultuser.png';
+    
     setVal('githubURL', profile.githubURL);
+    const githubPic = document.getElementById('manual-github-pic');
+    if (githubPic) {
+        const match = profile.githubURL?.match(/github\.com\/([^/?#\s]+)/i);
+        githubPic.src = profile.githubPic || (match ? `https://github.com/${match[1]}.png` : './defaultuser.png');
+    }
     
     // Appearance
     setVal('theme', profile.themePreference || 'dark');
@@ -96,7 +106,7 @@ function updateLinkedAccounts(profile, providerData = []) {
             info: getOAuthInfo('github') || profile?.githubURL
         },
         discord: { 
-            linked: isOAuthLinked('discord') || !!profile?.discordId, 
+            linked: isOAuthLinked('discord') || !!profile?.discordId || !!profile?.discordLinked, 
             info: getOAuthInfo('discord') || profile?.discordId
         },
         twitter: { 
@@ -116,20 +126,19 @@ function updateLinkedAccounts(profile, providerData = []) {
             status.className = `badge ${linked ? 'bg-success' : 'bg-secondary'}`;
         }
         if (btn) {
-            // Only show Unlink for OAuth links; manual links are edited via input fields
             if (isOAuth) {
                 btn.textContent = 'Unlink';
-                btn.className = 'btn btn-sm btn-outline-danger';
+                btn.className = 'btn btn-outline-danger btn-sm';
                 btn.style.display = 'inline-block';
             } else {
                 btn.textContent = 'Link';
-                btn.className = 'btn btn-sm btn-outline-primary';
+                btn.className = 'btn btn-outline-primary btn-sm';
                 // Hide link button if already manually linked, unless it's discord which has a fallback
                 btn.style.display = (linked && name !== 'discord') ? 'none' : 'inline-block';
             }
         }
         if (infoEl) {
-            infoEl.textContent = info ? `(${info})` : '';
+            infoEl.textContent = info || '';
             infoEl.classList.toggle('d-none', !info);
         }
     });
@@ -211,7 +220,12 @@ function setupEventListeners() {
                     }
                 } else {
                     await AuthService.linkProvider(provider);
-                    Swal.fire('Linked', `${name} account linked`, 'success');
+                    Swal.fire({
+                        title: 'Linked!',
+                        text: `${name} account has been successfully linked.`,
+                        icon: 'success',
+                        confirmButtonText: 'Great'
+                    });
                 }
             }
         } catch (e) { 
@@ -219,8 +233,12 @@ function setupEventListeners() {
             let msg = e.message;
             if (e.code === 'auth/operation-not-allowed') {
                 msg = `${name} login is not enabled in your Firebase Console. Please enable it under Authentication > Sign-in method.`;
+            } else if (e.code === 'auth/credential-already-in-use') {
+                msg = `This ${name} account is already linked to another user. Please sign out and sign in with ${name} if you want to use that account.`;
+            } else if (e.code === 'auth/email-already-in-use') {
+                msg = `The email associated with this ${name} account is already in use by another user.`;
             }
-            Swal.fire('Error', msg, 'error'); 
+            Swal.fire('Linking Failed', msg, 'error'); 
         }
     };
 
@@ -229,26 +247,80 @@ function setupEventListeners() {
     document.getElementById('link-discord-btn')?.addEventListener('click', () => handleLink('discord', new OAuthProvider('discord.com'), 'discord.com'));
     document.getElementById('link-twitter-btn')?.addEventListener('click', () => handleLink('twitter', new TwitterAuthProvider(), 'twitter.com'));
 
-    // Check Discord availability when Discord fields change
-    document.getElementById('discordURL')?.addEventListener('input', () => {
-        const hasDiscord = !!document.getElementById('discordURL').value || !!document.getElementById('discordId').value;
-        const discordNotifEl = document.getElementById('discordNotif');
-        discordNotifEl.disabled = !hasDiscord;
-        if (!hasDiscord) discordNotifEl.checked = false;
+    // Live profile picture preview
+    document.getElementById('photoURL')?.addEventListener('input', (e) => {
+        const pic = document.getElementById('profile-pic');
+        if (pic) pic.src = e.target.value || './defaultuser.png';
     });
 
-    document.getElementById('discordId')?.addEventListener('input', () => {
-        const hasDiscord = !!document.getElementById('discordURL').value || !!document.getElementById('discordId').value;
+    // Auto-pull profile picture from GitHub
+    const syncGithub = (url) => {
+        const githubPic = document.getElementById('manual-github-pic');
+        const photoInput = document.getElementById('photoURL');
+        const mainPic = document.getElementById('profile-pic');
+        if (!url) {
+            if (githubPic) githubPic.src = './defaultuser.png';
+            return null;
+        }
+
+        // Match full URL or just username
+        const match = url.match(/(?:github\.com\/|github\.io\/)?([^/?#\s]+)$|github\.com\/([^/?#\s]+)/i);
+        const username = match ? (match[1] || match[2]) : (url.includes('/') ? null : url.trim());
+        
+        if (username && !username.includes('.') && !username.includes(':')) {
+            const newPhoto = `https://github.com/${username}.png`;
+            if (githubPic) githubPic.src = newPhoto;
+            if (photoInput && (!photoInput.value || photoInput.value.includes('github.com') || photoInput.value.includes('discord'))) {
+                photoInput.value = newPhoto;
+                if (mainPic) mainPic.src = newPhoto;
+            }
+            return newPhoto;
+        }
+        
+        if (githubPic) githubPic.src = './defaultuser.png';
+        return null;
+    };
+
+    document.getElementById('githubURL')?.addEventListener('input', (e) => syncGithub(e.target.value));
+    document.getElementById('githubURL')?.addEventListener('blur', (e) => syncGithub(e.target.value));
+
+    // Auto-pull profile picture from Discord
+    const syncDiscord = (id) => {
+        const discordPic = document.getElementById('manual-discord-pic');
+        const photoInput = document.getElementById('photoURL');
+        const mainPic = document.getElementById('profile-pic');
+        const cleanId = id.trim();
+        
+        if (!cleanId) {
+            if (discordPic) discordPic.src = './defaultuser.png';
+            return null;
+        }
+
+        // Manual ID lookup is no longer supported without a proxy/backend.
+        // We rely on the stored profile.discordPic from official OAuth.
+        if (discordPic) discordPic.src = './defaultuser.png';
+        return null;
+    };
+
+    document.getElementById('discordId')?.addEventListener('input', (e) => {
+        const id = e.target.value;
+        syncDiscord(id);
         const discordNotifEl = document.getElementById('discordNotif');
-        discordNotifEl.disabled = !hasDiscord;
-        if (!hasDiscord) discordNotifEl.checked = false;
+        if (discordNotifEl) {
+            discordNotifEl.disabled = !id;
+            if (!id) discordNotifEl.checked = false;
+        }
     });
+    document.getElementById('discordId')?.addEventListener('blur', (e) => syncDiscord(e.target.value));
 
     document.getElementById('settings-form').onsubmit = async (e) => {
         e.preventDefault();
         try {
             const discordNotifEnabled = document.getElementById('discordNotif').checked;
-            const hasDiscord = !!document.getElementById('discordURL').value || !!document.getElementById('discordId').value;
+            const hasDiscord = !!document.getElementById('discordId').value;
+            
+            const githubURL = document.getElementById('githubURL').value;
+            const discordId = document.getElementById('discordId').value;
             
             await AuthService.updateProfile(currentUser.uid, {
                 // Profile
@@ -256,9 +328,12 @@ function setupEventListeners() {
                 handle: document.getElementById('handle').value,
                 email: document.getElementById('email').value,
                 photoURL: document.getElementById('photoURL').value,
-                discordURL: document.getElementById('discordURL').value,
-                discordId: document.getElementById('discordId').value,
-                githubURL: document.getElementById('githubURL').value,
+                discordId: discordId,
+                githubURL: githubURL,
+                
+                // Pulled Social Pics
+                githubPic: syncGithub(githubURL),
+                discordPic: syncDiscord(discordId),
                 
                 // Appearance
                 themePreference: document.getElementById('theme').value,

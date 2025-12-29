@@ -59,7 +59,7 @@ const NotificationService = {
     // Check if Discord notifications are available for user
     async canUseDiscord(userId) {
         const profile = await this.getProfile(userId);
-        return !!(profile?.discordId || profile?.discordURL);
+        return !!profile?.discordId;
     },
 
     // Get user's notifications

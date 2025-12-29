@@ -94,12 +94,27 @@ async function editUser(u) {
         width: '600px',
         html: `
             <div class="text-start" style="max-height:60vh;overflow-y:auto;">
+                <div class="mb-2"><label class="form-label small mb-0">User ID (UID)</label><input class="form-control form-control-sm bg-dark-subtle" value="${u.uid}" readonly></div>
                 <div class="mb-2"><label class="form-label small mb-0">Display Name</label><input id="ed-displayName" class="form-control form-control-sm" value="${u.displayName || ''}"></div>
                 <div class="mb-2"><label class="form-label small mb-0">Handle</label><input id="ed-handle" class="form-control form-control-sm" value="${u.handle || ''}"></div>
                 <div class="mb-2"><label class="form-label small mb-0">Email</label><input id="ed-email" class="form-control form-control-sm" value="${u.email || ''}"></div>
                 <div class="mb-2"><label class="form-label small mb-0">Photo URL</label><input id="ed-photoURL" class="form-control form-control-sm" value="${u.photoURL || ''}"></div>
-                <div class="mb-2"><label class="form-label small mb-0">Discord URL</label><input id="ed-discordURL" class="form-control form-control-sm" value="${u.discordURL || ''}"></div>
-                <div class="mb-2"><label class="form-label small mb-0">GitHub URL</label><input id="ed-githubURL" class="form-control form-control-sm" value="${u.githubURL || ''}"></div>
+                <div class="row mb-2">
+                    <div class="col-6">
+                        <label class="form-label small mb-0">Discord ID</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <img id="ed-discord-pic" src="${u.discordPic || './defaultuser.png'}" class="rounded border" style="width: 30px; height: 30px; object-fit: cover;">
+                            <input id="ed-discordId" class="form-control form-control-sm" value="${u.discordId || ''}">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small mb-0">GitHub URL</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <img id="ed-github-pic" src="${u.githubPic || './defaultuser.png'}" class="rounded border" style="width: 30px; height: 30px; object-fit: cover;">
+                            <input id="ed-githubURL" class="form-control form-control-sm" value="${u.githubURL || ''}">
+                        </div>
+                    </div>
+                </div>
                 <div class="row mb-2">
                     <div class="col-6"><label class="form-label small mb-0">Theme</label><select id="ed-themePreference" class="form-select form-select-sm"><option value="dark" ${u.themePreference==='dark'?'selected':''}>Dark</option><option value="light" ${u.themePreference==='light'?'selected':''}>Light</option></select></div>
                     <div class="col-6"><label class="form-label small mb-0">Font Size</label><select id="ed-fontScaling" class="form-select form-select-sm"><option value="small" ${u.fontScaling==='small'?'selected':''}>Small</option><option value="normal" ${u.fontScaling==='normal'?'selected':''}>Normal</option><option value="large" ${u.fontScaling==='large'?'selected':''}>Large</option></select></div>
@@ -124,13 +139,37 @@ async function editUser(u) {
                     <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-screenReader" ${u.screenReader?'checked':''}><label class="form-check-label small" for="ed-screenReader">Screen Reader</label></div></div>
                 </div>
             </div>`,
+        didOpen: () => {
+            const syncEdDiscord = (id) => {
+                const pic = document.getElementById('ed-discord-pic');
+                const cleanId = id.trim();
+                
+                if (cleanId) {
+                    pic.src = './defaultuser.png';
+                } else {
+                    pic.src = './defaultuser.png';
+                }
+            };
+            const syncEdGithub = (url) => {
+                const pic = document.getElementById('ed-github-pic');
+                const match = url.match(/github\.com\/([^/?#\s]+)/i);
+                if (match) {
+                    pic.src = `https://github.com/${match[1]}.png`;
+                } else {
+                    pic.src = './defaultuser.png';
+                }
+            };
+
+            document.getElementById('ed-discordId').oninput = (e) => syncEdDiscord(e.target.value);
+            document.getElementById('ed-githubURL').oninput = (e) => syncEdGithub(e.target.value);
+        },
         showCancelButton: true,
         preConfirm: () => ({
             displayName: document.getElementById('ed-displayName').value,
             handle: document.getElementById('ed-handle').value,
             email: document.getElementById('ed-email').value,
             photoURL: document.getElementById('ed-photoURL').value,
-            discordURL: document.getElementById('ed-discordURL').value,
+            discordId: document.getElementById('ed-discordId').value,
             githubURL: document.getElementById('ed-githubURL').value,
             themePreference: document.getElementById('ed-themePreference').value,
             fontScaling: document.getElementById('ed-fontScaling').value,

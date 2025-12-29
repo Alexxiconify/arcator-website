@@ -63,49 +63,72 @@ const AuthService = {
         return { user, profile };
     },
 
-    async loginWithGoogle() { return this._oauth(new GoogleAuthProvider(), 'google'); },
-    async loginWithGithub() { return this._oauth(new GithubAuthProvider(), 'github'); },
+    async loginWithGoogle() { 
+        const p = new GoogleAuthProvider();
+        p.setCustomParameters({ prompt: 'select_account' });
+        return this._oauth(p, 'google'); 
+    },
+    async loginWithGithub() { 
+        const p = new GithubAuthProvider();
+        return this._oauth(p, 'github'); 
+    },
     async loginWithTwitter() { return this._oauth(new TwitterAuthProvider(), 'twitter'); },
     async loginWithApple() { return this._oauth(new OAuthProvider('apple.com'), 'apple'); },
     
-    // Discord OAuth - requires Firebase Cloud Function backend
-    // Discord OAuth - requires Discord Developer Portal setup
     async loginWithDiscord() {
-        // 1. Create app at https://discord.com/developers/applications
-        // 2. Add redirect URI: https://your-domain.com/discord-callback.html
-        // 3. Enable "Custom Providers" in Firebase Console if using official linkProvider
         try {
             return await this._oauth(new OAuthProvider('discord.com'), 'discord');
         } catch (e) {
-            // Fallback to manual flow if official fails
-            const discordClientId = '1234567890'; // REPLACE THIS with your real Discord Client ID
+            const discordClientId = '1455253162276683869';
             const redirectUri = encodeURIComponent(window.location.origin + '/discord-callback.html');
             const scope = encodeURIComponent('identify email');
             const state = Math.random().toString(36).substring(7);
             sessionStorage.setItem('discord_oauth_state', state);
-            window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}`;
+            window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}&state=${state}`;
         }
     },
 
     async _oauth(provider, name) {
-        const result = await signInWithPopup(auth, provider);
-        if (result._tokenResponse?.isNewUser) {
-            const { displayName: rn, handle } = randomIdentity();
-            const displayName = result.user.displayName || rn;
-            const photoURL = result.user.photoURL || generateProfilePic(displayName);
-            await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { displayName, email: result.user.email || '', photoURL, handle, themePreference: DEFAULT_THEME_NAME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: name });
-        } else {
-            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
+        try {
+            const result = await signInWithPopup(auth, provider);
+            if (result._tokenResponse?.isNewUser) {
+                const { displayName: rn, handle } = randomIdentity();
+                const displayName = result.user.displayName || rn;
+                const photoURL = result.user.photoURL || generateProfilePic(displayName);
+                await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { displayName, email: result.user.email || '', photoURL, handle, themePreference: DEFAULT_THEME_NAME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: name });
+            } else {
+                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
+            }
+            return result.user;
+        } catch (e) {
+            console.error(`${name} login error:`, e);
+            if (e.code === 'auth/operation-not-allowed') {
+                throw new Error(`${name} login is not enabled in Firebase Console. Enable it under Authentication > Sign-in method.`);
+            }
+            if (e.code === 'auth/unauthorized-domain') {
+                throw new Error(`This domain (${window.location.hostname}) is not authorized in Firebase Console. Add it under Authentication > Settings > Authorized domains.`);
+            }
+            throw e;
         }
-        return result.user;
     },
 
     async linkProvider(provider) {
         if (!auth.currentUser) throw new Error('Must be logged in to link accounts');
+        
+        // Force account selection for Google
+        if (provider instanceof GoogleAuthProvider) {
+            provider.setCustomParameters({ prompt: 'select_account' });
+        }
+
         const result = await linkWithPopup(auth.currentUser, provider);
+        
+        // Force token refresh to update providerData in the UI
+        await auth.currentUser.getIdToken(true);
+        
         await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, auth.currentUser.uid), { 
             lastUpdated: serverTimestamp() 
         }).catch(() => {});
+        
         return result.user;
     },
 

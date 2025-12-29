@@ -56,3 +56,17 @@ main { flex: 1; }
 .view-comments-btn { text-decoration: none; font-weight: 500; }
 .view-comments-btn:hover { text-decoration: underline; }
 .toggle-icon { display: inline-block; transition: transform .2s; font-size: 0.75em; }
+
+/* Profile Page */
+.profile-pic-preview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+}
+
+.manual-pic-preview {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+}
+

@@ -18,32 +18,54 @@
         import AuthService from './AuthService.js';
         
         async function handleCallback() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            const state = urlParams.get('state');
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            const accessToken = params.get('access_token');
+            const state = params.get('state');
             const savedState = sessionStorage.getItem('discord_oauth_state');
             
-            if (!code || state !== savedState) {
-                await Swal.fire('Error', 'Invalid OAuth state or code', 'error');
+            if (!accessToken || state !== savedState) {
+                await Swal.fire('Error', 'Invalid OAuth state or token', 'error');
                 window.location.href = './users.html';
                 return;
             }
             
             try {
-                // In a real app, you'd send this code to a backend/cloud function
-                // For now, we'll simulate getting the user info and updating the profile
-                // This is a placeholder for the actual backend exchange
+                await AuthService.ready();
+                const user = AuthService.getCurrentUser();
                 
-                // Simulate fetching Discord user info (this would be done on backend)
-                // const discordUser = await fetchDiscordUser(code);
-                
-                // For demonstration, we'll just show a success message and redirect
-                // The actual linking would happen via a Cloud Function updating the Firestore doc
+                if (!user) {
+                    await Swal.fire('Error', 'You must be logged in to link Discord', 'error');
+                    window.location.href = './users.html';
+                    return;
+                }
+
+                // Fetch user info from Discord API officially
+                const userResponse = await fetch('https://discord.com/api/users/@me', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const userData = await userResponse.json();
+
+                if (!userData.id) throw new Error('Failed to fetch Discord user data');
+
+                const avatarUrl = userData.avatar 
+                    ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
+                    : './defaultuser.png';
+
+                await AuthService.updateProfile(user.uid, {
+                    discordLinked: true,
+                    discordId: userData.id,
+                    discordTag: `${userData.username}${userData.discriminator !== '0' ? '#' + userData.discriminator : ''}`,
+                    discordPic: avatarUrl,
+                    lastDiscordLink: new Date().toISOString()
+                });
+
                 await Swal.fire({
-                    title: 'Discord Connected!',
-                    text: 'Your Discord account has been linked manually. Please update your Discord ID in settings.',
+                    title: 'Discord Linked!',
+                    text: `Successfully connected as ${userData.username}. Your profile picture and ID have been updated.`,
                     icon: 'success',
-                    timer: 3000
+                    timer: 3000,
+                    showConfirmButton: false
                 });
                 
                 window.location.href = './users.html';
