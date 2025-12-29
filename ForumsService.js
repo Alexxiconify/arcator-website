@@ -89,9 +89,9 @@ async function loadForums() {
                 </div>
                 <div class="card-footer py-2 comments-section" id="comments-${f.id}">
                     <div class="comments-list mb-2"><div class="text-center py-1"><div class="loading-spinner mx-auto"></div></div></div>
-                    <div class="input-group input-group-sm d-none add-comment-form">
-                        <input class="form-control" placeholder="Add a comment..." data-forum-id="${f.id}">
-                        <button class="btn btn-primary submit-comment-btn" data-forum-id="${f.id}">Post</button>
+                    <div class="d-none add-comment-form">
+                        <div class="add-comment-editor" id="add-comment-${f.id}"></div>
+                        <button class="btn btn-primary btn-sm mt-1 submit-comment-btn" data-forum-id="${f.id}">Post</button>
                     </div>
                 </div>
             </div>
@@ -114,6 +114,11 @@ async function loadForums() {
         if (currentUser) {
             const section = document.getElementById(`comments-${f.id}`);
             section?.querySelector('.add-comment-form')?.classList.remove('d-none');
+            // Initialize Quill for add comment
+            const editorEl = document.getElementById(`add-comment-${f.id}`);
+            if (editorEl && !editorEl.classList.contains('ql-container')) {
+                new Quill(`#add-comment-${f.id}`, { theme: 'snow', placeholder: 'Add a comment...', modules: { toolbar: [['bold','italic','underline'],['link'],['clean']] } });
+            }
         }
     }
 }
@@ -235,8 +240,16 @@ async function voteComment(forumId, commentId, emoji) {
 
 async function replyToComment(forumId, parentId) {
     if (!currentUser) return Swal.fire('Error', 'Sign in first', 'error');
-    const { value } = await Swal.fire({ title: 'Reply', input: 'textarea', showCancelButton: true });
-    if (value) {
+    const { value } = await Swal.fire({
+        title: 'Reply',
+        html: '<div id="reply-editor"></div>',
+        didOpen: () => {
+            window.replyQuill = new Quill('#reply-editor', { theme: 'snow', modules: { toolbar: [['bold','italic','underline'],['link'],['clean']] } });
+        },
+        showCancelButton: true,
+        preConfirm: () => window.replyQuill.root.innerHTML
+    });
+    if (value && value !== '<p><br></p>') {
         await DataService.addComment(forumId, { content: value, parentCommentId: parentId }, currentUser.uid, currentProfile);
         await loadComments(forumId);
     }
@@ -244,17 +257,29 @@ async function replyToComment(forumId, parentId) {
 
 async function submitComment(forumId) {
     if (!currentUser) return Swal.fire('Error', 'Sign in first', 'error');
-    const input = document.querySelector(`#comments-${forumId} input`);
-    const content = input.value.trim();
-    if (!content) return;
+    const editorEl = document.querySelector(`#add-comment-${forumId}`);
+    const quillInstance = Quill.find(editorEl);
+    const content = quillInstance ? quillInstance.root.innerHTML : '';
+    if (!content || content === '<p><br></p>') return;
     
     await DataService.addComment(forumId, { content }, currentUser.uid, currentProfile);
-    input.value = '';
+    if (quillInstance) quillInstance.root.innerHTML = '';
     await loadComments(forumId);
 }
 
 async function editComment(forumId, commentId, isAdminEdit) {
-    const { value } = await Swal.fire({ title: isAdminEdit ? 'Censor Comment' : 'Edit Comment', input: 'textarea', showCancelButton: true });
+    const comments = await DataService.getComments(forumId);
+    const comment = comments.find(c => c.id === commentId);
+    const { value } = await Swal.fire({
+        title: isAdminEdit ? 'Censor Comment' : 'Edit Comment',
+        html: '<div id="edit-editor"></div>',
+        didOpen: () => {
+            window.editQuill = new Quill('#edit-editor', { theme: 'snow', modules: { toolbar: [['bold','italic','underline'],['link'],['clean']] } });
+            window.editQuill.root.innerHTML = comment?.content || '';
+        },
+        showCancelButton: true,
+        preConfirm: () => window.editQuill.root.innerHTML
+    });
     if (value) {
         const updateData = { content: value };
         if (isAdminEdit) updateData.editedByAdmin = true;
@@ -526,18 +551,25 @@ async function init() {
     document.getElementById('add-member-btn').onclick = showAddMemberModal;
     document.getElementById('send-btn').onclick = sendMessage;
     document.getElementById('message-input').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+    // Initialize Quill for thread description
+    if (document.getElementById('thread-desc-editor')) {
+        window.threadDescQuill = new Quill('#thread-desc-editor', { theme: 'snow', modules: { toolbar: [['bold','italic','underline'],['link'],['clean']] } });
+    }
+    
     document.getElementById('thread-form').onsubmit = async (e) => {
         e.preventDefault();
         if (!currentUser) return Swal.fire('Error', 'Sign in first', 'error');
         try {
+            const desc = window.threadDescQuill ? window.threadDescQuill.root.innerHTML : '';
             await DataService.createForum({
                 title: document.getElementById('thread-title').value,
-                description: document.getElementById('thread-desc').value,
+                description: desc,
                 category: document.getElementById('thread-category').value,
                 tags: document.getElementById('thread-tags').value.split(',').map(t => t.trim()).filter(Boolean)
             }, currentUser.uid);
             document.getElementById('create-form').classList.add('d-none');
             document.getElementById('thread-form').reset();
+            if (window.threadDescQuill) window.threadDescQuill.root.innerHTML = '';
             await loadForums();
             Swal.fire('Success', 'Thread created', 'success');
         } catch (e) { Swal.fire('Error', e.message, 'error'); }

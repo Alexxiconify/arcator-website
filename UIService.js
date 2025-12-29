@@ -73,3 +73,10 @@ export async function initPage(AuthService) {
         console.error('Auth init error:', e);
     }
 }
+
+// Auto-init: import this for simple pages that only need nav/footer/theme
+export async function initApp() {
+    const { default: AuthService } = await import('./AuthService.js');
+    await initPage(AuthService);
+    return AuthService;
+}
