@@ -45,3 +45,8 @@ main { flex: 1; }
 .conv-container { min-height: 400px; }
 .message-bubble { max-width: 70%; }
 .profile-img-sm { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+
+.vote-buttons { min-width: 28px; }
+.vote-count { font-size: 0.85rem; font-weight: bold; }
+.replies-container:empty { display: none; }
+.comment-actions .btn-link { text-decoration: none; font-size: 0.8rem; }

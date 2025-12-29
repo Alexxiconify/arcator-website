@@ -236,34 +236,83 @@
             return;
         }
         
-        const commentsHtml = await Promise.all(comments.map(async c => {
+        // Separate root comments and replies
+        const rootComments = comments.filter(c => !c.parentCommentId);
+        const replies = comments.filter(c => c.parentCommentId);
+        
+        function getVoteCount(c) {
+            if (!c.reactions) return 0;
+            let count = 0;
+            Object.keys(c.reactions).forEach(k => {
+                if (k.startsWith('👍_')) count++;
+                if (k.startsWith('👎_')) count--;
+            });
+            return count;
+        }
+        
+        function hasVoted(c, emoji) {
+            if (!c.reactions || !currentUser) return false;
+            return c.reactions[`${emoji}_${currentUser.uid}`] === true;
+        }
+        
+        async function renderComment(c, depth = 0) {
             const author = await getUserInfo(c.authorId);
             const isOwn = c.authorId === currentUser?.uid;
             const wasEdited = c.editedByAdmin ? '<span class="text-warning ms-2">[Edited by Admin]</span>' : '';
+            const voteCount = getVoteCount(c);
+            const upvoted = hasVoted(c, '👍');
+            const downvoted = hasVoted(c, '👎');
+            const childReplies = replies.filter(r => r.parentCommentId === c.id);
+            
+            const childHtml = await Promise.all(childReplies.map(r => renderComment(r, depth + 1)));
             
             return `
-                <div class="comment mb-3 ps-3" data-id="${c.id}">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <img src="${author.photoURL || './defaultuser.png'}" class="profile-img-sm" alt="">
-                        <strong>${DOMPurify.sanitize(author.displayName || 'Anonymous')}</strong>
-                        <small class="text-secondary">${formatDate(c.createdAt)}</small>
-                        ${wasEdited}
-                        ${isOwn ? `
-                            <button class="btn btn-link btn-sm p-0 ms-2 edit-comment-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Edit</button>
-                            <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Delete</button>
-                        ` : ''}
-                        ${isAdmin && !isOwn ? `
-                            <button class="btn btn-link btn-sm p-0 ms-2 text-warning admin-edit-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Censor</button>
-                            <button class="btn btn-link btn-sm p-0 text-danger admin-delete-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Remove</button>
-                        ` : ''}
+                <div class="comment mb-2" data-id="${c.id}" data-depth="${depth}">
+                    <div class="d-flex">
+                        <div class="vote-buttons d-flex flex-column align-items-center me-2">
+                            <button class="btn btn-link btn-sm p-0 upvote-btn ${upvoted ? 'text-success' : 'text-secondary'}" data-forum-id="${forumId}" data-comment-id="${c.id}">▲</button>
+                            <span class="vote-count ${voteCount > 0 ? 'text-success' : voteCount < 0 ? 'text-danger' : ''}">${voteCount}</span>
+                            <button class="btn btn-link btn-sm p-0 downvote-btn ${downvoted ? 'text-danger' : 'text-secondary'}" data-forum-id="${forumId}" data-comment-id="${c.id}">▼</button>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <img src="${author.photoURL || './defaultuser.png'}" class="profile-img-sm" alt="">
+                                <strong>${DOMPurify.sanitize(author.displayName || 'Anonymous')}</strong>
+                                <small class="text-secondary">${formatDate(c.createdAt)}</small>
+                                ${wasEdited}
+                            </div>
+                            <p class="mb-1">${DOMPurify.sanitize(c.content || '')}</p>
+                            <div class="comment-actions mb-2">
+                                ${currentUser ? `<button class="btn btn-link btn-sm p-0 reply-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Reply</button>` : ''}
+                                ${isOwn ? `
+                                    <button class="btn btn-link btn-sm p-0 ms-2 edit-comment-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Edit</button>
+                                    <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Delete</button>
+                                ` : ''}
+                                ${isAdmin && !isOwn ? `
+                                    <button class="btn btn-link btn-sm p-0 ms-2 text-warning admin-edit-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Censor</button>
+                                    <button class="btn btn-link btn-sm p-0 text-danger admin-delete-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Remove</button>
+                                ` : ''}
+                            </div>
+                            <div class="replies-container ps-3 border-start">${childHtml.join('')}</div>
+                        </div>
                     </div>
-                    <p class="mb-0 ms-5">${DOMPurify.sanitize(c.content || '')}</p>
                 </div>
             `;
-        }));
+        }
         
+        const commentsHtml = await Promise.all(rootComments.map(c => renderComment(c)));
         list.innerHTML = commentsHtml.join('');
         
+        // Bind event handlers
+        list.querySelectorAll('.upvote-btn').forEach(btn => {
+            btn.onclick = () => voteComment(btn.dataset.forumId, btn.dataset.commentId, '👍');
+        });
+        list.querySelectorAll('.downvote-btn').forEach(btn => {
+            btn.onclick = () => voteComment(btn.dataset.forumId, btn.dataset.commentId, '👎');
+        });
+        list.querySelectorAll('.reply-btn').forEach(btn => {
+            btn.onclick = () => replyToComment(btn.dataset.forumId, btn.dataset.commentId);
+        });
         list.querySelectorAll('.edit-comment-btn').forEach(btn => {
             btn.onclick = () => editComment(btn.dataset.forumId, btn.dataset.commentId, false);
         });
@@ -276,6 +325,39 @@
         list.querySelectorAll('.admin-delete-btn').forEach(btn => {
             btn.onclick = () => deleteComment(btn.dataset.forumId, btn.dataset.commentId);
         });
+    }
+
+    async function voteComment(forumId, commentId, emoji) {
+        if (!currentUser) return Swal.fire('Error', 'Sign in to vote', 'error');
+        const key = `${emoji}_${currentUser.uid}`;
+        const comments = await DataService.getComments(forumId);
+        const comment = comments.find(c => c.id === commentId);
+        
+        const reactions = comment?.reactions || {};
+        const otherKey = emoji === '👍' ? `👎_${currentUser.uid}` : `👍_${currentUser.uid}`;
+        
+        if (reactions[key]) {
+            delete reactions[key];
+        } else {
+            reactions[key] = true;
+            delete reactions[otherKey];
+        }
+        
+        await DataService.updateComment(forumId, commentId, { reactions });
+        await loadComments(forumId);
+    }
+
+    async function replyToComment(forumId, parentId) {
+        if (!currentUser) return Swal.fire('Error', 'Sign in first', 'error');
+        const { value } = await Swal.fire({
+            title: 'Reply',
+            input: 'textarea',
+            showCancelButton: true
+        });
+        if (value) {
+            await DataService.addComment(forumId, { content: value, parentCommentId: parentId }, currentUser.uid, currentProfile);
+            await loadComments(forumId);
+        }
     }
 
     async function submitComment(forumId) {
