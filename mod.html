@@ -11,22 +11,21 @@
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-    <style>.ql-editor{min-height:200px;background:#1a1a1a;color:#fff}.ql-toolbar{background:#222;border-color:#333!important}.ql-container{border-color:#333!important}.ql-snow .ql-stroke{stroke:#aaa}.ql-snow .ql-fill{fill:#aaa}.ql-snow .ql-picker{color:#aaa}</style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <style>.ql-editor{min-height:200px;background:#1a1a1a;color:#fff}.ql-toolbar{background:#222;border-color:#333!important}.ql-container{border-color:#333!important}.ql-snow .ql-stroke{stroke:#aaa}.ql-snow .ql-fill{fill:#aaa}.ql-snow .ql-picker{color:#aaa}[x-cloak]{display:none!important}</style>
 </head>
-<body>
+<body x-data="adminPanel()" x-cloak>
 <div id="navbar-placeholder"></div>
 
-<div id="loading-view" class="container py-5 text-center"><div class="loading-spinner mx-auto"></div></div>
+<div x-show="loading" class="container py-5 text-center"><div class="loading-spinner mx-auto"></div></div>
 
-<div id="denied-view" class="container py-5 text-center d-none">
+<div x-show="!loading && denied" class="container py-5 text-center">
     <h1 class="display-4 fw-bold mb-4">Access Denied</h1>
     <p class="lead text-secondary mb-4">You do not have permission to access moderator tools.</p>
     <a href="./index.html" class="btn btn-primary">Return Home</a>
 </div>
 
-<div id="admin-view" class="d-none">
+<div x-show="!loading && !denied">
     <section class="hero-section">
         <img src="./creativespawn.png" alt="Hero" loading="lazy">
         <div class="hero-overlay"></div>
@@ -45,7 +44,18 @@
                         <div class="table-responsive">
                             <table class="table table-sm">
                                 <thead><tr><th>User</th><th>Email</th><th>Actions</th></tr></thead>
-                                <tbody id="users-table"></tbody>
+                                <tbody>
+                                    <template x-for="u in users" :key="u.id">
+                                        <tr>
+                                            <td class="d-flex align-items-center gap-2">
+                                                <img :src="u.photoURL || './defaultuser.png'" class="profile-img-sm" alt="">
+                                                <span x-text="u.displayName || 'Unknown'"></span>
+                                            </td>
+                                            <td x-text="u.email || '-'"></td>
+                                            <td><button class="btn btn-outline-primary btn-sm" @click="editUser(u)">Edit</button></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -55,11 +65,22 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Custom Pages</h5>
-                        <button class="btn btn-primary btn-sm" id="create-page-btn">Create Page</button>
+                        <button class="btn btn-primary btn-sm" @click="createPage()">Create Page</button>
                     </div>
                     <div class="card-body">
-                        <div id="pages-empty" class="text-secondary">No pages</div>
-                        <div class="list-group list-group-flush" id="pages-list"></div>
+                        <div x-show="pages.length === 0" class="text-secondary">No pages</div>
+                        <div class="list-group list-group-flush">
+                            <template x-for="p in pages" :key="p.id">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span x-text="p.title || 'Untitled'"></span>
+                                    <div class="btn-group btn-group-sm">
+                                        <a :href="'./pages.html?id=' + p.id" class="btn btn-outline-secondary">View</a>
+                                        <button class="btn btn-outline-primary" @click="editPage(p)">Edit</button>
+                                        <button class="btn btn-outline-danger" @click="deletePage(p.id)">Delete</button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -70,7 +91,20 @@
                         <div class="table-responsive">
                             <table class="table table-sm">
                                 <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Date</th><th>Actions</th></tr></thead>
-                                <tbody id="threads-table"></tbody>
+                                <tbody>
+                                    <template x-for="t in threads" :key="t.id">
+                                        <tr>
+                                            <td x-text="t.title || 'Untitled'"></td>
+                                            <td x-text="getAuthorName(t.authorId)"></td>
+                                            <td x-text="t.category || 'General'"></td>
+                                            <td x-text="formatDate(t.createdAt)"></td>
+                                            <td>
+                                                <button class="btn btn-outline-primary btn-sm" @click="editThread(t)">Edit</button>
+                                                <button class="btn btn-outline-danger btn-sm" @click="deleteThread(t.id)">Delete</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -82,7 +116,6 @@
 
 <div id="footer-placeholder"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module" src="./ModService.js"></script>
 </body>
 </html>
