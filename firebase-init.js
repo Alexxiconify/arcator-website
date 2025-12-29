@@ -10,12 +10,15 @@ export const DEFAULT_PROFILE_PIC = './defaultuser.png', DEFAULT_THEME_NAME = 'da
 
 const art = `artifacts/${projectId}`;
 export const COLLECTIONS = {
-    USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FORMS: 'forms', SUBMISSIONS: 'submissions',
-    DMS: uid => `${art}/users/${uid}/dms`,
-    MESSAGES: (uid, dmId) => `${art}/users/${uid}/dms/${dmId}/messages`,
+    USERS: 'user_profiles', 
+    USER_PROFILES: 'user_profiles', 
+    FORMS: `${art}/public/data/forms`,
+    SUBMISSIONS: (formId) => `${art}/public/data/forms/${formId}/submissions`,
+    CONVERSATIONS: 'conversations',
+    CONV_MESSAGES: (convId) => `conversations/${convId}/messages`,
     THEMES: `${art}/public/data/custom_themes`,
     PAGES: `${art}/public/data/temp_pages`,
-    ADMIN: `${art}/public/data/admin`
+    ADMINS: `${art}/public/data/whitelisted_admins`
 };
 
 export const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
@@ -35,13 +38,13 @@ export async function setUserProfileInFirestore(uid, data) {
 
 export async function getUserDMs(userId) {
     if (!userId) return [];
-    try { const s = await getDocs(query(collection(db, COLLECTIONS.DMS(userId)))); return s.docs.map(d => ({id: d.id, ...d.data()})); }
+    try { const s = await getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', userId))); return s.docs.map(d => ({id: d.id, ...d.data()})); }
     catch (e) { console.error('getUserDMs:', e); return []; }
 }
 
-export async function getDMMessages(userId, dmId, lim = 50) {
-    if (!userId || !dmId) return [];
-    try { const s = await getDocs(query(collection(db, COLLECTIONS.MESSAGES(userId, dmId)), orderBy('createdAt', 'desc'), limit(lim))); return s.docs.map(d => ({id: d.id, ...d.data()})); }
+export async function getDMMessages(convId, lim = 50) {
+    if (!convId) return [];
+    try { const s = await getDocs(query(collection(db, COLLECTIONS.CONV_MESSAGES(convId)), orderBy('createdAt', 'desc'), limit(lim))); return s.docs.map(d => ({id: d.id, ...d.data()})); }
     catch (e) { console.error('getDMMessages:', e); return []; }
 }
 

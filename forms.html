@@ -28,88 +28,73 @@
     </div>
 </section>
 
-<main class="container py-5" id="app">
-    <ul class="nav nav-tabs mb-4">
-        <li class="nav-item"><a class="nav-link" :class="{ active: tab === 'forums' }" href="#" @click.prevent="tab = 'forums'">Forums</a></li>
-        <li class="nav-item"><a class="nav-link" :class="{ active: tab === 'messages' }" href="#" @click.prevent="tab = 'messages'">Messages</a></li>
+<main class="container py-5">
+    <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="forums-tab" data-bs-toggle="tab" data-bs-target="#forums-pane" type="button" role="tab">Forums</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="messages-tab" data-bs-toggle="tab" data-bs-target="#messages-pane" type="button" role="tab">Messages</button>
+        </li>
     </ul>
 
-    <div x-show="tab === 'forums'">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="h4 mb-0">Forums</h2>
-            <button class="btn btn-primary btn-sm" @click="showCreate = !showCreate" x-show="user">Create Thread</button>
-        </div>
-
-        <div class="card mb-4" x-show="showCreate" x-transition>
-            <div class="card-body">
-                <h5 class="card-title">Create New Thread</h5>
-                <form @submit.prevent="createThread">
-                    <div class="mb-3"><input class="form-control" placeholder="Title" x-model="newThread.title" required></div>
-                    <div class="mb-3"><textarea class="form-control" placeholder="Description" x-model="newThread.description" rows="3" required></textarea></div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <select class="form-select" x-model="newThread.category" required aria-label="Category">
-                                <option value="">Select category...</option>
-                                <option value="announcements">Announcements</option>
-                                <option value="gaming">Gaming</option>
-                                <option value="discussion">Discussion</option>
-                                <option value="support">Support</option>
-                                <option value="feedback">Feedback</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6"><input class="form-control" placeholder="Tags (comma-separated)" x-model="newThread.tags"></div>
-                    </div>
-                    <div class="d-flex gap-2 justify-content-end">
-                        <button type="button" class="btn btn-secondary btn-sm" @click="showCreate = false">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm">Post</button>
-                    </div>
-                </form>
+    <div class="tab-content" id="mainTabsContent">
+        <!-- Forums Tab -->
+        <div class="tab-pane fade show active" id="forums-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="h4 mb-0">Forum Threads</h2>
+                <button class="btn btn-primary btn-sm" id="create-thread-btn" style="display:none">Create Thread</button>
             </div>
-        </div>
 
-        <div class="text-center py-5" x-show="loading"><div class="loading-spinner mx-auto"></div></div>
-        <div class="text-center py-5 text-secondary" x-show="!loading && forums.length === 0">No threads yet</div>
-        
-        <div class="list-group" x-show="!loading && forums.length > 0">
-            <template x-for="thread in forums" :key="thread.id">
-                <div class="list-group-item list-group-item-action forum-thread" @click="openThread(thread)">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="mb-1" x-text="thread.title"></h6>
-                            <small class="text-secondary" x-text="thread.category + ' • ' + formatDate(thread.createdAt)"></small>
-                        </div>
-                        <span class="badge bg-primary" x-text="(thread.commentCount || 0) + ' comments'"></span>
-                    </div>
-                </div>
-            </template>
-        </div>
-    </div>
-
-    <div x-show="tab === 'messages'">
-        <div class="alert alert-info" x-show="!user">Sign in to view messages</div>
-        <div class="row" style="min-height: 400px;" x-show="user">
-            <div class="col-md-4 border-end">
-                <h5 class="mb-3">Conversations</h5>
-                <div class="list-group" x-show="dms.length > 0">
-                    <template x-for="dm in dms" :key="dm.id">
-                        <a href="#" class="list-group-item list-group-item-action" :class="{ active: selectedDM?.id === dm.id }" @click.prevent="selectDM(dm)" x-text="dm.participantName || 'Chat'"></a>
-                    </template>
-                </div>
-                <div class="text-secondary" x-show="dms.length === 0">No conversations</div>
-            </div>
-            <div class="col-md-8">
-                <div class="text-center text-secondary py-5" x-show="!selectedDM">Select a conversation</div>
-                <div class="d-flex flex-column h-100" x-show="selectedDM">
-                    <div class="flex-grow-1 overflow-auto mb-3" style="max-height: 300px;">
-                        <template x-for="msg in messages" :key="msg.id">
-                            <div class="mb-2 p-2 rounded" :class="msg.senderId === user?.uid ? 'bg-primary text-white ms-auto' : 'bg-secondary'" style="max-width: 80%;">
-                                <small x-text="msg.content"></small>
+            <div class="card mb-4" id="create-form" style="display:none">
+                <div class="card-body">
+                    <h5 class="card-title">Create New Thread</h5>
+                    <form id="thread-form">
+                        <div class="mb-3"><input class="form-control" placeholder="Title" id="thread-title" required></div>
+                        <div class="mb-3"><textarea class="form-control" placeholder="Description" id="thread-desc" rows="3" required></textarea></div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <select class="form-select" id="thread-category" required aria-label="Category">
+                                    <option value="">Select category...</option>
+                                    <option value="announcements">Announcements</option>
+                                    <option value="gaming">Gaming</option>
+                                    <option value="discussion">Discussion</option>
+                                    <option value="support">Support</option>
+                                    <option value="feedback">Feedback</option>
+                                </select>
                             </div>
-                        </template>
-                    </div>
-                    <div class="input-group">
-                        <input class="form-control" placeholder="Type a message..." x-model="newMessage" @keyup.enter="sendMessage">
-                        <button class="btn btn-primary" @click="sendMessage">Send</button>
+                            <div class="col-md-6"><input class="form-control" placeholder="Tags (comma-separated)" id="thread-tags"></div>
+                        </div>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-secondary btn-sm" id="cancel-create">Cancel</button>
+                            <button type="submit" class="btn btn-primary btn-sm">Post</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="forums-loading" class="text-center py-5"><div class="loading-spinner mx-auto"></div></div>
+            <div id="forums-empty" class="text-center py-5 text-secondary" style="display:none">No threads yet</div>
+            <div class="list-group" id="forums-list"></div>
+        </div>
+
+        <!-- Messages Tab -->
+        <div class="tab-pane fade" id="messages-pane" role="tabpanel">
+            <div id="messages-auth" class="alert alert-info">Sign in to view messages</div>
+            <div id="messages-content" class="row" style="display:none; min-height: 400px;">
+                <div class="col-md-4 border-end">
+                    <h5 class="mb-3">Conversations</h5>
+                    <div class="list-group" id="conversations-list"></div>
+                    <div id="conversations-empty" class="text-secondary" style="display:none">No conversations</div>
+                </div>
+                <div class="col-md-8">
+                    <div id="no-conv-selected" class="text-center text-secondary py-5">Select a conversation</div>
+                    <div id="conv-selected" style="display:none" class="d-flex flex-column h-100">
+                        <div id="messages-list" class="flex-grow-1 overflow-auto mb-3" style="max-height: 300px;"></div>
+                        <div class="input-group">
+                            <input class="form-control" placeholder="Type a message..." id="message-input">
+                            <button class="btn btn-primary" id="send-btn">Send</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -120,67 +105,135 @@
 <div id="footer-placeholder"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <script type="module">
     import AuthService from './AuthService.js';
     import DataService from './DataService.js';
     import { initPage } from './UIService.js';
 
-    const forumsData = {
-        tab: 'forums', loading: true, showCreate: false,
-        user: null, profile: null, forums: [], dms: [], messages: [],
-        selectedDM: null, newMessage: '',
-        newThread: { title: '', description: '', category: '', tags: '' },
+    let currentUser = null;
+    let currentProfile = null;
+    let selectedConv = null;
 
-        async init() {
-            await initPage(AuthService);
-            AuthService.onAuthChange(async ({ user, profile }) => {
-                this.user = user;
-                this.profile = profile;
-                if (user) this.dms = await DataService.getDMs(user.uid);
-            });
-            this.forums = await DataService.getForums();
-            this.loading = false;
-        },
+    function formatDate(ts) {
+        if (!ts) return '';
+        const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+        return dayjs(d).fromNow();
+    }
 
-        formatDate(ts) {
-            if (!ts) return '';
-            const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
-            return dayjs(d).fromNow();
-        },
-
-        async createThread() {
-            if (!this.user) return Swal.fire('Error', 'Sign in first', 'error');
-            try {
-                await DataService.createForum({ title: this.newThread.title, description: this.newThread.description, category: this.newThread.category, tags: this.newThread.tags.split(',').map(t => t.trim()).filter(Boolean) }, this.user.uid);
-                this.forums = await DataService.getForums();
-                this.showCreate = false;
-                this.newThread = { title: '', description: '', category: '', tags: '' };
-                Swal.fire('Success', 'Thread created', 'success');
-            } catch (e) { Swal.fire('Error', e.message, 'error'); }
-        },
-
-        openThread(thread) {
-            Swal.fire({ title: thread.title, html: `<p>${DOMPurify.sanitize(thread.description || '')}</p>`, width: 600 });
-        },
-
-        async selectDM(dm) {
-            this.selectedDM = dm;
-            this.messages = await DataService.getMessages(this.user.uid, dm.id);
-        },
-
-        async sendMessage() {
-            if (!this.newMessage.trim() || !this.selectedDM) return;
-            this.newMessage = '';
+    async function loadForums() {
+        const forums = await DataService.getForums();
+        document.getElementById('forums-loading').style.display = 'none';
+        
+        if (forums.length === 0) {
+            document.getElementById('forums-empty').style.display = 'block';
+            return;
         }
+        
+        document.getElementById('forums-list').innerHTML = forums.map(f => `
+            <div class="list-group-item list-group-item-action forum-thread" data-id="${f.id}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">${DOMPurify.sanitize(f.title || 'Untitled')}</h6>
+                        <small class="text-secondary">${f.category || 'General'} • ${formatDate(f.createdAt)}</small>
+                    </div>
+                    <span class="badge bg-primary">${f.commentCount || 0} comments</span>
+                </div>
+            </div>
+        `).join('');
+        
+        document.querySelectorAll('.forum-thread').forEach(el => {
+            el.onclick = () => openThread(forums.find(f => f.id === el.dataset.id));
+        });
+    }
+
+    function openThread(thread) {
+        Swal.fire({ title: thread.title, html: `<p>${DOMPurify.sanitize(thread.description || '')}</p>`, width: 600 });
+    }
+
+    async function loadConversations() {
+        if (!currentUser) return;
+        const convs = await DataService.getConversations(currentUser.uid);
+        
+        if (convs.length === 0) {
+            document.getElementById('conversations-empty').style.display = 'block';
+            document.getElementById('conversations-list').innerHTML = '';
+            return;
+        }
+        
+        document.getElementById('conversations-empty').style.display = 'none';
+        document.getElementById('conversations-list').innerHTML = convs.map(c => `
+            <a href="#" class="list-group-item list-group-item-action" data-id="${c.id}">${c.name || 'Chat'}</a>
+        `).join('');
+        
+        document.querySelectorAll('#conversations-list a').forEach(el => {
+            el.onclick = async (e) => {
+                e.preventDefault();
+                selectedConv = convs.find(c => c.id === el.dataset.id);
+                document.getElementById('no-conv-selected').style.display = 'none';
+                document.getElementById('conv-selected').style.display = 'flex';
+                await loadMessages();
+            };
+        });
+    }
+
+    async function loadMessages() {
+        if (!selectedConv) return;
+        const messages = await DataService.getMessages(selectedConv.id);
+        document.getElementById('messages-list').innerHTML = messages.map(m => `
+            <div class="mb-2 p-2 rounded ${m.senderId === currentUser?.uid ? 'bg-primary text-white ms-auto' : 'bg-secondary'}" style="max-width: 80%;">
+                <small>${DOMPurify.sanitize(m.content || '')}</small>
+            </div>
+        `).join('');
+    }
+
+    async function init() {
+        await initPage(AuthService);
+        
+        AuthService.onAuthChange(async ({ user, profile }) => {
+            currentUser = user;
+            currentProfile = profile;
+            
+            if (user) {
+                document.getElementById('create-thread-btn').style.display = 'block';
+                document.getElementById('messages-auth').style.display = 'none';
+                document.getElementById('messages-content').style.display = 'flex';
+                await loadConversations();
+            } else {
+                document.getElementById('create-thread-btn').style.display = 'none';
+                document.getElementById('messages-auth').style.display = 'block';
+                document.getElementById('messages-content').style.display = 'none';
+            }
+        });
+        
+        await loadForums();
+    }
+
+    document.getElementById('create-thread-btn').onclick = () => {
+        document.getElementById('create-form').style.display = 'block';
     };
 
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('forumsStore', () => forumsData);
-    });
+    document.getElementById('cancel-create').onclick = () => {
+        document.getElementById('create-form').style.display = 'none';
+    };
 
-    document.getElementById('app').setAttribute('x-data', 'forumsStore');
+    document.getElementById('thread-form').onsubmit = async (e) => {
+        e.preventDefault();
+        if (!currentUser) return Swal.fire('Error', 'Sign in first', 'error');
+        try {
+            await DataService.createForum({
+                title: document.getElementById('thread-title').value,
+                description: document.getElementById('thread-desc').value,
+                category: document.getElementById('thread-category').value,
+                tags: document.getElementById('thread-tags').value.split(',').map(t => t.trim()).filter(Boolean)
+            }, currentUser.uid);
+            document.getElementById('create-form').style.display = 'none';
+            document.getElementById('thread-form').reset();
+            await loadForums();
+            Swal.fire('Success', 'Thread created', 'success');
+        } catch (e) { Swal.fire('Error', e.message, 'error'); }
+    };
+
+    init();
 </script>
 </body>
 </html>
-

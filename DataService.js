@@ -6,7 +6,7 @@ const DataService = {
             const q = query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'), limit(opts.maxResults || 50));
             const snap = await getDocs(q);
             return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { return []; }
+        } catch (e) { console.error('getForums:', e); return []; }
     },
 
     async getForum(id) {
@@ -27,27 +27,27 @@ const DataService = {
 
     async getComments(forumId, opts = {}) {
         try {
-            const q = query(collection(db, COLLECTIONS.FORMS, forumId, 'comments'), orderBy('createdAt', 'asc'), limit(opts.maxResults || 100));
+            const q = query(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), orderBy('createdAt', 'asc'), limit(opts.maxResults || 100));
             const snap = await getDocs(q);
             return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { return []; }
+        } catch (e) { console.error('getComments:', e); return []; }
     },
 
     async addComment(forumId, data, userId, profile) {
         const comment = { content: data.content, authorId: userId, authorName: profile?.displayName || 'Anonymous', authorPhoto: profile?.photoURL || './defaultuser.png', parentCommentId: data.parentCommentId || null, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-        const ref = await addDoc(collection(db, COLLECTIONS.FORMS, forumId, 'comments'), comment);
+        const ref = await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), comment);
         return { id: ref.id, ...comment };
     },
 
-    async updateComment(forumId, commentId, data) { await updateDoc(doc(db, COLLECTIONS.FORMS, forumId, 'comments', commentId), { ...data, updatedAt: serverTimestamp() }); },
-    async deleteComment(forumId, commentId) { await deleteDoc(doc(db, COLLECTIONS.FORMS, forumId, 'comments', commentId)); },
+    async updateComment(forumId, commentId, data) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), commentId), { ...data, updatedAt: serverTimestamp() }); },
+    async deleteComment(forumId, commentId) { await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), commentId)); },
 
     async getPages(opts = {}) {
         try {
             const q = query(collection(db, COLLECTIONS.PAGES), orderBy('createdAt', 'desc'), limit(opts.maxResults || 50));
             const snap = await getDocs(q);
             return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { return []; }
+        } catch (e) { console.error('getPages:', e); return []; }
     },
 
     async getPage(id) {
@@ -62,32 +62,33 @@ const DataService = {
             const q = query(collection(db, COLLECTIONS.USER_PROFILES), orderBy('createdAt', 'desc'), limit(opts.maxResults || 100));
             const snap = await getDocs(q);
             return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { return []; }
+        } catch (e) { console.error('getUsers:', e); return []; }
     },
 
-    async getDMs(userId) {
+    async getConversations(userId) {
         if (!userId) return [];
         try {
-            const snap = await getDocs(collection(db, COLLECTIONS.DMS(userId)));
+            const q = query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', userId));
+            const snap = await getDocs(q);
             return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { return []; }
+        } catch (e) { console.error('getConversations:', e); return []; }
     },
 
-    async getMessages(userId, dmId, opts = {}) {
-        if (!userId || !dmId) return [];
+    async getMessages(convId, opts = {}) {
+        if (!convId) return [];
         try {
-            const q = query(collection(db, COLLECTIONS.MESSAGES(userId, dmId)), orderBy('createdAt', 'desc'), limit(opts.maxResults || 50));
+            const q = query(collection(db, COLLECTIONS.CONV_MESSAGES(convId)), orderBy('createdAt', 'desc'), limit(opts.maxResults || 50));
             const snap = await getDocs(q);
             return snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
-        } catch { return []; }
+        } catch (e) { console.error('getMessages:', e); return []; }
     },
 
     subscribeToComments(forumId, cb) {
-        return onSnapshot(query(collection(db, COLLECTIONS.FORMS, forumId, 'comments'), orderBy('createdAt', 'asc')), snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+        return onSnapshot(query(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), orderBy('createdAt', 'asc')), snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     },
 
-    subscribeToMessages(userId, dmId, cb) {
-        return onSnapshot(query(collection(db, COLLECTIONS.MESSAGES(userId, dmId)), orderBy('createdAt', 'asc')), snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    subscribeToMessages(convId, cb) {
+        return onSnapshot(query(collection(db, COLLECTIONS.CONV_MESSAGES(convId)), orderBy('createdAt', 'asc')), snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     }
 };
 
