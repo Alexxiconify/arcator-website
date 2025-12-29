@@ -4,82 +4,278 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>Admin - Arcator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
-    <style>.ql-editor{min-height:200px;background:#1a1a1a;color:#fff}.ql-toolbar{background:#222;border-color:#333!important}.ql-container{border-color:#333!important}.ql-snow .ql-stroke{stroke:#aaa}.ql-snow .ql-fill{fill:#aaa}.ql-snow .ql-picker{color:#aaa}</style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 </head>
 <body>
 <div id="navbar-placeholder"></div>
 
-<div id="loading-spinner" class="container py-5 text-center"><div class="loading-spinner mx-auto"></div></div>
+<div x-data="adminData">
+    <div x-show="loading" class="container py-5 text-center"><div class="spinner-border text-primary"></div></div>
 
-<div id="access-denied" class="container py-5 text-center d-none">
-    <h1 class="display-4 fw-bold mb-4">Access Denied</h1>
-    <p class="lead text-secondary mb-4">You do not have permission to access moderator tools.</p>
-    <a href="./index.html" class="btn btn-primary">Return Home</a>
-</div>
+    <div x-show="!loading && !isAdmin" class="container py-5 text-center">
+        <h1 class="display-4 fw-bold mb-4">Access Denied</h1>
+        <p class="lead text-secondary mb-4">You do not have permission to access moderator tools.</p>
+        <a href="./index.html" class="btn btn-primary">Return Home</a>
+    </div>
 
-<div id="admin-content" class="d-none">
-    <section class="hero-section">
-        <img src="./creativespawn.png" alt="Hero" loading="lazy">
-        <div class="hero-overlay"></div>
-        <div class="hero-content">
-            <h1 class="display-4 fw-bold mb-3">Moderator Tools</h1>
-            <p class="lead">Manage pages, moderate content, and oversee conversations.</p>
-        </div>
-    </section>
+    <div x-show="!loading && isAdmin">
+        <section class="hero-section">
+            <img src="./creativespawn.png" alt="Hero" loading="lazy">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h1 class="display-4 fw-bold mb-3">Moderator Tools</h1>
+                <p class="lead">Manage pages, moderate content, and oversee conversations.</p>
+            </div>
+        </section>
 
-    <main class="container py-5">
-        <div class="row g-4">
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header"><h5 class="mb-0">User Management</h5></div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead><tr><th>User</th><th>Email</th><th>Actions</th></tr></thead>
-                                <tbody id="users-list"></tbody>
-                            </table>
+        <main class="container py-5">
+            <div class="row g-4">
+                <!-- User Management -->
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header"><h5 class="mb-0">User Management</h5></div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead><tr><th>User</th><th>Email</th><th>Actions</th></tr></thead>
+                                    <tbody>
+                                        <template x-for="user in users" :key="user.id">
+                                            <tr>
+                                                <td class="d-flex align-items-center gap-2">
+                                                    <img :src="user.photoURL || './defaultuser.png'" class="profile-img-sm" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                                                    <span x-text="user.displayName || 'Unknown'"></span>
+                                                </td>
+                                                <td x-text="user.email || '-'"></td>
+                                                <td><button class="btn btn-outline-primary btn-sm" @click="editUser(user)">Edit</button></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Pages -->
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Custom Pages</h5>
+                            <button class="btn btn-primary btn-sm" @click="createPage">Create Page</button>
+                        </div>
+                        <div class="card-body">
+                            <div x-show="pages.length === 0" class="text-secondary">No pages</div>
+                            <div class="list-group list-group-flush">
+                                <template x-for="page in pages" :key="page.id">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span x-text="page.title || 'Untitled'"></span>
+                                        <div class="btn-group btn-group-sm">
+                                            <a :href="'./pages.html?id=' + page.id" class="btn btn-outline-secondary">View</a>
+                                            <button class="btn btn-outline-primary" @click="editPage(page)">Edit</button>
+                                            <button class="btn btn-outline-danger" @click="deletePage(page.id)">Delete</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Forum Threads -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header"><h5 class="mb-0">Forum Threads</h5></div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Date</th><th>Actions</th></tr></thead>
+                                    <tbody>
+                                        <template x-for="thread in threads" :key="thread.id">
+                                            <tr>
+                                                <td x-text="thread.title || 'Untitled'"></td>
+                                                <td x-text="getAuthorName(thread.authorId)"></td>
+                                                <td x-text="thread.category || 'General'"></td>
+                                                <td x-text="formatDate(thread.createdAt)"></td>
+                                                <td>
+                                                    <button class="btn btn-outline-primary btn-sm" @click="editThread(thread)">Edit</button>
+                                                    <button class="btn btn-outline-danger btn-sm" @click="deleteThread(thread.id)">Delete</button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Custom Pages</h5>
-                        <button class="btn btn-primary btn-sm" onclick="window.adminPanel.createPage()">Create Page</button>
-                    </div>
-                    <div class="card-body">
-                        <div id="no-pages" class="text-secondary d-none">No pages</div>
-                        <div id="pages-list" class="list-group list-group-flush"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header"><h5 class="mb-0">Forum Threads</h5></div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Date</th><th>Actions</th></tr></thead>
-                                <tbody id="threads-list"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
+        </main>
+    </div>
 </div>
 
 <div id="footer-placeholder"></div>
 
-<script type="module" src="./ModService.js"></script>
+<script type="module" src="./app.js"></script>
+<script type="module">
+    import { db, COLLECTIONS, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from './firebase-init.js';
+    import { formatDate } from './utils.js';
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('adminData', () => ({
+            users: [],
+            pages: [],
+            threads: [],
+            loading: true,
+            isAdmin: false,
+
+            async init() {
+                this.$watch('$store.auth.user', async user => {
+                    if (user) {
+                        this.isAdmin = await Alpine.store('auth').checkAdmin(user.uid);
+                        if (this.isAdmin) await this.refreshAll();
+                    } else {
+                        this.isAdmin = false;
+                    }
+                    this.loading = false;
+                });
+                
+                // Initial check if user is already loaded
+                if (Alpine.store('auth').user) {
+                     this.isAdmin = await Alpine.store('auth').checkAdmin(Alpine.store('auth').user.uid);
+                     if (this.isAdmin) await this.refreshAll();
+                     this.loading = false;
+                }
+            },
+
+            async refreshAll() {
+                const [usersSnap, pagesSnap, threadsSnap] = await Promise.all([
+                    getDocs(collection(db, COLLECTIONS.USER_PROFILES)),
+                    getDocs(collection(db, COLLECTIONS.PAGES)),
+                    getDocs(collection(db, COLLECTIONS.FORMS))
+                ]);
+                this.users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                this.pages = pagesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                this.threads = threadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            },
+
+            getAuthorName(uid) {
+                const u = this.users.find(u => u.id === uid);
+                return u ? u.displayName : (uid ? 'Unknown' : 'System');
+            },
+
+            formatDate(ts) { return formatDate(ts); },
+
+            async createPage() {
+                const { value } = await Swal.fire({
+                    title: 'Create Page',
+                    html: `
+                        <input id="new-page-title" class="form-control mb-2" placeholder="Title">
+                        <input id="new-page-slug" class="form-control mb-2" placeholder="Slug">
+                        <textarea id="new-page-content" class="form-control" rows="10" placeholder="Content"></textarea>
+                    `,
+                    showCancelButton: true,
+                    preConfirm: () => ({
+                        title: document.getElementById('new-page-title').value,
+                        slug: document.getElementById('new-page-slug').value,
+                        content: document.getElementById('new-page-content').value,
+                        createdAt: new Date()
+                    })
+                });
+                if (value) {
+                    await addDoc(collection(db, COLLECTIONS.PAGES), value);
+                    await this.refreshAll();
+                    Swal.fire('Created', '', 'success');
+                }
+            },
+
+            async editPage(page) {
+                const { value } = await Swal.fire({
+                    title: 'Edit Page',
+                    html: `
+                        <input id="ed-page-title" class="form-control mb-2" placeholder="Title" value="${page.title || ''}">
+                        <input id="ed-page-slug" class="form-control mb-2" placeholder="Slug" value="${page.slug || ''}">
+                        <textarea id="ed-page-content" class="form-control" rows="10" placeholder="Content (HTML/Markdown)">${page.content || ''}</textarea>
+                    `,
+                    showCancelButton: true,
+                    preConfirm: () => ({
+                        title: document.getElementById('ed-page-title').value,
+                        slug: document.getElementById('ed-page-slug').value,
+                        content: document.getElementById('ed-page-content').value
+                    })
+                });
+                if (value) {
+                    await updateDoc(doc(db, COLLECTIONS.PAGES, page.id), value);
+                    await this.refreshAll();
+                    Swal.fire('Updated', '', 'success');
+                }
+            },
+
+            async deletePage(id) {
+                if (confirm('Delete this page?')) {
+                    await deleteDoc(doc(db, COLLECTIONS.PAGES, id));
+                    await this.refreshAll();
+                }
+            },
+
+            async editThread(thread) {
+                const { value } = await Swal.fire({
+                    title: 'Edit Thread',
+                    html: `
+                        <input id="ed-thread-title" class="form-control mb-2" placeholder="Title" value="${thread.title || ''}">
+                        <select id="ed-thread-category" class="form-select mb-2">
+                            <option value="General" ${thread.category === 'General' ? 'selected' : ''}>General</option>
+                            <option value="Announcements" ${thread.category === 'Announcements' ? 'selected' : ''}>Announcements</option>
+                            <option value="Support" ${thread.category === 'Support' ? 'selected' : ''}>Support</option>
+                        </select>
+                        <textarea id="ed-thread-content" class="form-control" rows="10" placeholder="Content">${thread.description || ''}</textarea>
+                    `,
+                    showCancelButton: true,
+                    preConfirm: () => ({
+                        title: document.getElementById('ed-thread-title').value,
+                        category: document.getElementById('ed-thread-category').value,
+                        description: document.getElementById('ed-thread-content').value
+                    })
+                });
+                if (value) {
+                    await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), value);
+                    await this.refreshAll();
+                    Swal.fire('Updated', '', 'success');
+                }
+            },
+
+            async deleteThread(id) {
+                if (confirm('Delete this thread?')) {
+                    await deleteDoc(doc(db, COLLECTIONS.FORMS, id));
+                    await this.refreshAll();
+                }
+            },
+
+            async editUser(user) {
+                 const { value } = await Swal.fire({
+                    title: 'Edit User',
+                    html: `
+                        <input id="ed-displayName" class="form-control mb-2" placeholder="Display Name" value="${user.displayName || ''}">
+                        <input id="ed-handle" class="form-control mb-2" placeholder="Handle" value="${user.handle || ''}">
+                    `,
+                    showCancelButton: true,
+                    preConfirm: () => ({
+                        displayName: document.getElementById('ed-displayName').value,
+                        handle: document.getElementById('ed-handle').value
+                    })
+                });
+                if (value) {
+                    await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.id), value);
+                    await this.refreshAll();
+                    Swal.fire('Updated', '', 'success');
+                }
+            }
+        }));
+    });
+</script>
 </body>
 </html>

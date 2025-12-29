@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>Forums - Arcator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@emoji-mart/css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
@@ -16,7 +13,16 @@
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-    <style>.ql-editor{min-height:60px;background:#1a1a1a;color:#fff}.ql-editor.ql-blank::before{color:#888!important}.ql-toolbar{background:#222;border-color:#333!important}.ql-container{border-color:#333!important}.ql-snow .ql-stroke{stroke:#aaa}.ql-snow .ql-fill{fill:#aaa}.ql-snow .ql-picker{color:#aaa}.add-comment-editor .ql-editor{min-height:50px}</style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <style>
+        .ql-editor{min-height:60px;background:#1a1a1a;color:#fff}
+        .ql-toolbar{background:#222;border-color:#333!important}
+        .ql-container{border-color:#333!important}
+        .forum-thread-card { transition: transform 0.2s; }
+        .forum-thread-card:hover { transform: translateY(-2px); }
+        .profile-img-sm { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+        .message-bubble { max-width: 80%; }
+    </style>
 </head>
 <body>
 <div id="navbar-placeholder"></div>
@@ -30,32 +36,31 @@
     </div>
 </section>
 
-<main class="container py-5">
-    <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="forums-tab" data-bs-toggle="tab" data-bs-target="#forums-pane" type="button" role="tab">Forums</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="messages-tab" data-bs-toggle="tab" data-bs-target="#messages-pane" type="button" role="tab">Messages</button>
-        </li>
+<main class="container py-5" x-data="{ tab: 'forums' }">
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item"><button class="nav-link" :class="{ 'active': tab === 'forums' }" @click="tab = 'forums'">Forums</button></li>
+        <li class="nav-item"><button class="nav-link" :class="{ 'active': tab === 'messages' }" @click="tab = 'messages'">Messages</button></li>
     </ul>
-
-    <div class="tab-content" id="mainTabsContent">
-        <div class="tab-pane fade show active" id="forums-pane" role="tabpanel">
+    <div class="tab-content">
+        <div x-show="tab === 'forums'" x-data="forumData">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="h4 mb-0">Forum Threads</h2>
-                <button class="btn btn-primary btn-sm d-none" id="create-thread-btn">Create Thread</button>
+                <template x-if="$store.auth.user">
+                    <button class="btn btn-primary btn-sm" @click="showCreateModal = true">Create Thread</button>
+                </template>
             </div>
-
-            <div class="card mb-4 d-none" id="create-form">
+            <div class="card mb-4" x-show="showCreateModal" x-transition>
                 <div class="card-body">
                     <h5 class="card-title">Create New Thread</h5>
-                    <form id="thread-form">
-                        <div class="mb-3"><input class="form-control" placeholder="Title" id="thread-title" required></div>
-                        <div class="mb-3"><label class="form-label small">Description</label><div id="thread-desc-editor"></div></div>
+                    <form @submit.prevent="createThread">
+                        <div class="mb-3"><input class="form-control" x-model="newThread.title" placeholder="Title" required></div>
+                        <div class="mb-3">
+                            <label class="form-label small">Description</label>
+                            <div x-ref="createEditor"></div>
+                        </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <select class="form-select" id="thread-category" required aria-label="Category">
+                                <select class="form-select" x-model="newThread.category" required>
                                     <option value="">Select category...</option>
                                     <option value="announcements">Announcements</option>
                                     <option value="gaming">Gaming</option>
@@ -63,58 +68,419 @@
                                     <option value="support">Support</option>
                                 </select>
                             </div>
-                            <div class="col-md-6"><input class="form-control" placeholder="Tags (comma-separated)" id="thread-tags"></div>
+                            <div class="col-md-6"><input class="form-control" x-model="newThread.tags" placeholder="Tags (comma-separated)"></div>
                         </div>
                         <div class="d-flex gap-2 justify-content-end">
-                            <button type="button" class="btn btn-secondary btn-sm" id="cancel-create">Cancel</button>
+                            <button type="button" class="btn btn-secondary btn-sm" @click="showCreateModal = false">Cancel</button>
                             <button type="submit" class="btn btn-primary btn-sm">Post</button>
                         </div>
                     </form>
                 </div>
             </div>
-
-            <div id="forums-loading" class="text-center py-5"><div class="loading-spinner mx-auto"></div></div>
-            <div id="forums-empty" class="text-center py-5 text-secondary d-none">No threads yet</div>
-            <div id="forums-list"></div>
+            <div x-show="loading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+            <div x-show="!loading && threads.length === 0" class="text-center py-5 text-secondary">No threads yet</div>
+            <template x-for="thread in threads" :key="thread.id">
+                <div class="card mb-2 forum-thread-card">
+                    <div class="card-body py-2">
+                        <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-link btn-sm p-0 text-primary" @click="toggleThread(thread)">
+                                    <span x-text="thread.expanded ? '▼' : '▶'"></span>
+                                </button>
+                                <span class="fw-bold" x-text="thread.title"></span>
+                            </div>
+                            <small class="text-secondary" x-html="getThreadMeta(thread)"></small>
+                        </div>
+                        <p class="mb-0 small mt-1" x-html="DOMPurify.sanitize(thread.description)"></p>
+                    </div>
+                    <div class="card-footer py-2" x-show="thread.expanded" x-transition>
+                        <div x-show="thread.loadingComments" class="text-center py-1"><div class="spinner-border spinner-border-sm"></div></div>
+                        <div class="comments-list mb-2">
+                            <template x-for="comment in thread.comments" :key="comment.id">
+                                <div class="comment mb-2 ms-0">
+                                    <div class="d-flex">
+                                        <div class="d-flex flex-column align-items-center me-2">
+                                            <button class="btn btn-link btn-sm p-0" :class="hasVoted(comment, '👍') ? 'text-success' : 'text-secondary'" @click="vote(thread.id, comment, '👍')">▲</button>
+                                            <span x-text="getVoteCount(comment)" :class="getVoteCount(comment) > 0 ? 'text-success' : getVoteCount(comment) < 0 ? 'text-danger' : ''"></span>
+                                            <button class="btn btn-link btn-sm p-0" :class="hasVoted(comment, '👎') ? 'text-danger' : 'text-secondary'" @click="vote(thread.id, comment, '👎')">▼</button>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <img :src="comment.authorPhoto || './defaultuser.png'" class="profile-img-sm">
+                                                <strong x-text="comment.authorName"></strong>
+                                                <small class="text-secondary" x-text="formatDate(comment.createdAt)"></small>
+                                                <span x-show="comment.editedByAdmin" class="text-warning small">[Edited by Admin]</span>
+                                            </div>
+                                            <div class="mb-1" x-html="DOMPurify.sanitize(comment.content)"></div>
+                                            <div class="comment-actions mb-2">
+                                                <template x-if="$store.auth.user">
+                                                    <button class="btn btn-link btn-sm p-0" @click="reply(thread.id, comment.id)">Reply</button>
+                                                </template>
+                                                <template x-if="$store.auth.user && $store.auth.user.uid === comment.authorId">
+                                                    <span>
+                                                        <button class="btn btn-link btn-sm p-0 ms-2" @click="editComment(thread.id, comment)">Edit</button>
+                                                        <button class="btn btn-link btn-sm p-0 text-danger" @click="deleteComment(thread.id, comment.id)">Delete</button>
+                                                    </span>
+                                                </template>
+                                            </div>
+                                            <div class="ps-3 border-start">
+                                                <template x-for="reply in getReplies(thread, comment.id)" :key="reply.id">
+                                                    <div class="comment mb-2">
+                                                        <div class="d-flex">
+                                                            <div class="d-flex flex-column align-items-center me-2">
+                                                                <button class="btn btn-link btn-sm p-0" :class="hasVoted(reply, '👍') ? 'text-success' : 'text-secondary'" @click="vote(thread.id, reply, '👍')">▲</button>
+                                                                <span x-text="getVoteCount(reply)"></span>
+                                                                <button class="btn btn-link btn-sm p-0" :class="hasVoted(reply, '👎') ? 'text-danger' : 'text-secondary'" @click="vote(thread.id, reply, '👎')">▼</button>
+                                                            </div>
+                                                            <div class="flex-grow-1">
+                                                                <div class="d-flex align-items-center gap-2 mb-1">
+                                                                    <img :src="reply.authorPhoto || './defaultuser.png'" class="profile-img-sm">
+                                                                    <strong x-text="reply.authorName"></strong>
+                                                                    <small class="text-secondary" x-text="formatDate(reply.createdAt)"></small>
+                                                                </div>
+                                                                <div class="mb-1" x-html="DOMPurify.sanitize(reply.content)"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <template x-if="$store.auth.user">
+                            <div class="mt-3">
+                                <div :id="'editor-' + thread.id" style="min-height: 50px;"></div>
+                                <button class="btn btn-primary btn-sm mt-2" @click="postComment(thread.id)">Post Comment</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
         </div>
 
-        <div class="tab-pane fade" id="messages-pane" role="tabpanel">
-            <div id="messages-auth" class="alert alert-info">Sign in to view messages</div>
-            <div id="messages-content" class="row d-none">
-                <div class="col-md-4 border-end">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0">Conversations</h5>
-                        <button class="btn btn-primary btn-sm" id="new-conv-btn">New</button>
+        <div x-show="tab === 'messages'" x-data="messageData">
+            <template x-if="!$store.auth.user">
+                <div class="alert alert-info">Sign in to view messages</div>
+            </template>
+            <template x-if="$store.auth.user">
+                <div class="row">
+                    <div class="col-md-4 border-end">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">Conversations</h5>
+                            <button class="btn btn-primary btn-sm" @click="createConversation">New</button>
+                        </div>
+                        <div class="list-group">
+                            <template x-for="conv in conversations" :key="conv.id">
+                                <a href="#" class="list-group-item list-group-item-action" :class="{ 'active': selectedConv?.id === conv.id }" @click.prevent="selectConv(conv)">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1" x-text="getConvName(conv)"></h6>
+                                        <small x-text="formatDate(conv.lastMessageTime)"></small>
+                                    </div>
+                                    <p class="mb-1 small text-truncate" x-text="conv.lastMessage || 'No messages'"></p>
+                                </a>
+                            </template>
+                        </div>
                     </div>
-                    <div class="list-group" id="conversations-list"></div>
-                    <div id="conversations-empty" class="text-secondary d-none">No conversations</div>
-                </div>
-                <div class="col-md-8">
-                    <div id="no-conv-selected" class="text-center text-secondary py-5">Select a conversation</div>
-                    <div id="conv-selected" class="d-none d-flex flex-column conv-container">
-                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                            <span id="conv-title" class="fw-bold"></span>
-                            <div>
-                                <button class="btn btn-outline-secondary btn-sm" id="add-member-btn">Add Member</button>
+                    <div class="col-md-8">
+                        <template x-if="!selectedConv">
+                            <div class="text-center text-secondary py-5">Select a conversation</div>
+                        </template>
+                        <template x-if="selectedConv">
+                            <div class="d-flex flex-column" style="height: 600px;">
+                                <div class="border-bottom pb-2 mb-3">
+                                    <strong x-text="getConvName(selectedConv)"></strong>
+                                </div>
+                                <div class="flex-grow-1 overflow-auto mb-3" id="msg-list">
+                                    <template x-for="msg in messages" :key="msg.id">
+                                        <div class="mb-2 d-flex" :class="msg.senderId === $store.auth.user.uid ? 'justify-content-end' : 'justify-content-start'">
+                                            <div class="message-bubble p-2 rounded" :class="msg.senderId === $store.auth.user.uid ? 'bg-primary text-white' : 'bg-secondary'">
+                                                <div x-text="msg.content"></div>
+                                                <small class="d-block text-end" style="font-size: 0.7em; opacity: 0.7;" x-text="formatDate(msg.createdAt)"></small>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" x-model="newMessage" @keydown.enter="sendMessage">
+                                    <button class="btn btn-primary" @click="sendMessage">Send</button>
+                                </div>
                             </div>
-                        </div>
-                        <div id="messages-list" class="flex-grow-1 overflow-auto mb-3"></div>
-                        <div class="input-group">
-                            <button class="btn btn-outline-secondary" id="emoji-btn" type="button">😀</button>
-                            <input class="form-control" placeholder="Type a message..." id="message-input">
-                            <button class="btn btn-primary" id="send-btn">Send</button>
-                        </div>
-                        <div id="emoji-picker-container" class="d-none position-absolute"></div>
+                        </template>
                     </div>
                 </div>
-            </div>
+            </template>
         </div>
     </div>
 </main>
 
 <div id="footer-placeholder"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script type="module" src="./ForumsService.js"></script>
+<script type="module" src="./app.js"></script>
+<script type="module">
+    import { db, COLLECTIONS, collection, query, orderBy, getDocs, addDoc, updateDoc, doc, increment, serverTimestamp, where, onSnapshot } from './firebase-init.js';
+    import { formatDate } from './utils.js';
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('forumData', () => ({
+            threads: [],
+            loading: true,
+            showCreateModal: false,
+            newThread: { title: '', category: '', tags: '' },
+            quill: null,
+
+            async init() {
+                this.loadThreads();
+                this.$watch('showCreateModal', value => {
+                    if (value && !this.quill) {
+                        this.$nextTick(() => {
+                            this.quill = new Quill(this.$refs.createEditor, { theme: 'snow', placeholder: 'Describe your thread...' });
+                        });
+                    }
+                });
+            },
+
+            async loadThreads() {
+                const q = query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'));
+                const snap = await getDocs(q);
+                this.threads = snap.docs.map(d => ({ id: d.id, ...d.data(), expanded: false, comments: [], loadingComments: false, quill: null }));
+                this.loading = false;
+            },
+
+            async createThread() {
+                if (!this.quill) return;
+                const description = this.quill.root.innerHTML;
+                const user = Alpine.store('auth').user;
+                if (!user) return;
+
+                await addDoc(collection(db, COLLECTIONS.FORMS), {
+                    ...this.newThread,
+                    description,
+                    authorId: user.uid,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                    commentCount: 0,
+                    votes: 0
+                });
+                this.showCreateModal = false;
+                this.newThread = { title: '', category: '', tags: '' };
+                this.quill.root.innerHTML = '';
+                this.loadThreads();
+            },
+
+            async toggleThread(thread) {
+                thread.expanded = !thread.expanded;
+                if (thread.expanded && thread.comments.length === 0) {
+                    thread.loadingComments = true;
+                    const q = query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc'));
+                    const snap = await getDocs(q);
+                    thread.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    thread.loadingComments = false;
+                    
+                    this.$nextTick(() => {
+                        if (!thread.quill && Alpine.store('auth').user) {
+                            const el = document.getElementById('editor-' + thread.id);
+                            if (el) {
+                                thread.quill = new Quill(el, { theme: 'snow', placeholder: 'Add a comment...', modules: { toolbar: [['bold','italic','underline'],['link'],['clean']] } });
+                            }
+                        }
+                    });
+                }
+            },
+
+            getReplies(thread, parentId) {
+                return thread.comments.filter(c => c.parentCommentId === parentId);
+            },
+
+            formatDate(ts) { return formatDate(ts); },
+
+            getThreadMeta(thread) {
+                const cat = thread.category || 'General';
+                const date = formatDate(thread.createdAt);
+                return `${cat} • ${date}`;
+            },
+
+            async postComment(forumId) {
+                const thread = this.threads.find(t => t.id === forumId);
+                if (!thread || !thread.quill) return;
+                const content = thread.quill.root.innerHTML;
+                if (!content || content === '<p><br></p>') return;
+
+                const user = Alpine.store('auth').user;
+                const profile = Alpine.store('auth').profile;
+                
+                await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), {
+                    content,
+                    authorId: user.uid,
+                    authorName: profile?.displayName || 'Anonymous',
+                    authorPhoto: profile?.photoURL || './defaultuser.png',
+                    createdAt: serverTimestamp(),
+                    parentCommentId: null
+                });
+                
+                await updateDoc(doc(db, COLLECTIONS.FORMS, forumId), { commentCount: increment(1) });
+                thread.quill.root.innerHTML = '';
+                
+                const q = query(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), orderBy('createdAt', 'asc'));
+                const snap = await getDocs(q);
+                thread.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            },
+
+            async vote(forumId, comment, type) {
+                const user = Alpine.store('auth').user;
+                if (!user) return Swal.fire('Error', 'Sign in to vote', 'error');
+                
+                const reactions = comment.reactions || {};
+                const key = `${type}_${user.uid}`;
+                const otherKey = type === '👍' ? `👎_${user.uid}` : `👍_${user.uid}`;
+                
+                if (reactions[key]) delete reactions[key];
+                else { reactions[key] = true; delete reactions[otherKey]; }
+                
+                await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { reactions });
+                comment.reactions = reactions;
+            },
+
+            hasVoted(comment, type) {
+                const user = Alpine.store('auth').user;
+                return user && comment.reactions && comment.reactions[`${type}_${user.uid}`];
+            },
+
+            getVoteCount(comment) {
+                if (!comment.reactions) return 0;
+                let count = 0;
+                Object.keys(comment.reactions).forEach(k => {
+                    if (k.startsWith('👍_')) count++;
+                    if (k.startsWith('👎_')) count--;
+                });
+                return count;
+            },
+            
+            async reply(forumId, parentId) {
+                const { value } = await Swal.fire({
+                    title: 'Reply',
+                    input: 'textarea',
+                    showCancelButton: true
+                });
+                if (value) {
+                    const user = Alpine.store('auth').user;
+                    const profile = Alpine.store('auth').profile;
+                    await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), {
+                        content: value,
+                        authorId: user.uid,
+                        authorName: profile?.displayName || 'Anonymous',
+                        authorPhoto: profile?.photoURL || './defaultuser.png',
+                        createdAt: serverTimestamp(),
+                        parentCommentId: parentId
+                    });
+                    await updateDoc(doc(db, COLLECTIONS.FORMS, forumId), { commentCount: increment(1) });
+                    const q = query(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), orderBy('createdAt', 'asc'));
+                    const snap = await getDocs(q);
+                    const thread = this.threads.find(t => t.id === forumId);
+                    if (thread) thread.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                }
+            },
+
+            async deleteComment(forumId, commentId) {
+                if (confirm('Delete this comment?')) {
+                    await updateDoc(doc(db, COLLECTIONS.FORMS, forumId), { commentCount: increment(-1) });
+                    await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), commentId));
+                    const q = query(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), orderBy('createdAt', 'asc'));
+                    const snap = await getDocs(q);
+                    const thread = this.threads.find(t => t.id === forumId);
+                    if (thread) thread.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                }
+            },
+            
+            async editComment(forumId, comment) {
+                 const { value } = await Swal.fire({
+                    title: 'Edit Comment',
+                    input: 'textarea',
+                    inputValue: comment.content.replace(/<[^>]*>?/gm, ''),
+                    showCancelButton: true
+                });
+                if (value) {
+                    await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { content: value });
+                    comment.content = value;
+                }
+            }
+        }));
+
+        Alpine.data('messageData', () => ({
+            conversations: [],
+            selectedConv: null,
+            messages: [],
+            newMessage: '',
+            unsubscribe: null,
+
+            init() {
+                this.$watch('$store.auth.user', user => {
+                    if (user) this.loadConversations();
+                    else { this.conversations = []; this.selectedConv = null; }
+                });
+                if (Alpine.store('auth').user) this.loadConversations();
+            },
+
+            async loadConversations() {
+                const user = Alpine.store('auth').user;
+                if (!user) return;
+                const q = query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', user.uid));
+                const snap = await getDocs(q);
+                this.conversations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            },
+
+            getConvName(conv) {
+                const user = Alpine.store('auth').user;
+                if (conv.name && conv.name !== 'Notes') return conv.name;
+                if (conv.participants.length === 1) return 'Notes';
+                return 'Chat'; 
+            },
+
+            async selectConv(conv) {
+                this.selectedConv = conv;
+                if (this.unsubscribe) this.unsubscribe();
+                
+                const q = query(collection(db, COLLECTIONS.CONV_MESSAGES(conv.id)), orderBy('createdAt', 'asc'));
+                this.unsubscribe = onSnapshot(q, snap => {
+                    this.messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    this.$nextTick(() => {
+                        const el = document.getElementById('msg-list');
+                        if (el) el.scrollTop = el.scrollHeight;
+                    });
+                });
+            },
+
+            async sendMessage() {
+                if (!this.newMessage.trim() || !this.selectedConv) return;
+                const user = Alpine.store('auth').user;
+                await addDoc(collection(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id)), {
+                    content: this.newMessage,
+                    senderId: user.uid,
+                    createdAt: serverTimestamp()
+                });
+                await updateDoc(doc(db, COLLECTIONS.CONVERSATIONS, this.selectedConv.id), {
+                    lastMessage: this.newMessage,
+                    lastMessageTime: serverTimestamp()
+                });
+                this.newMessage = '';
+            },
+
+            async createConversation() {
+                const { value: email } = await Swal.fire({
+                    title: 'New Conversation',
+                    input: 'email',
+                    inputPlaceholder: 'Enter user email',
+                    showCancelButton: true
+                });
+                if (email) {
+                    Swal.fire('Not Implemented', 'User search by email needs Firestore index', 'info');
+                }
+            },
+            
+            formatDate(ts) { return formatDate(ts); }
+        }));
+    });
+</script>
 </body>
 </html>

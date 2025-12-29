@@ -15,7 +15,7 @@
     </div>
 
     <script type="module">
-        import AuthService from './AuthService.js';
+        import { auth, db, COLLECTIONS, updateDoc, doc, onAuthStateChanged } from './firebase-init.js';
         
         async function handleCallback() {
             const hash = window.location.hash.substring(1);
@@ -30,16 +30,21 @@
                 return;
             }
             
-            try {
-                await AuthService.ready();
-                const user = AuthService.getCurrentUser();
-                
-                if (!user) {
-                    await Swal.fire('Error', 'You must be logged in to link Discord', 'error');
-                    window.location.href = './users.html';
-                    return;
-                }
+            // Wait for auth to be ready
+            const user = await new Promise(resolve => {
+                const unsubscribe = onAuthStateChanged(auth, (u) => {
+                    unsubscribe();
+                    resolve(u);
+                });
+            });
+            
+            if (!user) {
+                await Swal.fire('Error', 'You must be logged in to link Discord', 'error');
+                window.location.href = './users.html';
+                return;
+            }
 
+            try {
                 // Fetch user info from Discord API officially
                 const userResponse = await fetch('https://discord.com/api/users/@me', {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
@@ -52,7 +57,7 @@
                     ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
                     : './defaultuser.png';
 
-                await AuthService.updateProfile(user.uid, {
+                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.uid), {
                     discordLinked: true,
                     discordId: userData.id,
                     discordTag: `${userData.username}${userData.discriminator !== '0' ? '#' + userData.discriminator : ''}`,

@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>Account - Arcator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 </head>
 <body>
 <div id="navbar-placeholder"></div>
@@ -24,23 +23,23 @@
     </div>
 </section>
 
-<main class="container py-5">
+<main class="container py-5" x-data="userData">
     <!-- Auth Section -->
-    <div id="auth-section" class="row justify-content-center">
+    <div x-show="!$store.auth.user" class="row justify-content-center">
         <div class="col-md-6 col-lg-4">
             <div class="card">
                 <div class="card-body">
                     <h4 class="card-title mb-4">Sign In</h4>
-                    <form id="login-form">
-                        <div class="mb-3"><input type="email" id="login-email" class="form-control" placeholder="Email" autocomplete="email" required></div>
-                        <div class="mb-3"><input type="password" id="login-password" class="form-control" placeholder="Password" autocomplete="current-password" required></div>
+                    <form @submit.prevent="login">
+                        <div class="mb-3"><input type="email" x-model="email" class="form-control" placeholder="Email" autocomplete="email" required></div>
+                        <div class="mb-3"><input type="password" x-model="password" class="form-control" placeholder="Password" autocomplete="current-password" required></div>
                         <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
                     </form>
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-secondary" id="google-btn">Sign in with Google</button>
-                        <button class="btn btn-outline-secondary" id="github-btn">Sign in with GitHub</button>
-                        <button class="btn btn-outline-secondary" id="twitter-btn">Sign in with Twitter</button>
-                        <button class="btn btn-outline-secondary" id="discord-btn">Sign in with Discord</button>
+                        <button class="btn btn-outline-secondary" @click="loginWithProvider('google')">Sign in with Google</button>
+                        <button class="btn btn-outline-secondary" @click="loginWithProvider('github')">Sign in with GitHub</button>
+                        <button class="btn btn-outline-secondary" @click="loginWithProvider('twitter')">Sign in with Twitter</button>
+                        <button class="btn btn-outline-secondary" @click="loginWithProvider('discord')">Sign in with Discord</button>
                     </div>
                 </div>
             </div>
@@ -48,157 +47,47 @@
     </div>
 
     <!-- Settings Section -->
-    <div id="settings-section" class="row justify-content-center d-none">
+    <div x-show="$store.auth.user" class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">Profile Settings</h4>
-                    <button class="btn btn-outline-danger btn-sm" id="logout-btn">Sign Out</button>
+                    <button class="btn btn-outline-danger btn-sm" @click="$store.auth.logout()">Sign Out</button>
                 </div>
                 <div class="card-body">
-                    <form id="settings-form">
+                    <form @submit.prevent="saveProfile">
                         <div class="d-flex align-items-center gap-4 mb-4">
-                            <img id="profile-pic" src="./defaultuser.png" class="rounded-circle border border-primary profile-pic-preview" alt="Profile Preview">
+                            <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary profile-pic-preview" alt="Profile Preview" style="width: 100px; height: 100px; object-fit: cover;">
                             <div class="flex-grow-1">
                                 <h5 class="mb-3">Profile</h5>
                                 <div class="row g-3">
-                                    <div class="col-md-6"><label class="form-label" for="displayName">Display Name</label><input id="displayName" class="form-control" autocomplete="name"></div>
-                                    <div class="col-md-6"><label class="form-label" for="handle">Handle</label><input id="handle" class="form-control" autocomplete="username"></div>
+                                    <div class="col-md-6"><label class="form-label">Display Name</label><input x-model="profile.displayName" class="form-control"></div>
+                                    <div class="col-md-6"><label class="form-label">Handle</label><input x-model="profile.handle" class="form-control"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6"><label class="form-label" for="email">Email</label><input id="email" class="form-control" autocomplete="email"></div>
-                            <div class="col-md-6"><label class="form-label" for="photoURL">Photo URL</label><input id="photoURL" class="form-control" autocomplete="photo"></div>
-                        </div>
-                        
-                        <hr>
-                        <h5 class="mb-3">Linked Accounts (OAuth)</h5>
-                        <div class="row g-3 mb-4">
-                            <!-- Google -->
-                            <div class="col-12 col-md-6">
-                                <div class="p-3 border rounded bg-dark-subtle">
-                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span id="google-status" class="badge bg-secondary">Not Linked</span>
-                                            <span class="fw-bold">Google</span>
-                                        </div>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" id="link-google-btn">Link</button>
-                                    </div>
-                                    <small id="google-info" class="text-muted d-block text-truncate"></small>
-                                </div>
-                            </div>
-                            <!-- GitHub -->
-                            <div class="col-12 col-md-6">
-                                <div class="p-3 border rounded bg-dark-subtle">
-                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span id="github-status" class="badge bg-secondary">Not Linked</span>
-                                            <span class="fw-bold">GitHub</span>
-                                        </div>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" id="link-github-btn">Link</button>
-                                    </div>
-                                    <small id="github-info" class="text-muted d-block text-truncate"></small>
-                                </div>
-                            </div>
-                            <!-- Discord -->
-                            <div class="col-12 col-md-6">
-                                <div class="p-3 border rounded bg-dark-subtle">
-                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span id="discord-status" class="badge bg-secondary">Not Linked</span>
-                                            <span class="fw-bold">Discord</span>
-                                        </div>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" id="link-discord-btn">Link</button>
-                                    </div>
-                                    <small id="discord-info" class="text-muted d-block text-truncate"></small>
-                                </div>
-                            </div>
-                            <!-- Twitter -->
-                            <div class="col-12 col-md-6">
-                                <div class="p-3 border rounded bg-dark-subtle">
-                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span id="twitter-status" class="badge bg-secondary">Not Linked</span>
-                                            <span class="fw-bold">Twitter</span>
-                                        </div>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" id="link-twitter-btn">Link</button>
-                                    </div>
-                                    <small id="twitter-info" class="text-muted d-block text-truncate"></small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <h5 class="mb-3">Manual Connections</h5>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <div class="d-flex align-items-center gap-3">
-                                    <img id="manual-discord-pic" src="./defaultuser.png" class="rounded border manual-pic-preview" alt="Discord Preview">
-                                    <div class="flex-grow-1">
-                                        <label class="form-label" for="discordId">Discord User ID</label>
-                                        <input id="discordId" class="form-control" placeholder="123456789012345678">
-                                    </div>
-                                </div>
-                                <div class="form-text ms-5">Required for Discord notifications</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="d-flex align-items-center gap-3">
-                                    <img id="manual-github-pic" src="./defaultuser.png" class="rounded border manual-pic-preview" alt="GitHub Preview">
-                                    <div class="flex-grow-1">
-                                        <label class="form-label" for="githubURL">GitHub Profile URL</label>
-                                        <input id="githubURL" class="form-control" placeholder="https://github.com/username">
-                                    </div>
-                                </div>
-                            </div>
+                            <div class="col-md-6"><label class="form-label">Email</label><input x-model="profile.email" class="form-control" readonly></div>
+                            <div class="col-md-6"><label class="form-label">Photo URL</label><input x-model="profile.photoURL" class="form-control"></div>
                         </div>
                         
                         <hr>
                         <h5 class="mb-3">Appearance</h5>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="form-label" for="theme">Theme</label>
-                                <select id="theme" class="form-select" aria-label="Theme">
+                                <label class="form-label">Theme</label>
+                                <select x-model="profile.themePreference" class="form-select">
                                     <option value="dark">Dark</option>
                                     <option value="light">Light</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="fontScaling">Font Size</label>
-                                <select id="fontScaling" class="form-select" aria-label="Font Size">
+                                <label class="form-label">Font Size</label>
+                                <select x-model="profile.fontScaling" class="form-select">
                                     <option value="small">Small</option>
                                     <option value="normal">Normal</option>
                                     <option value="large">Large</option>
                                 </select>
-                            </div>
-                            <div class="col-md-6"><div class="form-check"><input id="reducedMotion" class="form-check-input" type="checkbox"><label class="form-check-label" for="reducedMotion">Reduced Motion</label></div></div>
-                            <div class="col-md-6"><div class="form-check"><input id="highContrast" class="form-check-input" type="checkbox"><label class="form-check-label" for="highContrast">High Contrast</label></div></div>
-                        </div>
-                        
-                        <hr>
-                        <h5 class="mb-3">Notifications</h5>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4"><div class="form-check"><input id="emailNotif" class="form-check-input" type="checkbox"><label class="form-check-label" for="emailNotif">Email</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input id="pushNotif" class="form-check-input" type="checkbox"><label class="form-check-label" for="pushNotif">Push</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input id="discordNotif" class="form-check-input" type="checkbox" disabled><label class="form-check-label" for="discordNotif">Discord <small class="text-muted">(requires Discord ID)</small></label></div></div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="notifFrequency">Notification Frequency</label>
-                                <select id="notifFrequency" class="form-select" aria-label="Notification Frequency">
-                                    <option value="immediate">Immediate</option>
-                                    <option value="daily">Daily Digest</option>
-                                    <option value="weekly">Weekly Digest</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <hr>
-                        <h5 class="mb-3">Privacy</h5>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4"><div class="form-check"><input id="profileVisible" class="form-check-input" type="checkbox"><label class="form-check-label" for="profileVisible">Profile Visible</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input id="activityTracking" class="form-check-input" type="checkbox"><label class="form-check-label" for="activityTracking">Activity Tracking</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input id="thirdPartySharing" class="form-check-input" type="checkbox"><label class="form-check-label" for="thirdPartySharing">Third Party Sharing</label></div></div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="dataRetention">Data Retention (days)</label>
-                                <input id="dataRetention" class="form-control" type="number" min="30" max="3650" value="365">
                             </div>
                         </div>
                         
@@ -212,7 +101,66 @@
 
 <div id="footer-placeholder"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script type="module" src="./UsersService.js"></script>
+<script type="module" src="./app.js"></script>
+<script type="module">
+    import { db, COLLECTIONS, updateDoc, doc, updateProfile, auth } from './firebase-init.js';
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('userData', () => ({
+            email: '',
+            password: '',
+            profile: {},
+
+            init() {
+                this.$watch('$store.auth.profile', val => {
+                    if (val) this.profile = { ...val };
+                });
+                if (Alpine.store('auth').profile) this.profile = { ...Alpine.store('auth').profile };
+            },
+
+            async login() {
+                try {
+                    await Alpine.store('auth').login(this.email, this.password);
+                } catch (e) {
+                    Swal.fire('Error', e.message, 'error');
+                }
+            },
+
+            async loginWithProvider(provider) {
+                try {
+                    await Alpine.store('auth').loginWithProvider(provider);
+                } catch (e) {
+                    Swal.fire('Error', e.message, 'error');
+                }
+            },
+
+            async saveProfile() {
+                try {
+                    const user = Alpine.store('auth').user;
+                    if (!user) return;
+                    
+                    await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.uid), this.profile);
+                    
+                    // Update Auth profile if needed
+                    if (this.profile.displayName !== user.displayName || this.profile.photoURL !== user.photoURL) {
+                        await updateProfile(user, { 
+                            displayName: this.profile.displayName, 
+                            photoURL: this.profile.photoURL 
+                        });
+                    }
+                    
+                    // Update store
+                    Alpine.store('auth').profile = { ...this.profile };
+                    Alpine.store('auth').cacheUser(user, this.profile);
+                    Alpine.store('auth').updateTheme(this.profile.themePreference, this.profile.fontScaling);
+                    
+                    Swal.fire('Success', 'Profile updated', 'success');
+                } catch (e) {
+                    Swal.fire('Error', e.message, 'error');
+                }
+            }
+        }));
+    });
+</script>
 </body>
 </html>

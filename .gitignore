@@ -5,9 +5,6 @@ dist
 /.idea/
 /.dev/
 /node_models/
-/firestore.rules
-firebase-init.js
-/firebase-init.js
 codeql-custom-queries-javascript/
 *.ql
 /.vscode/
