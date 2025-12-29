@@ -41,36 +41,46 @@
     async function init() {
         try {
             await initPage(AuthService);
-            const pages = await DataService.getPages();
-            
-            document.getElementById('pages-loading').classList.add('d-none');
-            
-            if (pages.length === 0) {
-                document.getElementById('pages-empty').classList.remove('d-none');
-                return;
-            }
-            
-            const list = document.getElementById('pages-list');
-            list.classList.remove('d-none');
-            list.innerHTML = pages.map(page => {
-                let date = 'Unknown';
-                if (page.createdAt) {
-                    const d = page.createdAt.seconds ? new Date(page.createdAt.seconds * 1000) : new Date(page.createdAt);
-                    date = dayjs(d).format('MMM D, YYYY');
-                }
-                return `<div class="col-md-4"><div class="card h-100"><div class="card-body">
-                    <h5 class="card-title">${page.title || 'Untitled'}</h5>
-                    <p class="card-text text-secondary">${page.description || 'No description'}</p>
-                </div><div class="card-footer d-flex justify-content-between align-items-center">
-                    <small class="text-secondary">${date}</small>
-                    <a href="./page.html?id=${page.id}" class="btn btn-primary btn-sm">View</a>
-                </div></div></div>`;
-            }).join('');
+            await loadPages();
         } catch (e) {
             console.error('Pages init error:', e);
             document.getElementById('pages-loading').innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
         }
     }
+
+    async function loadPages() {
+        const pages = await DataService.getPages();
+        document.getElementById('pages-loading').classList.add('d-none');
+        
+        if (pages.length === 0) {
+            document.getElementById('pages-empty').classList.remove('d-none');
+            return;
+        }
+        
+        const list = document.getElementById('pages-list');
+        list.classList.remove('d-none');
+        list.innerHTML = pages.map(page => {
+            let dateStr = 'Unknown';
+            if (page.createdAt) {
+                const d = page.createdAt.seconds ? new Date(page.createdAt.seconds * 1000) : new Date(page.createdAt);
+                dateStr = dayjs(d).format('MMM D, YYYY');
+            }
+            return `
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">${page.title || 'Untitled'}</h5>
+                            <p class="card-text text-secondary">${page.description || 'No description'}</p>
+                        </div>
+                        <div class="card-footer d-flex justify-content-between align-items-center">
+                            <small class="text-secondary">${dateStr}</small>
+                            <a href="./page.html?id=${page.id}" class="btn btn-primary btn-sm">View</a>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
     init();
 </script>
 </body>

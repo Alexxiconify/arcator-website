@@ -152,12 +152,16 @@
                 <span>${p.title || 'Untitled'}</span>
                 <div class="btn-group btn-group-sm">
                     <a href="./page.html?id=${p.id}" class="btn btn-outline-secondary">View</a>
-                    <button class="btn btn-outline-danger" data-pid="${p.id}">Delete</button>
+                    <button class="btn btn-outline-primary edit-page-btn" data-pid="${p.id}">Edit</button>
+                    <button class="btn btn-outline-danger delete-page-btn" data-pid="${p.id}">Delete</button>
                 </div>
             </div>
         `).join('');
         
-        list.querySelectorAll('button').forEach(btn => {
+        list.querySelectorAll('.edit-page-btn').forEach(btn => {
+            btn.onclick = () => editPage(pages.find(p => p.id === btn.dataset.pid));
+        });
+        list.querySelectorAll('.delete-page-btn').forEach(btn => {
             btn.onclick = () => deletePage(btn.dataset.pid);
         });
     }
@@ -176,9 +180,29 @@
         }
     }
 
+    async function editPage(p) {
+        const { value } = await Swal.fire({
+            title: 'Edit Page',
+            html: `<input id="swal-title" class="swal2-input" placeholder="Title" value="${p.title || ''}">
+                   <input id="swal-desc" class="swal2-input" placeholder="Description" value="${p.description || ''}">
+                   <textarea id="swal-content" class="swal2-textarea" placeholder="Content (Markdown)">${p.content || ''}</textarea>`,
+            preConfirm: () => ({ 
+                title: document.getElementById('swal-title').value, 
+                description: document.getElementById('swal-desc').value,
+                content: document.getElementById('swal-content').value 
+            })
+        });
+        if (value) {
+            await DataService.updatePage(p.id, value);
+            await loadPages();
+            Swal.fire('Updated', '', 'success');
+        }
+    }
+
     async function deletePage(id) {
         const { isConfirmed } = await Swal.fire({ title: 'Delete page?', icon: 'warning', showCancelButton: true });
         if (isConfirmed) {
+            await DataService.deletePage(id);
             await loadPages();
             Swal.fire('Deleted', '', 'success');
         }
@@ -188,11 +212,18 @@
         const { value } = await Swal.fire({
             title: 'Create Page',
             html: `<input id="swal-title" class="swal2-input" placeholder="Title">
+                   <input id="swal-desc" class="swal2-input" placeholder="Description">
                    <textarea id="swal-content" class="swal2-textarea" placeholder="Content (Markdown)"></textarea>`,
-            preConfirm: () => ({ title: document.getElementById('swal-title').value, content: document.getElementById('swal-content').value })
+            preConfirm: () => ({ 
+                title: document.getElementById('swal-title').value, 
+                description: document.getElementById('swal-desc').value,
+                content: document.getElementById('swal-content').value 
+            })
         });
         if (value && value.title) {
-            Swal.fire('Created', 'Page creation would save to Firestore', 'info');
+            await DataService.createPage(value);
+            await loadPages();
+            Swal.fire('Created', '', 'success');
         }
     };
 

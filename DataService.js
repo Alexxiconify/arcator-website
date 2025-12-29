@@ -57,6 +57,20 @@ const DataService = {
         } catch { return null; }
     },
 
+    async createPage(data) {
+        const page = { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+        const ref = await addDoc(collection(db, COLLECTIONS.PAGES), page);
+        return { id: ref.id, ...page };
+    },
+
+    async updatePage(id, data) {
+        await updateDoc(doc(db, COLLECTIONS.PAGES, id), { ...data, updatedAt: serverTimestamp() });
+    },
+
+    async deletePage(id) {
+        await deleteDoc(doc(db, COLLECTIONS.PAGES, id));
+    },
+
     async getUsers(opts = {}) {
         try {
             const q = query(collection(db, COLLECTIONS.USER_PROFILES), orderBy('createdAt', 'desc'), limit(opts.maxResults || 100));
