@@ -8,3 +8,6 @@ dist
 /firestore.rules
 firebase-init.js
 /firebase-init.js
+codeql-custom-queries-javascript/
+*.ql
+/.vscode/
