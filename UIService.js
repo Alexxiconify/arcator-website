@@ -65,7 +65,9 @@ export async function initPage(AuthService) {
         AuthService.onAuthChange(({ user, profile }) => {
             renderUserSection(user, profile);
             const theme = profile?.themePreference || 'dark';
+            const fontSize = profile?.fontScaling || 'normal';
             document.documentElement.setAttribute('data-bs-theme', theme);
+            document.documentElement.setAttribute('data-font-size', fontSize);
         });
     } catch (e) {
         console.error('Auth init error:', e);
