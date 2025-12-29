@@ -71,17 +71,6 @@
     import AuthService from './AuthService.js';
     import DataService from './DataService.js';
     import { initPage } from './UIService.js';
-    import { db, COLLECTIONS, getDoc, doc } from './firebase-init.js';
-
-    async function checkAdmin(uid) {
-        if (!uid) return false;
-        // Hardcoded admin UID fallback
-        if (uid === 'CEch8cXWemSDQnM3dHVKPt0RGpn2') return true;
-        try {
-            const snap = await getDoc(doc(db, 'artifacts', 'arcator-web', 'public', 'data', 'whitelisted_admins', uid));
-            return snap.exists();
-        } catch { return false; }
-    }
 
     async function init() {
         try {
@@ -96,7 +85,7 @@
                     return;
                 }
                 
-                const isAdmin = await checkAdmin(user.uid);
+                const isAdmin = await AuthService.isAdmin(user.uid);
                 
                 if (!isAdmin) {
                     document.getElementById('denied-view').classList.remove('d-none');
@@ -169,9 +158,64 @@
     async function editUser(u) {
         const { value } = await Swal.fire({
             title: 'Edit User',
-            html: `<input id="swal-name" class="swal2-input" placeholder="Display Name" value="${u.displayName || ''}">
-                   <input id="swal-email" class="swal2-input" placeholder="Email" value="${u.email || ''}">`,
-            preConfirm: () => ({ displayName: document.getElementById('swal-name').value, email: document.getElementById('swal-email').value })
+            width: '600px',
+            html: `
+                <div class="text-start" style="max-height:60vh;overflow-y:auto;">
+                    <div class="mb-2"><label class="form-label small mb-0">Display Name</label><input id="ed-displayName" class="form-control form-control-sm" value="${u.displayName || ''}"></div>
+                    <div class="mb-2"><label class="form-label small mb-0">Handle</label><input id="ed-handle" class="form-control form-control-sm" value="${u.handle || ''}"></div>
+                    <div class="mb-2"><label class="form-label small mb-0">Email</label><input id="ed-email" class="form-control form-control-sm" value="${u.email || ''}"></div>
+                    <div class="mb-2"><label class="form-label small mb-0">Photo URL</label><input id="ed-photoURL" class="form-control form-control-sm" value="${u.photoURL || ''}"></div>
+                    <div class="mb-2"><label class="form-label small mb-0">Discord URL</label><input id="ed-discordURL" class="form-control form-control-sm" value="${u.discordURL || ''}"></div>
+                    <div class="mb-2"><label class="form-label small mb-0">GitHub URL</label><input id="ed-githubURL" class="form-control form-control-sm" value="${u.githubURL || ''}"></div>
+                    <div class="row mb-2">
+                        <div class="col-6"><label class="form-label small mb-0">Theme</label><select id="ed-themePreference" class="form-select form-select-sm"><option value="dark" ${u.themePreference==='dark'?'selected':''}>Dark</option><option value="light" ${u.themePreference==='light'?'selected':''}>Light</option></select></div>
+                        <div class="col-6"><label class="form-label small mb-0">Font Size</label><select id="ed-fontScaling" class="form-select form-select-sm"><option value="small" ${u.fontScaling==='small'?'selected':''}>Small</option><option value="normal" ${u.fontScaling==='normal'?'selected':''}>Normal</option><option value="large" ${u.fontScaling==='large'?'selected':''}>Large</option></select></div>
+                    </div>
+                    <div class="mb-2"><label class="form-label small mb-0">Custom CSS</label><textarea id="ed-customCSS" class="form-control form-control-sm" rows="2">${u.customCSS || ''}</textarea></div>
+                    <div class="row mb-2">
+                        <div class="col-6"><label class="form-label small mb-0">Data Retention (days)</label><input id="ed-dataRetention" class="form-control form-control-sm" value="${u.dataRetention || '365'}"></div>
+                        <div class="col-6"><label class="form-label small mb-0">Notification Freq</label><select id="ed-notificationFrequency" class="form-select form-select-sm"><option value="immediate" ${u.notificationFrequency==='immediate'?'selected':''}>Immediate</option><option value="daily" ${u.notificationFrequency==='daily'?'selected':''}>Daily</option><option value="weekly" ${u.notificationFrequency==='weekly'?'selected':''}>Weekly</option></select></div>
+                    </div>
+                    <hr><p class="small text-secondary mb-1">Toggles</p>
+                    <div class="row">
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-emailNotifications" ${u.emailNotifications?'checked':''}><label class="form-check-label small" for="ed-emailNotifications">Email Notifications</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-pushNotifications" ${u.pushNotifications?'checked':''}><label class="form-check-label small" for="ed-pushNotifications">Push Notifications</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-discordNotifications" ${u.discordNotifications?'checked':''}><label class="form-check-label small" for="ed-discordNotifications">Discord Notifications</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-profileVisible" ${u.profileVisible?'checked':''}><label class="form-check-label small" for="ed-profileVisible">Profile Visible</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-activityTracking" ${u.activityTracking?'checked':''}><label class="form-check-label small" for="ed-activityTracking">Activity Tracking</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-thirdPartySharing" ${u.thirdPartySharing?'checked':''}><label class="form-check-label small" for="ed-thirdPartySharing">Third Party Sharing</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-debugMode" ${u.debugMode?'checked':''}><label class="form-check-label small" for="ed-debugMode">Debug Mode</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-reducedMotion" ${u.reducedMotion?'checked':''}><label class="form-check-label small" for="ed-reducedMotion">Reduced Motion</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-highContrast" ${u.highContrast?'checked':''}><label class="form-check-label small" for="ed-highContrast">High Contrast</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-focusIndicators" ${u.focusIndicators?'checked':''}><label class="form-check-label small" for="ed-focusIndicators">Focus Indicators</label></div></div>
+                        <div class="col-6"><div class="form-check"><input type="checkbox" class="form-check-input" id="ed-screenReader" ${u.screenReader?'checked':''}><label class="form-check-label small" for="ed-screenReader">Screen Reader</label></div></div>
+                    </div>
+                </div>`,
+            showCancelButton: true,
+            preConfirm: () => ({
+                displayName: document.getElementById('ed-displayName').value,
+                handle: document.getElementById('ed-handle').value,
+                email: document.getElementById('ed-email').value,
+                photoURL: document.getElementById('ed-photoURL').value,
+                discordURL: document.getElementById('ed-discordURL').value,
+                githubURL: document.getElementById('ed-githubURL').value,
+                themePreference: document.getElementById('ed-themePreference').value,
+                fontScaling: document.getElementById('ed-fontScaling').value,
+                customCSS: document.getElementById('ed-customCSS').value,
+                dataRetention: document.getElementById('ed-dataRetention').value,
+                notificationFrequency: document.getElementById('ed-notificationFrequency').value,
+                emailNotifications: document.getElementById('ed-emailNotifications').checked,
+                pushNotifications: document.getElementById('ed-pushNotifications').checked,
+                discordNotifications: document.getElementById('ed-discordNotifications').checked,
+                profileVisible: document.getElementById('ed-profileVisible').checked,
+                activityTracking: document.getElementById('ed-activityTracking').checked,
+                thirdPartySharing: document.getElementById('ed-thirdPartySharing').checked,
+                debugMode: document.getElementById('ed-debugMode').checked,
+                reducedMotion: document.getElementById('ed-reducedMotion').checked,
+                highContrast: document.getElementById('ed-highContrast').checked,
+                focusIndicators: document.getElementById('ed-focusIndicators').checked,
+                screenReader: document.getElementById('ed-screenReader').checked
+            })
         });
         if (value) {
             await AuthService.updateProfile(u.id, value);

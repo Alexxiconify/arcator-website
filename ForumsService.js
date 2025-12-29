@@ -19,22 +19,8 @@ async function getUserInfo(uid) {
             userCache[uid] = snap.data();
             return userCache[uid];
         }
-    } catch (e) { console.error('getUserInfo error:', e); }
+    } catch (e) { console.error('getUserInfo:', e); }
     return { displayName: 'Unknown', photoURL: './defaultuser.png' };
-}
-
-async function checkAdmin(uid) {
-    if (!uid) return false;
-    // Hardcoded admin UID fallback
-    if (uid === 'CEch8cXWemSDQnM3dHVKPt0RGpn2') return true;
-    try {
-        const snap = await getDoc(doc(db, 'artifacts', 'arcator-web', 'public', 'data', 'whitelisted_admins', uid));
-        console.log('Admin check for', uid, ':', snap.exists());
-        return snap.exists();
-    } catch (e) {
-        console.error('checkAdmin error:', e);
-        return false;
-    }
 }
 
 function formatDate(ts) {
@@ -44,9 +30,15 @@ function formatDate(ts) {
     const diff = now - d;
     const isToday = d.toDateString() === now.toDateString();
     
-    if (isToday) return dayjs(d).format('HH:mm:ss');
-    else if (diff < 86400000 * 7) return dayjs(d).format('ddd HH:mm');
-    else return dayjs(d).format('DD/MM/YY HH:mm');
+    if (typeof dayjs !== 'undefined') {
+        if (isToday) return dayjs(d).format('HH:mm:ss');
+        if (diff < 86400000 * 7) return dayjs(d).format('ddd HH:mm');
+        return dayjs(d).format('DD/MM/YY HH:mm');
+    }
+    // Fallback without dayjs
+    const pad = n => String(n).padStart(2, '0');
+    if (isToday) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)}`;
 }
 
 async function loadForums() {
@@ -58,33 +50,46 @@ async function loadForums() {
         return;
     }
     
-    const forumHtml = await Promise.all(forums.map(async f => {
+    // Fetch comment counts for forums missing the count field
+    const forumData = await Promise.all(forums.map(async f => {
+        let commentCount = f.commentCount;
+        if (commentCount === undefined || commentCount === null) {
+            const comments = await DataService.getComments(f.id);
+            commentCount = comments.length;
+        }
+        return { ...f, commentCount };
+    }));
+    
+    const forumHtml = await Promise.all(forumData.map(async f => {
         const isSystemThread = !f.authorId;
         const author = isSystemThread ? null : await getUserInfo(f.authorId);
-        const comments = await DataService.getComments(f.id);
-        const commentCount = comments.length;
         
-        const authorHtml = isSystemThread 
-            ? `<span class="badge bg-info">System</span> • ${f.category || 'General'} • ${formatDate(f.createdAt)}`
+        const categoryEmoji = { announcements: '📢', gaming: '🎮', discussion: '💬', support: '🛠️', general: '📝' };
+        const cat = f.category?.toLowerCase() || 'general';
+        const categoryDisplay = categoryEmoji[cat] || f.category || '📝';
+        
+        const authorInfo = isSystemThread 
+            ? `<span class="badge bg-info">System</span> • ${categoryDisplay} • ${formatDate(f.createdAt)}`
             : `<img src="${author.photoURL || './defaultuser.png'}" class="profile-img-sm me-1" alt="">
-               ${author.displayName || 'Anonymous'} • ${f.category || 'General'} • ${formatDate(f.createdAt)}`;
+               ${author.displayName || 'Anonymous'} • ${categoryDisplay} • ${formatDate(f.createdAt)}`;
         
         return `
-            <div class="card mb-3 forum-thread-card" data-id="${f.id}">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="mb-0">${DOMPurify.sanitize(f.title || 'Untitled')}</h5>
-                        <small class="text-secondary">${authorHtml}</small>
+            <div class="card mb-2 forum-thread-card" data-id="${f.id}">
+                <div class="card-body py-2">
+                    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-link btn-sm p-0 text-primary view-comments-btn" data-id="${f.id}">
+                                <span class="toggle-icon">▼</span>
+                            </button>
+                            <span class="fw-bold">${DOMPurify.sanitize(f.title || 'Untitled')}</span>
+                        </div>
+                        <small class="text-secondary">${authorInfo}</small>
                     </div>
-                    <span class="badge bg-primary">${commentCount}</span>
+                    <p class="mb-0 small mt-1">${DOMPurify.sanitize(f.description || '')}</p>
                 </div>
-                <div class="card-body">
-                    <p class="card-text">${DOMPurify.sanitize(f.description || '')}</p>
-                    <button class="btn btn-outline-primary btn-sm view-comments-btn" data-id="${f.id}">View Comments (${commentCount})</button>
-                </div>
-                <div class="card-footer d-none comments-section" id="comments-${f.id}">
-                    <div class="comments-list mb-3"></div>
-                    <div class="input-group d-none add-comment-form">
+                <div class="card-footer py-2 comments-section" id="comments-${f.id}">
+                    <div class="comments-list mb-2"><div class="text-center py-1"><div class="loading-spinner mx-auto"></div></div></div>
+                    <div class="input-group input-group-sm d-none add-comment-form">
                         <input class="form-control" placeholder="Add a comment..." data-forum-id="${f.id}">
                         <button class="btn btn-primary submit-comment-btn" data-forum-id="${f.id}">Post</button>
                     </div>
@@ -95,24 +100,38 @@ async function loadForums() {
     
     document.getElementById('forums-list').innerHTML = forumHtml.join('');
     
+    // Bind toggle handlers and load comments for expanded sections
     document.querySelectorAll('.view-comments-btn').forEach(btn => {
         btn.onclick = () => toggleComments(btn.dataset.id);
     });
     document.querySelectorAll('.submit-comment-btn').forEach(btn => {
         btn.onclick = () => submitComment(btn.dataset.forumId);
     });
+    
+    // Load comments for all forums (expanded by default)
+    for (const f of forumData) {
+        await loadComments(f.id);
+        if (currentUser) {
+            const section = document.getElementById(`comments-${f.id}`);
+            section?.querySelector('.add-comment-form')?.classList.remove('d-none');
+        }
+    }
 }
 
 async function toggleComments(forumId) {
     const section = document.getElementById(`comments-${forumId}`);
+    const btn = document.querySelector(`.view-comments-btn[data-id="${forumId}"]`);
+    const icon = btn?.querySelector('.toggle-icon');
     const isHidden = section.classList.contains('d-none');
     
     if (isHidden) {
         section.classList.remove('d-none');
+        if (icon) icon.textContent = '▼';
         await loadComments(forumId);
-        if (currentUser) section.querySelector('.add-comment-form').classList.remove('d-none');
+        if (currentUser) section.querySelector('.add-comment-form')?.classList.remove('d-none');
     } else {
         section.classList.add('d-none');
+        if (icon) icon.textContent = '▶';
     }
 }
 
@@ -486,7 +505,7 @@ async function init() {
         currentProfile = profile;
         
         if (user) {
-            isAdmin = await checkAdmin(user.uid);
+            isAdmin = await AuthService.isAdmin(user.uid);
             document.getElementById('create-thread-btn').classList.remove('d-none');
             document.getElementById('messages-auth').classList.add('d-none');
             document.getElementById('messages-content').classList.remove('d-none');
@@ -501,14 +520,12 @@ async function init() {
     
     await loadForums();
     
-    // Bind UI handlers
     document.getElementById('create-thread-btn').onclick = () => document.getElementById('create-form').classList.remove('d-none');
     document.getElementById('cancel-create').onclick = () => document.getElementById('create-form').classList.add('d-none');
     document.getElementById('new-conv-btn').onclick = showNewConvoModal;
     document.getElementById('add-member-btn').onclick = showAddMemberModal;
     document.getElementById('send-btn').onclick = sendMessage;
     document.getElementById('message-input').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
-    
     document.getElementById('thread-form').onsubmit = async (e) => {
         e.preventDefault();
         if (!currentUser) return Swal.fire('Error', 'Sign in first', 'error');

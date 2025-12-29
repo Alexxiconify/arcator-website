@@ -1,4 +1,4 @@
-import { db, COLLECTIONS, collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp } from './firebase-init.js';
+import { db, COLLECTIONS, collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, increment } from './firebase-init.js';
 
 const DataService = {
     async getForums(opts = {}) {
@@ -36,11 +36,15 @@ const DataService = {
     async addComment(forumId, data, userId, profile) {
         const comment = { content: data.content, authorId: userId, authorName: profile?.displayName || 'Anonymous', authorPhoto: profile?.photoURL || './defaultuser.png', parentCommentId: data.parentCommentId || null, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
         const ref = await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), comment);
+        await updateDoc(doc(db, COLLECTIONS.FORMS, forumId), { commentCount: increment(1) }).catch(() => {});
         return { id: ref.id, ...comment };
     },
 
     async updateComment(forumId, commentId, data) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), commentId), { ...data, updatedAt: serverTimestamp() }); },
-    async deleteComment(forumId, commentId) { await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), commentId)); },
+    async deleteComment(forumId, commentId) {
+        await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), commentId));
+        await updateDoc(doc(db, COLLECTIONS.FORMS, forumId), { commentCount: increment(-1) }).catch(() => {});
+    },
 
     async getPages(opts = {}) {
         try {

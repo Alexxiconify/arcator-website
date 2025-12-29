@@ -5,6 +5,8 @@ import {
     doc, getDoc, setDoc, updateDoc, serverTimestamp
 } from './firebase-init.js';
 
+const ADMIN_UID = 'CEch8cXWemSDQnM3dHVKPt0RGpn2';
+
 function generateProfilePic(name) {
     const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'];
     const hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0);
@@ -94,6 +96,16 @@ const AuthService = {
     },
 
     ready: () => new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(); }); }),
+
+    async isAdmin(uid) {
+        if (!uid) return false;
+        if (uid === ADMIN_UID) return true;
+        try {
+            const snap = await getDoc(doc(db, 'artifacts', 'arcator-web', 'public', 'data', 'whitelisted_admins', uid));
+            return snap.exists();
+        } catch { return false; }
+    },
+
     DEFAULT_PROFILE_PIC,
     DEFAULT_THEME_NAME
 };
