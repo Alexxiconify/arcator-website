@@ -32,13 +32,15 @@
                 <div class="card-body">
                     <h4 class="card-title mb-4">Sign In</h4>
                     <form id="login-form">
-                        <div class="mb-3"><input type="email" id="login-email" class="form-control" placeholder="Email" required></div>
-                        <div class="mb-3"><input type="password" id="login-password" class="form-control" placeholder="Password" required></div>
+                        <div class="mb-3"><input type="email" id="login-email" class="form-control" placeholder="Email" autocomplete="email" required></div>
+                        <div class="mb-3"><input type="password" id="login-password" class="form-control" placeholder="Password" autocomplete="current-password" required></div>
                         <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
                     </form>
                     <div class="d-grid gap-2">
                         <button class="btn btn-outline-secondary" id="google-btn">Sign in with Google</button>
                         <button class="btn btn-outline-secondary" id="github-btn">Sign in with GitHub</button>
+                        <button class="btn btn-outline-secondary" id="twitter-btn">Sign in with Twitter</button>
+                        <button class="btn btn-outline-secondary" id="discord-btn">Sign in with Discord</button>
                     </div>
                 </div>
             </div>
@@ -55,13 +57,67 @@
                 </div>
                 <div class="card-body">
                     <form id="settings-form">
-                        <div class="row g-3">
-                            <div class="col-md-6"><label class="form-label" for="displayName">Display Name</label><input id="displayName" class="form-control"></div>
-                            <div class="col-md-6"><label class="form-label" for="handle">Handle</label><input id="handle" class="form-control"></div>
-                            <div class="col-md-6"><label class="form-label" for="email">Email</label><input id="email" class="form-control"></div>
-                            <div class="col-md-6"><label class="form-label" for="photoURL">Photo URL</label><input id="photoURL" class="form-control"></div>
-                            <div class="col-md-6"><label class="form-label" for="discordURL">Discord</label><input id="discordURL" class="form-control"></div>
-                            <div class="col-md-6"><label class="form-label" for="githubURL">GitHub</label><input id="githubURL" class="form-control"></div>
+                        <h5 class="mb-3">Profile</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6"><label class="form-label" for="displayName">Display Name</label><input id="displayName" class="form-control" autocomplete="name"></div>
+                            <div class="col-md-6"><label class="form-label" for="handle">Handle</label><input id="handle" class="form-control" autocomplete="username"></div>
+                            <div class="col-md-6"><label class="form-label" for="email">Email</label><input id="email" class="form-control" autocomplete="email"></div>
+                            <div class="col-md-6"><label class="form-label" for="photoURL">Photo URL</label><input id="photoURL" class="form-control" autocomplete="photo"></div>
+                        </div>
+                        
+                        <hr>
+                        <h5 class="mb-3">Linked Accounts (OAuth)</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6 col-lg-4">
+                                <div class="p-2 border rounded d-flex align-items-center gap-2">
+                                    <span id="google-status" class="badge bg-secondary">Not Linked</span>
+                                    <span class="flex-grow-1">Google <small id="google-info" class="text-muted d-none"></small></span>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="link-google-btn">Link</button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <div class="p-2 border rounded d-flex align-items-center gap-2">
+                                    <span id="github-status" class="badge bg-secondary">Not Linked</span>
+                                    <span class="flex-grow-1">GitHub <small id="github-info" class="text-muted d-none"></small></span>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="link-github-btn">Link</button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <div class="p-2 border rounded d-flex align-items-center gap-2">
+                                    <span id="discord-status" class="badge bg-secondary">Not Linked</span>
+                                    <span class="flex-grow-1">Discord <small id="discord-info" class="text-muted d-none"></small></span>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="link-discord-btn">Link</button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <div class="p-2 border rounded d-flex align-items-center gap-2">
+                                    <span id="twitter-status" class="badge bg-secondary">Not Linked</span>
+                                    <span class="flex-grow-1">Twitter <small id="twitter-info" class="text-muted d-none"></small></span>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="link-twitter-btn">Link</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 class="mb-3">Manual Connections</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label" for="discordId">Discord User ID</label>
+                                <input id="discordId" class="form-control" placeholder="123456789012345678">
+                                <div class="form-text">Required for Discord notifications</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="discordURL">Discord Profile URL</label>
+                                <input id="discordURL" class="form-control" placeholder="https://discord.com/users/...">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label" for="githubURL">GitHub Profile URL</label>
+                                <input id="githubURL" class="form-control" placeholder="https://github.com/username">
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        <h5 class="mb-3">Appearance</h5>
+                        <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label" for="theme">Theme</label>
                                 <select id="theme" class="form-select" aria-label="Theme">
@@ -77,19 +133,38 @@
                                     <option value="large">Large</option>
                                 </select>
                             </div>
+                            <div class="col-md-6"><div class="form-check"><input id="reducedMotion" class="form-check-input" type="checkbox"><label class="form-check-label" for="reducedMotion">Reduced Motion</label></div></div>
+                            <div class="col-md-6"><div class="form-check"><input id="highContrast" class="form-check-input" type="checkbox"><label class="form-check-label" for="highContrast">High Contrast</label></div></div>
                         </div>
-                        <hr class="my-4">
-                        <h5>Notifications</h5>
+                        
+                        <hr>
+                        <h5 class="mb-3">Notifications</h5>
                         <div class="row g-3 mb-4">
                             <div class="col-md-4"><div class="form-check"><input id="emailNotif" class="form-check-input" type="checkbox"><label class="form-check-label" for="emailNotif">Email</label></div></div>
                             <div class="col-md-4"><div class="form-check"><input id="pushNotif" class="form-check-input" type="checkbox"><label class="form-check-label" for="pushNotif">Push</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input id="discordNotif" class="form-check-input" type="checkbox"><label class="form-check-label" for="discordNotif">Discord</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input id="discordNotif" class="form-check-input" type="checkbox" disabled><label class="form-check-label" for="discordNotif">Discord <small class="text-muted">(requires Discord ID)</small></label></div></div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="notifFrequency">Notification Frequency</label>
+                                <select id="notifFrequency" class="form-select" aria-label="Notification Frequency">
+                                    <option value="immediate">Immediate</option>
+                                    <option value="daily">Daily Digest</option>
+                                    <option value="weekly">Weekly Digest</option>
+                                </select>
+                            </div>
                         </div>
-                        <h5>Privacy</h5>
+                        
+                        <hr>
+                        <h5 class="mb-3">Privacy</h5>
                         <div class="row g-3 mb-4">
                             <div class="col-md-4"><div class="form-check"><input id="profileVisible" class="form-check-input" type="checkbox"><label class="form-check-label" for="profileVisible">Profile Visible</label></div></div>
                             <div class="col-md-4"><div class="form-check"><input id="activityTracking" class="form-check-input" type="checkbox"><label class="form-check-label" for="activityTracking">Activity Tracking</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input id="thirdPartySharing" class="form-check-input" type="checkbox"><label class="form-check-label" for="thirdPartySharing">Third Party Sharing</label></div></div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="dataRetention">Data Retention (days)</label>
+                                <input id="dataRetention" class="form-control" type="number" min="30" max="3650" value="365">
+                            </div>
                         </div>
+                        
                         <button type="submit" class="btn btn-primary">Save All Changes</button>
                     </form>
                 </div>

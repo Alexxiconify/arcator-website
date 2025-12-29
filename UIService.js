@@ -53,6 +53,31 @@ export function renderFooter(container) {
 </footer>`;
 }
 
+const CACHE_KEY = 'arcator_user_cache';
+
+// Get cached user data for instant UI render
+function getCachedUser() {
+    try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+}
+
+// Cache user data for quick reload
+function cacheUser(user, profile) {
+    if (user && profile) {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+            uid: user.uid,
+            displayName: profile.displayName || user.displayName,
+            photoURL: profile.photoURL || user.photoURL,
+            themePreference: profile.themePreference || 'dark',
+            fontScaling: profile.fontScaling || 'normal'
+        }));
+    } else {
+        localStorage.removeItem(CACHE_KEY);
+    }
+}
+
 export async function initPage(AuthService) {
     const navbar = document.getElementById('navbar-placeholder');
     const footer = document.getElementById('footer-placeholder');
@@ -60,10 +85,19 @@ export async function initPage(AuthService) {
     if (navbar) renderNavbar(navbar);
     if (footer) renderFooter(footer);
     
+    // Immediately render cached user to prevent flash
+    const cached = getCachedUser();
+    if (cached) {
+        renderUserSection({ uid: cached.uid }, cached);
+        document.documentElement.setAttribute('data-bs-theme', cached.themePreference);
+        document.documentElement.setAttribute('data-font-size', cached.fontScaling);
+    }
+    
     try {
         await AuthService.ready();
         AuthService.onAuthChange(({ user, profile }) => {
             renderUserSection(user, profile);
+            cacheUser(user, profile);
             const theme = profile?.themePreference || 'dark';
             const fontSize = profile?.fontScaling || 'normal';
             document.documentElement.setAttribute('data-bs-theme', theme);

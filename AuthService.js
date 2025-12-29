@@ -1,8 +1,9 @@
 import {
     auth, db, COLLECTIONS, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME,
-    createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, unlink,
     signOut, updateProfile, GoogleAuthProvider, GithubAuthProvider,
-    doc, getDoc, setDoc, updateDoc, serverTimestamp
+    doc, getDoc, setDoc, updateDoc, serverTimestamp,
+    OAuthProvider, TwitterAuthProvider, onIdTokenChanged
 } from './firebase-init.js';
 
 const ADMIN_UID = 'CEch8cXWemSDQnM3dHVKPt0RGpn2';
@@ -64,6 +65,27 @@ const AuthService = {
 
     async loginWithGoogle() { return this._oauth(new GoogleAuthProvider(), 'google'); },
     async loginWithGithub() { return this._oauth(new GithubAuthProvider(), 'github'); },
+    async loginWithTwitter() { return this._oauth(new TwitterAuthProvider(), 'twitter'); },
+    async loginWithApple() { return this._oauth(new OAuthProvider('apple.com'), 'apple'); },
+    
+    // Discord OAuth - requires Firebase Cloud Function backend
+    // Discord OAuth - requires Discord Developer Portal setup
+    async loginWithDiscord() {
+        // 1. Create app at https://discord.com/developers/applications
+        // 2. Add redirect URI: https://your-domain.com/discord-callback.html
+        // 3. Enable "Custom Providers" in Firebase Console if using official linkProvider
+        try {
+            return await this._oauth(new OAuthProvider('discord.com'), 'discord');
+        } catch (e) {
+            // Fallback to manual flow if official fails
+            const discordClientId = '1234567890'; // REPLACE THIS with your real Discord Client ID
+            const redirectUri = encodeURIComponent(window.location.origin + '/discord-callback.html');
+            const scope = encodeURIComponent('identify email');
+            const state = Math.random().toString(36).substring(7);
+            sessionStorage.setItem('discord_oauth_state', state);
+            window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}`;
+        }
+    },
 
     async _oauth(provider, name) {
         const result = await signInWithPopup(auth, provider);
@@ -78,6 +100,24 @@ const AuthService = {
         return result.user;
     },
 
+    async linkProvider(provider) {
+        if (!auth.currentUser) throw new Error('Must be logged in to link accounts');
+        const result = await linkWithPopup(auth.currentUser, provider);
+        await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, auth.currentUser.uid), { 
+            lastUpdated: serverTimestamp() 
+        }).catch(() => {});
+        return result.user;
+    },
+
+    async unlinkProvider(providerId) {
+        if (!auth.currentUser) throw new Error('Must be logged in to unlink accounts');
+        const result = await unlink(auth.currentUser, providerId);
+        await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, auth.currentUser.uid), { 
+            lastUpdated: serverTimestamp() 
+        }).catch(() => {});
+        return result;
+    },
+
     async logout() { await signOut(auth); },
 
     async updateProfile(uid, data) {
@@ -89,9 +129,9 @@ const AuthService = {
     },
 
     onAuthChange(callback) {
-        return auth.onAuthStateChanged(async user => {
+        return onIdTokenChanged(auth, async user => {
             const profile = user ? await this.getProfile(user.uid) : null;
-            callback({ user, profile });
+            callback({ user, profile, providerData: user?.providerData || [] });
         });
     },
 

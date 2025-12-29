@@ -1,20 +1,25 @@
 import AuthService from './AuthService.js';
 import { initPage } from './UIService.js';
+import { GoogleAuthProvider, GithubAuthProvider, TwitterAuthProvider, OAuthProvider } from './firebase-init.js';
 
 let currentUser = null;
+let currentProfile = null;
 
 export async function init() {
     await initPage(AuthService);
     
-    AuthService.onAuthChange(({ user, profile }) => {
+    AuthService.onAuthChange(({ user, profile, providerData }) => {
         currentUser = user;
+        currentProfile = profile;
         if (user) {
-            document.getElementById('auth-section').style.display = 'none';
-            document.getElementById('settings-section').style.display = 'flex';
+            document.getElementById('auth-section').classList.add('d-none');
+            document.getElementById('settings-section').classList.remove('d-none');
             populateSettings(profile);
+            updateDiscordNotifAvailability(profile);
+            updateLinkedAccounts(profile, providerData);
         } else {
-            document.getElementById('auth-section').style.display = 'flex';
-            document.getElementById('settings-section').style.display = 'none';
+            document.getElementById('auth-section').classList.remove('d-none');
+            document.getElementById('settings-section').classList.add('d-none');
         }
     });
     
@@ -23,19 +28,111 @@ export async function init() {
 
 function populateSettings(profile) {
     if (!profile) return;
-    document.getElementById('displayName').value = profile.displayName || '';
-    document.getElementById('handle').value = profile.handle || '';
-    document.getElementById('email').value = profile.email || '';
-    document.getElementById('photoURL').value = profile.photoURL || '';
-    document.getElementById('discordURL').value = profile.discordURL || '';
-    document.getElementById('githubURL').value = profile.githubURL || '';
-    document.getElementById('theme').value = profile.themePreference || 'dark';
-    document.getElementById('fontScaling').value = profile.fontScaling || 'normal';
-    document.getElementById('emailNotif').checked = profile.emailNotifications ?? true;
-    document.getElementById('pushNotif').checked = profile.pushNotifications ?? true;
-    document.getElementById('discordNotif').checked = profile.discordNotifications ?? false;
-    document.getElementById('profileVisible').checked = profile.profileVisible ?? true;
-    document.getElementById('activityTracking').checked = profile.activityTracking ?? true;
+    
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val ?? false; };
+    
+    // Profile info
+    setVal('displayName', profile.displayName);
+    setVal('handle', profile.handle);
+    setVal('email', profile.email);
+    setVal('photoURL', profile.photoURL);
+    setVal('discordURL', profile.discordURL);
+    setVal('discordId', profile.discordId);
+    setVal('githubURL', profile.githubURL);
+    
+    // Appearance
+    setVal('theme', profile.themePreference || 'dark');
+    setVal('fontScaling', profile.fontScaling || 'normal');
+    setCheck('reducedMotion', profile.reducedMotion);
+    setCheck('highContrast', profile.highContrast);
+    
+    // Notifications
+    setCheck('emailNotif', profile.emailNotifications ?? true);
+    setCheck('pushNotif', profile.pushNotifications ?? true);
+    setCheck('discordNotif', profile.discordNotifications);
+    setVal('notifFrequency', profile.notificationFrequency || 'immediate');
+    
+    // Privacy
+    setCheck('profileVisible', profile.profileVisible ?? true);
+    setCheck('activityTracking', profile.activityTracking ?? true);
+    setCheck('thirdPartySharing', profile.thirdPartySharing);
+    setVal('dataRetention', profile.dataRetention || '365');
+}
+
+function updateDiscordNotifAvailability(profile) {
+    const discordNotifEl = document.getElementById('discordNotif');
+    const discordNotifContainer = discordNotifEl?.closest('.form-check');
+    const hasDiscord = !!(profile?.discordId || profile?.discordURL || profile?.provider === 'discord');
+    
+    if (discordNotifContainer) {
+        if (hasDiscord) {
+            discordNotifEl.disabled = false;
+            discordNotifContainer.classList.remove('opacity-50');
+            discordNotifContainer.title = '';
+        } else {
+            discordNotifEl.disabled = true;
+            discordNotifEl.checked = false;
+            discordNotifContainer.classList.add('opacity-50');
+            discordNotifContainer.title = 'Link your Discord first';
+        }
+    }
+}
+
+function updateLinkedAccounts(profile, providerData = []) {
+    const linkedProviders = providerData.map(p => p.providerId);
+    
+    // Precise matching for OAuth provider IDs
+    const isOAuthLinked = (id) => linkedProviders.some(p => p === id || p === `${id}.com`);
+    const getOAuthInfo = (id) => providerData.find(p => p.providerId === id || p.providerId === `${id}.com`)?.email;
+
+    const providers = {
+        google: { 
+            linked: isOAuthLinked('google'), 
+            info: getOAuthInfo('google')
+        },
+        github: { 
+            linked: isOAuthLinked('github') || !!profile?.githubURL, 
+            info: getOAuthInfo('github') || profile?.githubURL
+        },
+        discord: { 
+            linked: isOAuthLinked('discord') || !!profile?.discordId, 
+            info: getOAuthInfo('discord') || profile?.discordId
+        },
+        twitter: { 
+            linked: isOAuthLinked('twitter'), 
+            info: getOAuthInfo('twitter')
+        }
+    };
+    
+    Object.entries(providers).forEach(([name, { linked, info }]) => {
+        const status = document.getElementById(`${name}-status`);
+        const btn = document.getElementById(`link-${name}-btn`);
+        const infoEl = document.getElementById(`${name}-info`);
+        const isOAuth = isOAuthLinked(name);
+        
+        if (status) {
+            status.textContent = linked ? (isOAuth ? 'Linked (OAuth)' : 'Linked (Manual)') : 'Not Linked';
+            status.className = `badge ${linked ? 'bg-success' : 'bg-secondary'}`;
+        }
+        if (btn) {
+            // Only show Unlink for OAuth links; manual links are edited via input fields
+            if (isOAuth) {
+                btn.textContent = 'Unlink';
+                btn.className = 'btn btn-sm btn-outline-danger';
+                btn.style.display = 'inline-block';
+            } else {
+                btn.textContent = 'Link';
+                btn.className = 'btn btn-sm btn-outline-primary';
+                // Hide link button if already manually linked, unless it's discord which has a fallback
+                btn.style.display = (linked && name !== 'discord') ? 'none' : 'inline-block';
+            }
+        }
+        if (infoEl) {
+            infoEl.textContent = info ? `(${info})` : '';
+            infoEl.classList.toggle('d-none', !info);
+        }
+    });
 }
 
 function setupEventListeners() {
@@ -58,32 +155,128 @@ function setupEventListeners() {
         try { await AuthService.loginWithGithub(); } catch (e) { Swal.fire('Error', e.message, 'error'); }
     };
 
+    document.getElementById('twitter-btn')?.addEventListener('click', async () => {
+        try { await AuthService.loginWithTwitter(); } catch (e) { Swal.fire('Error', e.message, 'error'); }
+    });
+
+    document.getElementById('discord-btn')?.addEventListener('click', async () => {
+        try { await AuthService.loginWithDiscord(); } catch (e) { Swal.fire('Error', e.message, 'error'); }
+    });
+
     document.getElementById('logout-btn').onclick = async () => {
+        localStorage.removeItem('arcator_user_cache');
         await AuthService.logout();
         Swal.fire('Signed out', '', 'info');
     };
 
+    // Live theme preview
     document.getElementById('theme').onchange = (e) => {
         document.documentElement.setAttribute('data-bs-theme', e.target.value);
     };
 
+    // Live font scaling preview
+    document.getElementById('fontScaling').onchange = (e) => {
+        document.documentElement.setAttribute('data-font-size', e.target.value);
+    };
+
+    // Link account buttons - these link additional providers to existing account
+    const handleLink = async (name, provider, providerId) => {
+        const btn = document.getElementById(`link-${name}-btn`);
+        const isLinked = btn?.textContent === 'Unlink';
+        
+        try {
+            if (isLinked) {
+                const result = await Swal.fire({
+                    title: `Unlink ${name}?`,
+                    text: `You will no longer be able to sign in with ${name}.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, unlink it'
+                });
+                if (result.isConfirmed) {
+                    await AuthService.unlinkProvider(providerId);
+                    Swal.fire('Unlinked', `${name} account unlinked`, 'success');
+                }
+            } else {
+                if (name === 'discord') {
+                    try {
+                        await AuthService.linkProvider(new OAuthProvider('discord.com'));
+                        Swal.fire('Linked', 'Discord account linked via OAuth', 'success');
+                    } catch (e) {
+                        if (e.code === 'auth/operation-not-allowed' || e.code === 'auth/invalid-provider-id') {
+                            await AuthService.loginWithDiscord();
+                        } else {
+                            throw e;
+                        }
+                    }
+                } else {
+                    await AuthService.linkProvider(provider);
+                    Swal.fire('Linked', `${name} account linked`, 'success');
+                }
+            }
+        } catch (e) { 
+            console.error(`Link error (${name}):`, e);
+            let msg = e.message;
+            if (e.code === 'auth/operation-not-allowed') {
+                msg = `${name} login is not enabled in your Firebase Console. Please enable it under Authentication > Sign-in method.`;
+            }
+            Swal.fire('Error', msg, 'error'); 
+        }
+    };
+
+    document.getElementById('link-google-btn')?.addEventListener('click', () => handleLink('google', new GoogleAuthProvider(), 'google.com'));
+    document.getElementById('link-github-btn')?.addEventListener('click', () => handleLink('github', new GithubAuthProvider(), 'github.com'));
+    document.getElementById('link-discord-btn')?.addEventListener('click', () => handleLink('discord', new OAuthProvider('discord.com'), 'discord.com'));
+    document.getElementById('link-twitter-btn')?.addEventListener('click', () => handleLink('twitter', new TwitterAuthProvider(), 'twitter.com'));
+
+    // Check Discord availability when Discord fields change
+    document.getElementById('discordURL')?.addEventListener('input', () => {
+        const hasDiscord = !!document.getElementById('discordURL').value || !!document.getElementById('discordId').value;
+        const discordNotifEl = document.getElementById('discordNotif');
+        discordNotifEl.disabled = !hasDiscord;
+        if (!hasDiscord) discordNotifEl.checked = false;
+    });
+
+    document.getElementById('discordId')?.addEventListener('input', () => {
+        const hasDiscord = !!document.getElementById('discordURL').value || !!document.getElementById('discordId').value;
+        const discordNotifEl = document.getElementById('discordNotif');
+        discordNotifEl.disabled = !hasDiscord;
+        if (!hasDiscord) discordNotifEl.checked = false;
+    });
+
     document.getElementById('settings-form').onsubmit = async (e) => {
         e.preventDefault();
         try {
+            const discordNotifEnabled = document.getElementById('discordNotif').checked;
+            const hasDiscord = !!document.getElementById('discordURL').value || !!document.getElementById('discordId').value;
+            
             await AuthService.updateProfile(currentUser.uid, {
+                // Profile
                 displayName: document.getElementById('displayName').value,
                 handle: document.getElementById('handle').value,
                 email: document.getElementById('email').value,
                 photoURL: document.getElementById('photoURL').value,
                 discordURL: document.getElementById('discordURL').value,
+                discordId: document.getElementById('discordId').value,
                 githubURL: document.getElementById('githubURL').value,
+                
+                // Appearance
                 themePreference: document.getElementById('theme').value,
                 fontScaling: document.getElementById('fontScaling').value,
+                reducedMotion: document.getElementById('reducedMotion').checked,
+                highContrast: document.getElementById('highContrast').checked,
+                
+                // Notifications
                 emailNotifications: document.getElementById('emailNotif').checked,
                 pushNotifications: document.getElementById('pushNotif').checked,
-                discordNotifications: document.getElementById('discordNotif').checked,
+                discordNotifications: hasDiscord ? discordNotifEnabled : false,
+                notificationFrequency: document.getElementById('notifFrequency').value,
+                
+                // Privacy
                 profileVisible: document.getElementById('profileVisible').checked,
-                activityTracking: document.getElementById('activityTracking').checked
+                activityTracking: document.getElementById('activityTracking').checked,
+                thirdPartySharing: document.getElementById('thirdPartySharing').checked,
+                dataRetention: parseInt(document.getElementById('dataRetention').value) || 365
             });
             Swal.fire('Saved', 'Settings updated', 'success');
         } catch (e) { Swal.fire('Error', e.message, 'error'); }

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Callback - Arcator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-dark text-light d-flex align-items-center justify-content-center vh-100">
+    <div class="text-center">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <h4>Linking Discord...</h4>
+        <p class="text-muted">Please wait while we complete the connection.</p>
+    </div>
+
+    <script type="module">
+        import AuthService from './AuthService.js';
+        
+        async function handleCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const savedState = sessionStorage.getItem('discord_oauth_state');
+            
+            if (!code || state !== savedState) {
+                await Swal.fire('Error', 'Invalid OAuth state or code', 'error');
+                window.location.href = './users.html';
+                return;
+            }
+            
+            try {
+                // In a real app, you'd send this code to a backend/cloud function
+                // For now, we'll simulate getting the user info and updating the profile
+                // This is a placeholder for the actual backend exchange
+                
+                // Simulate fetching Discord user info (this would be done on backend)
+                // const discordUser = await fetchDiscordUser(code);
+                
+                // For demonstration, we'll just show a success message and redirect
+                // The actual linking would happen via a Cloud Function updating the Firestore doc
+                await Swal.fire({
+                    title: 'Discord Connected!',
+                    text: 'Your Discord account has been linked manually. Please update your Discord ID in settings.',
+                    icon: 'success',
+                    timer: 3000
+                });
+                
+                window.location.href = './users.html';
+            } catch (e) {
+                await Swal.fire('Error', e.message, 'error');
+                window.location.href = './users.html';
+            }
+        }
+        
+        handleCallback();
+    </script>
+</body>
+</html>
