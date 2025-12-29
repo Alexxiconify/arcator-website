@@ -89,6 +89,40 @@ const DataService = {
 
     subscribeToMessages(convId, cb) {
         return onSnapshot(query(collection(db, COLLECTIONS.CONV_MESSAGES(convId)), orderBy('createdAt', 'asc')), snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    },
+
+    async sendMessage(convId, content, senderId) {
+        const msg = { content, senderId, createdAt: serverTimestamp() };
+        const ref = await addDoc(collection(db, COLLECTIONS.CONV_MESSAGES(convId)), msg);
+        await updateDoc(doc(db, COLLECTIONS.CONVERSATIONS, convId), { lastMessage: content, lastMessageTime: serverTimestamp() });
+        return { id: ref.id, ...msg };
+    },
+
+    async updateMessage(convId, msgId, data) {
+        await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msgId), { ...data, updatedAt: serverTimestamp() });
+    },
+
+    async deleteMessage(convId, msgId) {
+        await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msgId));
+    },
+
+    async createConversation(participants, name = null) {
+        const conv = { participants, name, createdAt: serverTimestamp(), lastMessage: '', lastMessageTime: serverTimestamp() };
+        const ref = await addDoc(collection(db, COLLECTIONS.CONVERSATIONS), conv);
+        return { id: ref.id, ...conv };
+    },
+
+    async searchUsersByHandle(handle) {
+        if (!handle) return [];
+        try {
+            const q = query(collection(db, COLLECTIONS.USER_PROFILES), where('handle', '==', handle.toLowerCase()), limit(5));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch { return []; }
+    },
+
+    async updateConversation(convId, data) {
+        await updateDoc(doc(db, COLLECTIONS.CONVERSATIONS, convId), { ...data, updatedAt: serverTimestamp() });
     }
 };
 
