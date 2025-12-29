@@ -75,6 +75,8 @@
 
     async function checkAdmin(uid) {
         if (!uid) return false;
+        // Hardcoded admin UID fallback
+        if (uid === 'CEch8cXWemSDQnM3dHVKPt0RGpn2') return true;
         try {
             const snap = await getDoc(doc(db, 'artifacts', 'arcator-web', 'public', 'data', 'whitelisted_admins', uid));
             return snap.exists();

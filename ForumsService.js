@@ -25,14 +25,15 @@ async function getUserInfo(uid) {
 
 async function checkAdmin(uid) {
     if (!uid) return false;
+    // Hardcoded admin UID fallback
+    if (uid === 'CEch8cXWemSDQnM3dHVKPt0RGpn2') return true;
     try {
-        // whitelisted_admins is at: artifacts/arcator-web/public/data/whitelisted_admins/{uid}
         const snap = await getDoc(doc(db, 'artifacts', 'arcator-web', 'public', 'data', 'whitelisted_admins', uid));
         console.log('Admin check for', uid, ':', snap.exists());
         return snap.exists();
-    } catch (e) { 
+    } catch (e) {
         console.error('checkAdmin error:', e);
-        return false; 
+        return false;
     }
 }
 
