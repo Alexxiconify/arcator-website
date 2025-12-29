@@ -26,8 +26,8 @@
 
 <main class="container py-5">
     <div id="pages-loading" class="text-center py-5"><div class="loading-spinner mx-auto"></div></div>
-    <div id="pages-empty" class="text-center py-5 text-secondary" style="display:none">No pages found</div>
-    <div id="pages-list" class="row g-4" style="display:none"></div>
+    <div id="pages-empty" class="text-center py-5 text-secondary d-none">No pages found</div>
+    <div id="pages-list" class="row g-4 d-none"></div>
 </main>
 
 <div id="footer-placeholder"></div>
@@ -43,15 +43,15 @@
             await initPage(AuthService);
             const pages = await DataService.getPages();
             
-            document.getElementById('pages-loading').style.display = 'none';
+            document.getElementById('pages-loading').classList.add('d-none');
             
             if (pages.length === 0) {
-                document.getElementById('pages-empty').style.display = 'block';
+                document.getElementById('pages-empty').classList.remove('d-none');
                 return;
             }
             
             const list = document.getElementById('pages-list');
-            list.style.display = 'flex';
+            list.classList.remove('d-none');
             list.innerHTML = pages.map(page => {
                 let date = 'Unknown';
                 if (page.createdAt) {

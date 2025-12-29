@@ -17,13 +17,13 @@
 
 <div id="loading-view" class="container py-5 text-center"><div class="loading-spinner mx-auto"></div></div>
 
-<div id="denied-view" class="container py-5 text-center" style="display:none">
+<div id="denied-view" class="container py-5 text-center d-none">
     <h1 class="display-4 fw-bold mb-4">Access Denied</h1>
     <p class="lead text-secondary mb-4">You do not have permission to access moderator tools.</p>
     <a href="./index.html" class="btn btn-primary">Return Home</a>
 </div>
 
-<div id="admin-view" style="display:none">
+<div id="admin-view" class="d-none">
     <section class="hero-section">
         <img src="./creativespawn.png" alt="Hero" loading="lazy">
         <div class="hero-overlay"></div>
@@ -71,26 +71,39 @@
     import AuthService from './AuthService.js';
     import DataService from './DataService.js';
     import { initPage } from './UIService.js';
+    import { db, COLLECTIONS, getDoc, doc } from './firebase-init.js';
 
-    let currentProfile = null;
+    async function checkAdmin(uid) {
+        if (!uid) return false;
+        try {
+            const snap = await getDoc(doc(db, COLLECTIONS.ADMINS, uid));
+            return snap.exists();
+        } catch { return false; }
+    }
 
     async function init() {
         try {
             await initPage(AuthService);
             
             AuthService.onAuthChange(async ({ user, profile }) => {
-                console.log('Auth change:', user?.uid, profile?.isAdmin);
-                document.getElementById('loading-view').style.display = 'none';
+                document.getElementById('loading-view').classList.add('d-none');
                 
-                if (!profile?.isAdmin) {
-                    document.getElementById('denied-view').style.display = 'block';
-                    document.getElementById('admin-view').style.display = 'none';
+                if (!user) {
+                    document.getElementById('denied-view').classList.remove('d-none');
+                    document.getElementById('admin-view').classList.add('d-none');
                     return;
                 }
                 
-                currentProfile = profile;
-                document.getElementById('denied-view').style.display = 'none';
-                document.getElementById('admin-view').style.display = 'block';
+                const isAdmin = await checkAdmin(user.uid);
+                
+                if (!isAdmin) {
+                    document.getElementById('denied-view').classList.remove('d-none');
+                    document.getElementById('admin-view').classList.add('d-none');
+                    return;
+                }
+                
+                document.getElementById('denied-view').classList.add('d-none');
+                document.getElementById('admin-view').classList.remove('d-none');
                 
                 await loadUsers();
                 await loadPages();
@@ -107,7 +120,7 @@
         tbody.innerHTML = users.map(u => `
             <tr>
                 <td class="d-flex align-items-center gap-2">
-                    <img src="${u.photoURL || './defaultuser.png'}" class="profile-img" style="width:24px;height:24px;">
+                    <img src="${u.photoURL || './defaultuser.png'}" class="profile-img-sm" alt="">
                     <span>${u.displayName || 'Unknown'}</span>
                 </td>
                 <td>${u.email || '-'}</td>
@@ -126,12 +139,12 @@
         const empty = document.getElementById('pages-empty');
         
         if (pages.length === 0) {
-            empty.style.display = 'block';
+            empty.classList.remove('d-none');
             list.innerHTML = '';
             return;
         }
         
-        empty.style.display = 'none';
+        empty.classList.add('d-none');
         list.innerHTML = pages.map(p => `
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 <span>${p.title || 'Untitled'}</span>
@@ -185,4 +198,3 @@
 </script>
 </body>
 </html>
-

@@ -12,8 +12,6 @@
     <link href="./favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
-    <script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
@@ -39,14 +37,13 @@
     </ul>
 
     <div class="tab-content" id="mainTabsContent">
-        <!-- Forums Tab -->
         <div class="tab-pane fade show active" id="forums-pane" role="tabpanel">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="h4 mb-0">Forum Threads</h2>
-                <button class="btn btn-primary btn-sm" id="create-thread-btn" style="display:none">Create Thread</button>
+                <button class="btn btn-primary btn-sm d-none" id="create-thread-btn">Create Thread</button>
             </div>
 
-            <div class="card mb-4" id="create-form" style="display:none">
+            <div class="card mb-4 d-none" id="create-form">
                 <div class="card-body">
                     <h5 class="card-title">Create New Thread</h5>
                     <form id="thread-form">
@@ -60,7 +57,6 @@
                                     <option value="gaming">Gaming</option>
                                     <option value="discussion">Discussion</option>
                                     <option value="support">Support</option>
-                                    <option value="feedback">Feedback</option>
                                 </select>
                             </div>
                             <div class="col-md-6"><input class="form-control" placeholder="Tags (comma-separated)" id="thread-tags"></div>
@@ -74,23 +70,22 @@
             </div>
 
             <div id="forums-loading" class="text-center py-5"><div class="loading-spinner mx-auto"></div></div>
-            <div id="forums-empty" class="text-center py-5 text-secondary" style="display:none">No threads yet</div>
-            <div class="list-group" id="forums-list"></div>
+            <div id="forums-empty" class="text-center py-5 text-secondary d-none">No threads yet</div>
+            <div id="forums-list"></div>
         </div>
 
-        <!-- Messages Tab -->
         <div class="tab-pane fade" id="messages-pane" role="tabpanel">
             <div id="messages-auth" class="alert alert-info">Sign in to view messages</div>
-            <div id="messages-content" class="row" style="display:none; min-height: 400px;">
+            <div id="messages-content" class="row d-none">
                 <div class="col-md-4 border-end">
                     <h5 class="mb-3">Conversations</h5>
                     <div class="list-group" id="conversations-list"></div>
-                    <div id="conversations-empty" class="text-secondary" style="display:none">No conversations</div>
+                    <div id="conversations-empty" class="text-secondary d-none">No conversations</div>
                 </div>
                 <div class="col-md-8">
                     <div id="no-conv-selected" class="text-center text-secondary py-5">Select a conversation</div>
-                    <div id="conv-selected" style="display:none" class="d-flex flex-column h-100">
-                        <div id="messages-list" class="flex-grow-1 overflow-auto mb-3" style="max-height: 300px;"></div>
+                    <div id="conv-selected" class="d-none d-flex flex-column conv-container">
+                        <div id="messages-list" class="flex-grow-1 overflow-auto mb-3"></div>
                         <div class="input-group">
                             <input class="form-control" placeholder="Type a message..." id="message-input">
                             <button class="btn btn-primary" id="send-btn">Send</button>
@@ -109,56 +104,197 @@
     import AuthService from './AuthService.js';
     import DataService from './DataService.js';
     import { initPage } from './UIService.js';
+    import { db, COLLECTIONS, getDoc, doc } from './firebase-init.js';
 
     let currentUser = null;
     let currentProfile = null;
+    let isAdmin = false;
     let selectedConv = null;
+    const userCache = {};
+
+    async function getUserInfo(uid) {
+        if (!uid) return { displayName: 'Anonymous', photoURL: './defaultuser.png' };
+        if (userCache[uid]) return userCache[uid];
+        try {
+            const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
+            if (snap.exists()) {
+                userCache[uid] = snap.data();
+                return userCache[uid];
+            }
+        } catch {}
+        return { displayName: 'Unknown', photoURL: './defaultuser.png' };
+    }
+
+    async function checkAdmin(uid) {
+        if (!uid) return false;
+        try {
+            const snap = await getDoc(doc(db, COLLECTIONS.ADMINS, uid));
+            return snap.exists();
+        } catch { return false; }
+    }
 
     function formatDate(ts) {
         if (!ts) return '';
         const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
-        return dayjs(d).fromNow();
+        const now = new Date();
+        const diff = now - d;
+        const isToday = d.toDateString() === now.toDateString();
+        
+        if (isToday) {
+            return dayjs(d).format('HH:mm:ss');
+        } else if (diff < 86400000 * 7) {
+            return dayjs(d).format('ddd HH:mm');
+        } else {
+            return dayjs(d).format('DD/MM/YY HH:mm');
+        }
     }
 
     async function loadForums() {
         const forums = await DataService.getForums();
-        document.getElementById('forums-loading').style.display = 'none';
+        document.getElementById('forums-loading').classList.add('d-none');
         
         if (forums.length === 0) {
-            document.getElementById('forums-empty').style.display = 'block';
+            document.getElementById('forums-empty').classList.remove('d-none');
             return;
         }
         
-        document.getElementById('forums-list').innerHTML = forums.map(f => `
-            <div class="list-group-item list-group-item-action forum-thread" data-id="${f.id}">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="mb-1">${DOMPurify.sanitize(f.title || 'Untitled')}</h6>
-                        <small class="text-secondary">${f.category || 'General'} • ${formatDate(f.createdAt)}</small>
+        const forumHtml = await Promise.all(forums.map(async f => {
+            const author = await getUserInfo(f.authorId);
+            return `
+                <div class="card mb-3 forum-thread-card" data-id="${f.id}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">${DOMPurify.sanitize(f.title || 'Untitled')}</h5>
+                            <small class="text-secondary">
+                                <img src="${author.photoURL || './defaultuser.png'}" class="profile-img-sm me-1" alt="">
+                                ${author.displayName || 'Anonymous'} • ${f.category || 'General'} • ${formatDate(f.createdAt)}
+                            </small>
+                        </div>
+                        <span class="badge bg-primary">${f.commentCount || 0}</span>
                     </div>
-                    <span class="badge bg-primary">${f.commentCount || 0} comments</span>
+                    <div class="card-body">
+                        <p class="card-text">${DOMPurify.sanitize(f.description || '')}</p>
+                        <button class="btn btn-outline-primary btn-sm view-comments-btn" data-id="${f.id}">View Comments</button>
+                    </div>
+                    <div class="card-footer d-none comments-section" id="comments-${f.id}">
+                        <div class="comments-list mb-3"></div>
+                        <div class="input-group d-none add-comment-form">
+                            <input class="form-control" placeholder="Add a comment..." data-forum-id="${f.id}">
+                            <button class="btn btn-primary submit-comment-btn" data-forum-id="${f.id}">Post</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }));
         
-        document.querySelectorAll('.forum-thread').forEach(el => {
-            el.onclick = () => openThread(forums.find(f => f.id === el.dataset.id));
+        document.getElementById('forums-list').innerHTML = forumHtml.join('');
+        
+        document.querySelectorAll('.view-comments-btn').forEach(btn => {
+            btn.onclick = () => toggleComments(btn.dataset.id);
+        });
+        
+        document.querySelectorAll('.submit-comment-btn').forEach(btn => {
+            btn.onclick = () => submitComment(btn.dataset.forumId);
         });
     }
 
-    async function openThread(thread) {
-        const comments = await DataService.getComments(thread.id);
-        let commentsHtml = comments.length > 0 
-            ? comments.map(c => `<div class="border-start border-primary ps-3 mb-2"><strong>${DOMPurify.sanitize(c.authorName || 'Anonymous')}</strong><p class="mb-0">${DOMPurify.sanitize(c.content || '')}</p></div>`).join('')
-            : '<p class="text-secondary">No comments yet</p>';
+    async function toggleComments(forumId) {
+        const section = document.getElementById(`comments-${forumId}`);
+        const isHidden = section.classList.contains('d-none');
         
-        Swal.fire({ 
-            title: thread.title, 
-            html: `<p>${DOMPurify.sanitize(thread.description || '')}</p><hr><h6>Comments (${comments.length})</h6>${commentsHtml}`, 
-            width: 700,
-            showConfirmButton: true,
-            confirmButtonText: 'Close'
+        if (isHidden) {
+            section.classList.remove('d-none');
+            await loadComments(forumId);
+            if (currentUser) section.querySelector('.add-comment-form').classList.remove('d-none');
+        } else {
+            section.classList.add('d-none');
+        }
+    }
+
+    async function loadComments(forumId) {
+        const comments = await DataService.getComments(forumId);
+        const list = document.querySelector(`#comments-${forumId} .comments-list`);
+        
+        if (comments.length === 0) {
+            list.innerHTML = '<p class="text-secondary">No comments yet</p>';
+            return;
+        }
+        
+        const commentsHtml = await Promise.all(comments.map(async c => {
+            const author = await getUserInfo(c.authorId);
+            const isOwn = c.authorId === currentUser?.uid;
+            const wasEdited = c.editedByAdmin ? '<span class="text-warning ms-2">[Edited by Admin]</span>' : '';
+            
+            return `
+                <div class="comment mb-3 ps-3" data-id="${c.id}">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <img src="${author.photoURL || './defaultuser.png'}" class="profile-img-sm" alt="">
+                        <strong>${DOMPurify.sanitize(author.displayName || 'Anonymous')}</strong>
+                        <small class="text-secondary">${formatDate(c.createdAt)}</small>
+                        ${wasEdited}
+                        ${isOwn ? `
+                            <button class="btn btn-link btn-sm p-0 ms-2 edit-comment-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Edit</button>
+                            <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Delete</button>
+                        ` : ''}
+                        ${isAdmin && !isOwn ? `
+                            <button class="btn btn-link btn-sm p-0 ms-2 text-warning admin-edit-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Censor</button>
+                            <button class="btn btn-link btn-sm p-0 text-danger admin-delete-btn" data-forum-id="${forumId}" data-comment-id="${c.id}">Remove</button>
+                        ` : ''}
+                    </div>
+                    <p class="mb-0 ms-5">${DOMPurify.sanitize(c.content || '')}</p>
+                </div>
+            `;
+        }));
+        
+        list.innerHTML = commentsHtml.join('');
+        
+        list.querySelectorAll('.edit-comment-btn').forEach(btn => {
+            btn.onclick = () => editComment(btn.dataset.forumId, btn.dataset.commentId, false);
         });
+        list.querySelectorAll('.delete-comment-btn').forEach(btn => {
+            btn.onclick = () => deleteComment(btn.dataset.forumId, btn.dataset.commentId);
+        });
+        list.querySelectorAll('.admin-edit-btn').forEach(btn => {
+            btn.onclick = () => editComment(btn.dataset.forumId, btn.dataset.commentId, true);
+        });
+        list.querySelectorAll('.admin-delete-btn').forEach(btn => {
+            btn.onclick = () => deleteComment(btn.dataset.forumId, btn.dataset.commentId);
+        });
+    }
+
+    async function submitComment(forumId) {
+        if (!currentUser) return Swal.fire('Error', 'Sign in first', 'error');
+        const input = document.querySelector(`#comments-${forumId} input`);
+        const content = input.value.trim();
+        if (!content) return;
+        
+        try {
+            await DataService.addComment(forumId, { content }, currentUser.uid, currentProfile);
+            input.value = '';
+            await loadComments(forumId);
+        } catch (e) { Swal.fire('Error', e.message, 'error'); }
+    }
+
+    async function editComment(forumId, commentId, isAdminEdit) {
+        const { value } = await Swal.fire({
+            title: isAdminEdit ? 'Censor Comment' : 'Edit Comment',
+            input: 'textarea',
+            showCancelButton: true
+        });
+        if (value) {
+            const updateData = { content: value };
+            if (isAdminEdit) updateData.editedByAdmin = true;
+            await DataService.updateComment(forumId, commentId, updateData);
+            await loadComments(forumId);
+        }
+    }
+
+    async function deleteComment(forumId, commentId) {
+        const { isConfirmed } = await Swal.fire({ title: 'Delete comment?', icon: 'warning', showCancelButton: true });
+        if (isConfirmed) {
+            await DataService.deleteComment(forumId, commentId);
+            await loadComments(forumId);
+        }
     }
 
     async function loadConversations() {
@@ -166,22 +302,32 @@
         const convs = await DataService.getConversations(currentUser.uid);
         
         if (convs.length === 0) {
-            document.getElementById('conversations-empty').style.display = 'block';
+            document.getElementById('conversations-empty').classList.remove('d-none');
             document.getElementById('conversations-list').innerHTML = '';
             return;
         }
         
-        document.getElementById('conversations-empty').style.display = 'none';
-        document.getElementById('conversations-list').innerHTML = convs.map(c => `
-            <a href="#" class="list-group-item list-group-item-action" data-id="${c.id}">${c.name || 'Chat'}</a>
-        `).join('');
+        document.getElementById('conversations-empty').classList.add('d-none');
+        
+        const convHtml = await Promise.all(convs.map(async c => {
+            const otherParticipant = c.participants?.find(p => p !== currentUser.uid);
+            const other = await getUserInfo(otherParticipant);
+            return `<a href="#" class="list-group-item list-group-item-action d-flex align-items-center gap-2" data-id="${c.id}">
+                <img src="${other.photoURL || './defaultuser.png'}" class="profile-img-sm" alt="">
+                <span>${other.displayName || 'Chat'}</span>
+            </a>`;
+        }));
+        
+        document.getElementById('conversations-list').innerHTML = convHtml.join('');
         
         document.querySelectorAll('#conversations-list a').forEach(el => {
             el.onclick = async (e) => {
                 e.preventDefault();
+                document.querySelectorAll('#conversations-list a').forEach(a => a.classList.remove('active'));
+                el.classList.add('active');
                 selectedConv = convs.find(c => c.id === el.dataset.id);
-                document.getElementById('no-conv-selected').style.display = 'none';
-                document.getElementById('conv-selected').style.display = 'flex';
+                document.getElementById('no-conv-selected').classList.add('d-none');
+                document.getElementById('conv-selected').classList.remove('d-none');
                 await loadMessages();
             };
         });
@@ -190,11 +336,29 @@
     async function loadMessages() {
         if (!selectedConv) return;
         const messages = await DataService.getMessages(selectedConv.id);
-        document.getElementById('messages-list').innerHTML = messages.map(m => `
-            <div class="mb-2 p-2 rounded ${m.senderId === currentUser?.uid ? 'bg-primary text-white ms-auto' : 'bg-secondary'}" style="max-width: 80%;">
-                <small>${DOMPurify.sanitize(m.content || '')}</small>
-            </div>
-        `).join('');
+        const list = document.getElementById('messages-list');
+        
+        if (messages.length === 0) {
+            list.innerHTML = '<p class="text-center text-secondary py-3">No messages yet</p>';
+            return;
+        }
+        
+        const msgsHtml = await Promise.all(messages.map(async m => {
+            const isMine = m.senderId === currentUser?.uid;
+            const sender = await getUserInfo(m.senderId);
+            return `
+                <div class="mb-2 d-flex ${isMine ? 'justify-content-end' : 'justify-content-start'}">
+                    <div class="message-bubble p-2 rounded ${isMine ? 'bg-primary text-white' : 'bg-secondary'}">
+                        ${!isMine ? `<small class="d-block fw-bold">${sender.displayName}</small>` : ''}
+                        <div>${DOMPurify.sanitize(m.content || m.text || '')}</div>
+                        <small class="${isMine ? 'text-white-50' : 'text-muted'}">${formatDate(m.createdAt)}</small>
+                    </div>
+                </div>
+            `;
+        }));
+        
+        list.innerHTML = msgsHtml.join('');
+        list.scrollTop = list.scrollHeight;
     }
 
     async function init() {
@@ -205,27 +369,24 @@
             currentProfile = profile;
             
             if (user) {
-                document.getElementById('create-thread-btn').style.display = 'block';
-                document.getElementById('messages-auth').style.display = 'none';
-                document.getElementById('messages-content').style.display = 'flex';
+                isAdmin = await checkAdmin(user.uid);
+                document.getElementById('create-thread-btn').classList.remove('d-none');
+                document.getElementById('messages-auth').classList.add('d-none');
+                document.getElementById('messages-content').classList.remove('d-none');
                 await loadConversations();
             } else {
-                document.getElementById('create-thread-btn').style.display = 'none';
-                document.getElementById('messages-auth').style.display = 'block';
-                document.getElementById('messages-content').style.display = 'none';
+                isAdmin = false;
+                document.getElementById('create-thread-btn').classList.add('d-none');
+                document.getElementById('messages-auth').classList.remove('d-none');
+                document.getElementById('messages-content').classList.add('d-none');
             }
         });
         
         await loadForums();
     }
 
-    document.getElementById('create-thread-btn').onclick = () => {
-        document.getElementById('create-form').style.display = 'block';
-    };
-
-    document.getElementById('cancel-create').onclick = () => {
-        document.getElementById('create-form').style.display = 'none';
-    };
+    document.getElementById('create-thread-btn').onclick = () => document.getElementById('create-form').classList.remove('d-none');
+    document.getElementById('cancel-create').onclick = () => document.getElementById('create-form').classList.add('d-none');
 
     document.getElementById('thread-form').onsubmit = async (e) => {
         e.preventDefault();
@@ -237,7 +398,7 @@
                 category: document.getElementById('thread-category').value,
                 tags: document.getElementById('thread-tags').value.split(',').map(t => t.trim()).filter(Boolean)
             }, currentUser.uid);
-            document.getElementById('create-form').style.display = 'none';
+            document.getElementById('create-form').classList.add('d-none');
             document.getElementById('thread-form').reset();
             await loadForums();
             Swal.fire('Success', 'Thread created', 'success');
