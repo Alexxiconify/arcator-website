@@ -4,8 +4,16 @@
     --bs-border-color: #1e3a8a; --bs-card-bg: #111; --bs-secondary-color: #A0AEC0; --bs-tertiary-color: #718096;
     --bs-success: #059669; --bs-danger: #DC2626; --bs-warning: #D97706; --bs-form-control-bg: #1A1A1A;
     --bs-navbar-color: #A0AEC0; --bs-navbar-hover-color: #fff; --bs-navbar-brand-color: #2563eb;
+    --bs-dark-rgb: 0,0,0;
 }
 [data-bs-theme="light"] { --bs-primary: #2563eb; --bs-primary-rgb: 37, 99, 235; --bs-border-color: #1e3a8a; }
+
+html, body { min-height: 100vh; }
+body { display: flex; flex-direction: column; }
+main { flex: 1; }
+
+.navbar { background-color: #000 !important; }
+.bg-dark { background-color: #000 !important; }
 .vh-60 { min-height: 60vh; }
 
 .hero-section { position: relative; height: 320px; overflow: hidden; }
@@ -23,3 +31,9 @@
 .forum-thread { border: 1px solid var(--bs-border-color); transition: background-color .2s; }
 .forum-thread:hover { background-color: var(--bs-tertiary-bg); }
 .comment { border-left: 2px solid var(--bs-primary); }
+
+.swal2-popup { background: #111 !important; color: #fff !important; }
+.swal2-title { color: #fff !important; }
+.swal2-html-container { color: #A0AEC0 !important; }
+.swal2-input, .swal2-textarea { background: #1A1A1A !important; color: #fff !important; border-color: #1e3a8a !important; }
+.swal2-confirm { background: #2563eb !important; }
