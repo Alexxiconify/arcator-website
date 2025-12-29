@@ -57,33 +57,33 @@
                 <div class="card-body">
                     <form @submit.prevent="saveProfile">
                         <div class="d-flex align-items-center gap-4 mb-4">
-                            <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary profile-pic-preview" alt="Profile Preview" style="width: 100px; height: 100px; object-fit: cover;">
+                            <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary profile-pic-preview profile-preview-lg" alt="Profile Preview">
                             <div class="flex-grow-1">
                                 <h5 class="mb-3">Profile</h5>
                                 <div class="row g-3">
-                                    <div class="col-md-6"><label class="form-label">Display Name</label><input x-model="profile.displayName" class="form-control"></div>
-                                    <div class="col-md-6"><label class="form-label">Handle</label><input x-model="profile.handle" class="form-control"></div>
+                                    <div class="col-md-6"><label class="form-label" for="profile-displayName">Display Name</label><input id="profile-displayName" x-model="profile.displayName" class="form-control"></div>
+                                    <div class="col-md-6"><label class="form-label" for="profile-handle">Handle</label><input id="profile-handle" x-model="profile.handle" class="form-control"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6"><label class="form-label">Email</label><input x-model="profile.email" class="form-control" readonly></div>
-                            <div class="col-md-6"><label class="form-label">Photo URL</label><input x-model="profile.photoURL" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-email">Email</label><input id="profile-email" x-model="profile.email" class="form-control" readonly></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-photoURL">Photo URL</label><input id="profile-photoURL" x-model="profile.photoURL" class="form-control"></div>
                         </div>
                         
                         <hr>
                         <h5 class="mb-3">Appearance</h5>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="form-label">Theme</label>
-                                <select x-model="profile.themePreference" class="form-select">
+                                <label class="form-label" for="profile-theme">Theme</label>
+                                <select id="profile-theme" x-model="profile.themePreference" class="form-select" aria-label="Theme Preference">
                                     <option value="dark">Dark</option>
                                     <option value="light">Light</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Font Size</label>
-                                <select x-model="profile.fontScaling" class="form-select">
+                                <label class="form-label" for="profile-font">Font Size</label>
+                                <select id="profile-font" x-model="profile.fontScaling" class="form-select" aria-label="Font Scaling">
                                     <option value="small">Small</option>
                                     <option value="normal">Normal</option>
                                     <option value="large">Large</option>
