@@ -95,7 +95,7 @@ const AuthService = {
                 const { displayName: rn, handle } = randomIdentity();
                 const displayName = result.user.displayName || rn;
                 const photoURL = result.user.photoURL || generateProfilePic(displayName);
-                await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { displayName, email: result.user.email || '', photoURL, handle, themePreference: DEFAULT_THEME_NAME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: name });
+                await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { uid: result.user.uid, displayName, email: result.user.email || '', photoURL, handle, themePreference: DEFAULT_THEME_NAME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: name });
             } else {
                 await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
             }
