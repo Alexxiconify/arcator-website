@@ -15,9 +15,10 @@ export async function init() {
             toggleClass('admin-view', 'd-none', !isAdmin);
             
             if (isAdmin) {
-                await loadUsers();
+                const users = await DataService.getUsers();
+                await loadUsers(users);
                 await loadPages();
-                await loadThreads();
+                await loadThreads(users);
             }
         });
     } catch (e) {
@@ -28,8 +29,7 @@ export async function init() {
     if ($('create-page-btn')) $('create-page-btn').onclick = createPage;
 }
 
-async function loadUsers() {
-    const users = await DataService.getUsers();
+async function loadUsers(users) {
     const tbody = $('users-table');
     if (!tbody) return;
     tbody.innerHTML = users.map(u => `
@@ -160,7 +160,9 @@ async function editUser(u) {
     });
     if (value) {
         await AuthService.updateProfile(u.id, value);
-        await loadUsers();
+        // Reload users to show changes
+        const users = await DataService.getUsers();
+        await loadUsers(users);
         Swal.fire('Updated', '', 'success');
     }
 }
@@ -223,24 +225,32 @@ async function createPage() {
     }
 }
 
-async function loadThreads() {
+async function loadThreads(users) {
     const threads = await DataService.getForums();
     const tbody = $('threads-table');
     if (!tbody) return;
-    tbody.innerHTML = threads.map(t => `
+    
+    tbody.innerHTML = threads.map(t => {
+        const author = users.find(u => u.id === t.authorId);
+        const authorName = author ? author.displayName : (t.authorId ? 'Unknown' : 'System');
+        const date = t.createdAt?.seconds ? new Date(t.createdAt.seconds * 1000).toLocaleDateString() : '-';
+        
+        return `
         <tr>
             <td>${t.title || 'Untitled'}</td>
-            <td>${t.authorId || 'Unknown'}</td>
+            <td>${authorName}</td>
+            <td>${t.category || 'General'}</td>
+            <td>${date}</td>
             <td><button class="btn btn-outline-danger btn-sm" data-tid="${t.id}">Delete</button></td>
         </tr>
-    `).join('');
+    `}).join('');
     
     tbody.querySelectorAll('button').forEach(btn => {
         btn.onclick = async () => {
             const { isConfirmed } = await Swal.fire({ title: 'Delete Thread?', icon: 'warning', showCancelButton: true });
             if (isConfirmed) {
                 await DataService.deleteForum(btn.dataset.tid);
-                await loadThreads();
+                await loadThreads(users);
                 Swal.fire('Deleted', '', 'success');
             }
         };
