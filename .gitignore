@@ -6,4 +6,5 @@ dist
 /.dev/
 /node_models/
 /firestore.rules
-/firestore.rules.txt
+firebase-init.js
+/firebase-init.js
