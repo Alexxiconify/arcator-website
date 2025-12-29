@@ -146,8 +146,19 @@
         });
     }
 
-    function openThread(thread) {
-        Swal.fire({ title: thread.title, html: `<p>${DOMPurify.sanitize(thread.description || '')}</p>`, width: 600 });
+    async function openThread(thread) {
+        const comments = await DataService.getComments(thread.id);
+        let commentsHtml = comments.length > 0 
+            ? comments.map(c => `<div class="border-start border-primary ps-3 mb-2"><strong>${DOMPurify.sanitize(c.authorName || 'Anonymous')}</strong><p class="mb-0">${DOMPurify.sanitize(c.content || '')}</p></div>`).join('')
+            : '<p class="text-secondary">No comments yet</p>';
+        
+        Swal.fire({ 
+            title: thread.title, 
+            html: `<p>${DOMPurify.sanitize(thread.description || '')}</p><hr><h6>Comments (${comments.length})</h6>${commentsHtml}`, 
+            width: 700,
+            showConfirmButton: true,
+            confirmButtonText: 'Close'
+        });
     }
 
     async function loadConversations() {
