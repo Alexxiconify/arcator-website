@@ -2,7 +2,7 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-
 import {createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, onAuthStateChanged, onIdTokenChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, unlink, signOut, updateProfile} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 import {addDoc, collection, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
-const cfg = {apiKey: "AIzaSyCP5Zb1CRermAKn7p_S30E8qzCbvsMxhm4", authDomain: "arcator-web.firebaseapp.com", projectId: "arcator-web", storageBucket: "arcator-web.appspot.com", messagingSenderId: "919078249743", appId: "1:919078249743:web:050cc10de97b51f10b9830"};
+const cfg = {apiKey: "REDACTED", authDomain: "arcator-web.firebaseapp.com", projectId: "arcator-web", storageBucket: "arcator-web.appspot.com", messagingSenderId: "919078249743", appId: "1:919078249743:web:050cc10de97b51f10b9830"};
 const app = initializeApp(cfg);
 export const auth = getAuth(app), db = initializeFirestore(app, {});
 export const projectId = cfg.projectId, appId = cfg.appId;
