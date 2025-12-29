@@ -37,3 +37,7 @@ main { flex: 1; }
 .swal2-html-container { color: #A0AEC0 !important; }
 .swal2-input, .swal2-textarea { background: #1A1A1A !important; color: #fff !important; border-color: #1e3a8a !important; }
 .swal2-confirm { background: #2563eb !important; }
+
+[data-font-size="small"] { font-size: 14px; }
+[data-font-size="normal"] { font-size: 16px; }
+[data-font-size="large"] { font-size: 18px; }
