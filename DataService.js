@@ -106,8 +106,8 @@ const DataService = {
         await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msgId));
     },
 
-    async createConversation(participants, name = null) {
-        const conv = { participants, name, createdAt: serverTimestamp(), lastMessage: '', lastMessageTime: serverTimestamp() };
+    async createConversation(participants, name = null, description = null) {
+        const conv = { participants, name, description, createdAt: serverTimestamp(), lastMessage: '', lastMessageTime: serverTimestamp() };
         const ref = await addDoc(collection(db, COLLECTIONS.CONVERSATIONS), conv);
         return { id: ref.id, ...conv };
     },
