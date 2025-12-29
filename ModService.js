@@ -241,11 +241,18 @@ async function loadThreads(users) {
             <td>${authorName}</td>
             <td>${t.category || 'General'}</td>
             <td>${date}</td>
-            <td><button class="btn btn-outline-danger btn-sm" data-tid="${t.id}">Delete</button></td>
+            <td>
+                <button class="btn btn-outline-primary btn-sm edit-thread-btn" data-tid="${t.id}">Edit</button>
+                <button class="btn btn-outline-danger btn-sm delete-thread-btn" data-tid="${t.id}">Delete</button>
+            </td>
         </tr>
     `}).join('');
     
-    tbody.querySelectorAll('button').forEach(btn => {
+    tbody.querySelectorAll('.edit-thread-btn').forEach(btn => {
+        btn.onclick = () => editThread(threads.find(t => t.id === btn.dataset.tid));
+    });
+
+    tbody.querySelectorAll('.delete-thread-btn').forEach(btn => {
         btn.onclick = async () => {
             const { isConfirmed } = await Swal.fire({ title: 'Delete Thread?', icon: 'warning', showCancelButton: true });
             if (isConfirmed) {
@@ -255,6 +262,38 @@ async function loadThreads(users) {
             }
         };
     });
+}
+
+async function editThread(t) {
+    const { value } = await Swal.fire({
+        title: 'Edit Thread',
+        html: `
+            <input id="ed-thread-title" class="form-control mb-2" placeholder="Title" value="${t.title || ''}">
+            <select id="ed-thread-category" class="form-select mb-2">
+                <option value="General" ${t.category === 'General' ? 'selected' : ''}>General</option>
+                <option value="Announcements" ${t.category === 'Announcements' ? 'selected' : ''}>Announcements</option>
+                <option value="Support" ${t.category === 'Support' ? 'selected' : ''}>Support</option>
+                <option value="Feedback" ${t.category === 'Feedback' ? 'selected' : ''}>Feedback</option>
+            </select>
+            <textarea id="ed-thread-content" class="form-control" rows="10" placeholder="Content (HTML/Markdown)">${t.content || ''}</textarea>
+        `,
+        showCancelButton: true,
+        preConfirm: () => ({
+            title: $('ed-thread-title').value,
+            category: $('ed-thread-category').value,
+            content: $('ed-thread-content').value
+        })
+    });
+    if (value) {
+        await DataService.updateForum(t.id, value);
+        // Reload threads to show changes. We need to fetch users again or pass them if we want to be pure, 
+        // but for now let's just re-fetch users to be safe or rely on the fact that loadThreads needs them.
+        // Actually, loadThreads requires 'users' arg. 
+        // To avoid fetching users again unnecessarily, we can fetch them once.
+        const users = await DataService.getUsers();
+        await loadThreads(users);
+        Swal.fire('Updated', '', 'success');
+    }
 }
 
 init();
