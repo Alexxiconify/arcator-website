@@ -1,46 +1,37 @@
 import AuthService from './AuthService.js';
 import DataService from './DataService.js';
 import { initPage } from './UIService.js';
+import { $, toggleClass, syncGithub, syncDiscord } from './Utils.js';
 
 export async function init() {
     try {
         await initPage(AuthService);
         
         AuthService.onAuthChange(async ({ user }) => {
-            document.getElementById('loading-view').classList.add('d-none');
+            toggleClass('loading-view', 'd-none', true);
             
-            if (!user) {
-                document.getElementById('denied-view').classList.remove('d-none');
-                document.getElementById('admin-view').classList.add('d-none');
-                return;
+            const isAdmin = user ? await AuthService.isAdmin(user.uid) : false;
+            toggleClass('denied-view', 'd-none', isAdmin);
+            toggleClass('admin-view', 'd-none', !isAdmin);
+            
+            if (isAdmin) {
+                await loadUsers();
+                await loadPages();
+                await loadThreads();
             }
-            
-            const isAdmin = await AuthService.isAdmin(user.uid);
-            
-            if (!isAdmin) {
-                document.getElementById('denied-view').classList.remove('d-none');
-                document.getElementById('admin-view').classList.add('d-none');
-                return;
-            }
-            
-            document.getElementById('denied-view').classList.add('d-none');
-            document.getElementById('admin-view').classList.remove('d-none');
-            
-            await loadUsers();
-            await loadPages();
-            await loadThreads();
         });
     } catch (e) {
         console.error('Init error:', e);
-        document.getElementById('loading-view').innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+        if ($('loading-view')) $('loading-view').innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
     }
     
-    document.getElementById('create-page-btn').onclick = createPage;
+    if ($('create-page-btn')) $('create-page-btn').onclick = createPage;
 }
 
 async function loadUsers() {
     const users = await DataService.getUsers();
-    const tbody = document.getElementById('users-table');
+    const tbody = $('users-table');
+    if (!tbody) return;
     tbody.innerHTML = users.map(u => `
         <tr>
             <td class="d-flex align-items-center gap-2">
@@ -59,16 +50,11 @@ async function loadUsers() {
 
 async function loadPages() {
     const pages = await DataService.getPages();
-    const list = document.getElementById('pages-list');
-    const empty = document.getElementById('pages-empty');
+    const list = $('pages-list');
+    const empty = $('pages-empty');
+    if (!list) return;
     
-    if (pages.length === 0) {
-        empty.classList.remove('d-none');
-        list.innerHTML = '';
-        return;
-    }
-    
-    empty.classList.add('d-none');
+    toggleClass('pages-empty', 'd-none', pages.length > 0);
     list.innerHTML = pages.map(p => `
         <div class="list-group-item d-flex justify-content-between align-items-center">
             <span>${p.title || 'Untitled'}</span>
@@ -140,53 +126,36 @@ async function editUser(u) {
                 </div>
             </div>`,
         didOpen: () => {
-            const syncEdDiscord = (id) => {
-                const pic = document.getElementById('ed-discord-pic');
-                const cleanId = id.trim();
-                
-                if (cleanId) {
-                    pic.src = './defaultuser.png';
-                } else {
-                    pic.src = './defaultuser.png';
-                }
-            };
-            const syncEdGithub = (url) => {
-                const pic = document.getElementById('ed-github-pic');
-                const match = url.match(/github\.com\/([^/?#\s]+)/i);
-                if (match) {
-                    pic.src = `https://github.com/${match[1]}.png`;
-                } else {
-                    pic.src = './defaultuser.png';
-                }
-            };
+            const syncEdDiscord = (id) => syncDiscord(id, { pic: $('ed-discord-pic') });
+            const syncEdGithub = (url) => syncGithub(url, { pic: $('ed-github-pic') });
 
-            document.getElementById('ed-discordId').oninput = (e) => syncEdDiscord(e.target.value);
-            document.getElementById('ed-githubURL').oninput = (e) => syncEdGithub(e.target.value);
+            $('ed-discordId').oninput = (e) => syncEdDiscord(e.target.value);
+            $('ed-githubURL').oninput = (e) => syncEdGithub(e.target.value);
         },
         showCancelButton: true,
         preConfirm: () => ({
-            displayName: document.getElementById('ed-displayName').value,
-            handle: document.getElementById('ed-handle').value,
-            email: document.getElementById('ed-email').value,
-            photoURL: document.getElementById('ed-photoURL').value,
-            discordId: document.getElementById('ed-discordId').value,
-            githubURL: document.getElementById('ed-githubURL').value,
-            themePreference: document.getElementById('ed-themePreference').value,
-            fontScaling: document.getElementById('ed-fontScaling').value,
-            customCSS: document.getElementById('ed-customCSS').value,
-            dataRetention: document.getElementById('ed-dataRetention').value,
-            notificationFrequency: document.getElementById('ed-notificationFrequency').value,
-            emailNotifications: document.getElementById('ed-emailNotifications').checked,
-            pushNotifications: document.getElementById('ed-pushNotifications').checked,
-            discordNotifications: document.getElementById('ed-discordNotifications').checked,
-            profileVisible: document.getElementById('ed-profileVisible').checked,
-            activityTracking: document.getElementById('ed-activityTracking').checked,
-            thirdPartySharing: document.getElementById('ed-thirdPartySharing').checked,
-            debugMode: document.getElementById('ed-debugMode').checked,
-            reducedMotion: document.getElementById('ed-reducedMotion').checked,
-            highContrast: document.getElementById('ed-highContrast').checked,
-            focusIndicators: document.getElementById('ed-focusIndicators').checked,
-            screenReader: document.getElementById('ed-screenReader').checked
+            displayName: $('ed-displayName').value,
+            handle: $('ed-handle').value,
+            email: $('ed-email').value,
+            photoURL: $('ed-photoURL').value,
+            discordId: $('ed-discordId').value,
+            githubURL: $('ed-githubURL').value,
+            themePreference: $('ed-themePreference').value,
+            fontScaling: $('ed-fontScaling').value,
+            customCSS: $('ed-customCSS').value,
+            dataRetention: $('ed-dataRetention').value,
+            notificationFrequency: $('ed-notificationFrequency').value,
+            emailNotifications: $('ed-emailNotifications').checked,
+            pushNotifications: $('ed-pushNotifications').checked,
+            discordNotifications: $('ed-discordNotifications').checked,
+            profileVisible: $('ed-profileVisible').checked,
+            activityTracking: $('ed-activityTracking').checked,
+            thirdPartySharing: $('ed-thirdPartySharing').checked,
+            debugMode: $('ed-debugMode').checked,
+            reducedMotion: $('ed-reducedMotion').checked,
+            highContrast: $('ed-highContrast').checked,
+            focusIndicators: $('ed-focusIndicators').checked,
+            screenReader: $('ed-screenReader').checked
         })
     });
     if (value) {
@@ -199,25 +168,16 @@ async function editUser(u) {
 async function editPage(p) {
     const { value } = await Swal.fire({
         title: 'Edit Page',
-        width: '80%',
-        html: `<div class="text-start mb-2"><label class="form-label small">Title</label><div id="ed-title"></div></div>
-               <div class="text-start mb-2"><label class="form-label small">Description</label><div id="ed-desc"></div></div>
-               <div class="text-start mb-2"><label class="form-label small">Content</label><div id="ed-content"></div></div>`,
-        didOpen: () => {
-            const minToolbar = [['bold','italic','underline'],['link']];
-            const fullToolbar = [['bold','italic','underline','strike'],['blockquote','code-block'],['link','image'],[{header:1},{header:2}],[{list:'ordered'},{list:'bullet'}],[{color:[]},{background:[]}],['clean']];
-            window.edTitle = new Quill('#ed-title', { theme:'snow', modules:{toolbar:minToolbar} });
-            window.edDesc = new Quill('#ed-desc', { theme:'snow', modules:{toolbar:minToolbar} });
-            window.edContent = new Quill('#ed-content', { theme:'snow', modules:{toolbar:fullToolbar} });
-            window.edTitle.root.innerHTML = p.title || '';
-            window.edDesc.root.innerHTML = p.description || '';
-            window.edContent.root.innerHTML = p.content || '';
-        },
+        html: `
+            <input id="ed-page-title" class="form-control mb-2" placeholder="Title" value="${p.title || ''}">
+            <input id="ed-page-slug" class="form-control mb-2" placeholder="Slug" value="${p.slug || ''}">
+            <textarea id="ed-page-content" class="form-control" rows="10" placeholder="Content (HTML/Markdown)">${p.content || ''}</textarea>
+        `,
         showCancelButton: true,
-        preConfirm: () => ({ 
-            title: window.edTitle.root.innerHTML, 
-            description: window.edDesc.root.innerHTML,
-            content: window.edContent.root.innerHTML 
+        preConfirm: () => ({
+            title: $('ed-page-title').value,
+            slug: $('ed-page-slug').value,
+            content: $('ed-page-content').value
         })
     });
     if (value) {
@@ -228,7 +188,12 @@ async function editPage(p) {
 }
 
 async function deletePage(id) {
-    const { isConfirmed } = await Swal.fire({ title: 'Delete page?', icon: 'warning', showCancelButton: true });
+    const { isConfirmed } = await Swal.fire({
+        title: 'Delete Page?',
+        text: 'This cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true
+    });
     if (isConfirmed) {
         await DataService.deletePage(id);
         await loadPages();
@@ -239,25 +204,19 @@ async function deletePage(id) {
 async function createPage() {
     const { value } = await Swal.fire({
         title: 'Create Page',
-        width: '80%',
-        html: `<div class="text-start mb-2"><label class="form-label small">Title</label><div id="ed-title"></div></div>
-               <div class="text-start mb-2"><label class="form-label small">Description</label><div id="ed-desc"></div></div>
-               <div class="text-start mb-2"><label class="form-label small">Content</label><div id="ed-content"></div></div>`,
-        didOpen: () => {
-            const minToolbar = [['bold','italic','underline'],['link']];
-            const fullToolbar = [['bold','italic','underline','strike'],['blockquote','code-block'],['link','image'],[{header:1},{header:2}],[{list:'ordered'},{list:'bullet'}],[{color:[]},{background:[]}],['clean']];
-            window.edTitle = new Quill('#ed-title', { theme:'snow', modules:{toolbar:minToolbar} });
-            window.edDesc = new Quill('#ed-desc', { theme:'snow', modules:{toolbar:minToolbar} });
-            window.edContent = new Quill('#ed-content', { theme:'snow', modules:{toolbar:fullToolbar} });
-        },
+        html: `
+            <input id="new-page-title" class="form-control mb-2" placeholder="Title">
+            <input id="new-page-slug" class="form-control mb-2" placeholder="Slug">
+            <textarea id="new-page-content" class="form-control" rows="10" placeholder="Content"></textarea>
+        `,
         showCancelButton: true,
-        preConfirm: () => ({ 
-            title: window.edTitle.root.innerHTML, 
-            description: window.edDesc.root.innerHTML,
-            content: window.edContent.root.innerHTML 
+        preConfirm: () => ({
+            title: $('new-page-title').value,
+            slug: $('new-page-slug').value,
+            content: $('new-page-content').value
         })
     });
-    if (value && value.title) {
+    if (value) {
         await DataService.createPage(value);
         await loadPages();
         Swal.fire('Created', '', 'success');
@@ -266,102 +225,26 @@ async function createPage() {
 
 async function loadThreads() {
     const threads = await DataService.getForums();
-    const tbody = document.getElementById('threads-table');
+    const tbody = $('threads-table');
+    if (!tbody) return;
+    tbody.innerHTML = threads.map(t => `
+        <tr>
+            <td>${t.title || 'Untitled'}</td>
+            <td>${t.authorId || 'Unknown'}</td>
+            <td><button class="btn btn-outline-danger btn-sm" data-tid="${t.id}">Delete</button></td>
+        </tr>
+    `).join('');
     
-    const rows = await Promise.all(threads.map(async t => {
-        let authorName = 'System';
-        if (t.authorId) {
-            const users = await DataService.getUsers();
-            const author = users.find(u => u.id === t.authorId || u.uid === t.authorId);
-            authorName = author?.displayName || 'Unknown';
-        }
-        const date = t.createdAt?.seconds ? new Date(t.createdAt.seconds * 1000).toLocaleDateString() : '';
-        return `
-            <tr>
-                <td>${t.title || 'Untitled'}</td>
-                <td>${authorName}</td>
-                <td>${t.category || 'General'}</td>
-                <td>${date}</td>
-                <td>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary edit-thread-btn" data-tid="${t.id}">Edit</button>
-                        <button class="btn btn-outline-danger delete-thread-btn" data-tid="${t.id}">Delete</button>
-                    </div>
-                </td>
-            </tr>`;
-    }));
-    tbody.innerHTML = rows.join('');
-    
-    tbody.querySelectorAll('.edit-thread-btn').forEach(btn => {
-        btn.onclick = () => editThread(threads.find(t => t.id === btn.dataset.tid));
+    tbody.querySelectorAll('button').forEach(btn => {
+        btn.onclick = async () => {
+            const { isConfirmed } = await Swal.fire({ title: 'Delete Thread?', icon: 'warning', showCancelButton: true });
+            if (isConfirmed) {
+                await DataService.deleteForum(btn.dataset.tid);
+                await loadThreads();
+                Swal.fire('Deleted', '', 'success');
+            }
+        };
     });
-    tbody.querySelectorAll('.delete-thread-btn').forEach(btn => {
-        btn.onclick = () => deleteThread(btn.dataset.tid);
-    });
-}
-
-async function editThread(t) {
-    const users = await DataService.getUsers();
-    const userOptions = users.map(u => `<option value="${u.id}" ${u.id === t.authorId ? 'selected' : ''}>${u.displayName || u.email}</option>`).join('');
-    
-    const { value } = await Swal.fire({
-        title: 'Edit Thread',
-        width: '80%',
-        html: `
-            <div class="text-start" style="max-height:60vh;overflow-y:auto;">
-                <div class="mb-2"><label class="form-label small">Title</label><div id="ed-title"></div></div>
-                <div class="mb-2"><label class="form-label small">Description</label><div id="ed-desc"></div></div>
-                <div class="row mb-2">
-                    <div class="col-6">
-                        <label class="form-label small">Category</label>
-                        <select id="ed-category" class="form-select form-select-sm">
-                            <option value="announcements" ${t.category==='announcements'?'selected':''}>Announcements</option>
-                            <option value="gaming" ${t.category==='gaming'?'selected':''}>Gaming</option>
-                            <option value="discussion" ${t.category==='discussion'?'selected':''}>Discussion</option>
-                            <option value="support" ${t.category==='support'?'selected':''}>Support</option>
-                            <option value="general" ${t.category==='general'?'selected':''}>General</option>
-                        </select>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label small">Author</label>
-                        <select id="ed-author" class="form-select form-select-sm">
-                            <option value="">System</option>
-                            ${userOptions}
-                        </select>
-                    </div>
-                </div>
-                <div class="mb-2"><label class="form-label small">Tags (comma-separated)</label><input id="ed-tags" class="form-control form-control-sm" value="${(t.tags || []).join(', ')}"></div>
-            </div>`,
-        didOpen: () => {
-            const minToolbar = [['bold','italic','underline'],['link']];
-            window.edTitle = new Quill('#ed-title', { theme:'snow', modules:{toolbar:minToolbar} });
-            window.edDesc = new Quill('#ed-desc', { theme:'snow', modules:{toolbar:minToolbar} });
-            window.edTitle.root.innerHTML = t.title || '';
-            window.edDesc.root.innerHTML = t.description || '';
-        },
-        showCancelButton: true,
-        preConfirm: () => ({
-            title: window.edTitle.root.innerHTML,
-            description: window.edDesc.root.innerHTML,
-            category: document.getElementById('ed-category').value,
-            authorId: document.getElementById('ed-author').value || null,
-            tags: document.getElementById('ed-tags').value.split(',').map(s => s.trim()).filter(Boolean)
-        })
-    });
-    if (value) {
-        await DataService.updateForum(t.id, value);
-        await loadThreads();
-        Swal.fire('Updated', '', 'success');
-    }
-}
-
-async function deleteThread(id) {
-    const { isConfirmed } = await Swal.fire({ title: 'Delete thread?', icon: 'warning', showCancelButton: true });
-    if (isConfirmed) {
-        await DataService.deleteForum(id);
-        await loadThreads();
-        Swal.fire('Deleted', '', 'success');
-    }
 }
 
 init();
