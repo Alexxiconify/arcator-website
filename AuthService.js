@@ -1,8 +1,7 @@
 import {
     auth, db, COLLECTIONS, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME,
     createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup,
-    signOut, sendPasswordResetEmail, updateProfile,
-    GoogleAuthProvider, GithubAuthProvider,
+    signOut, updateProfile, GoogleAuthProvider, GithubAuthProvider,
     doc, getDoc, setDoc, updateDoc, serverTimestamp
 } from './firebase-init.js';
 
@@ -77,7 +76,6 @@ const AuthService = {
         return result.user;
     },
 
-    async resetPassword(email) { await sendPasswordResetEmail(auth, email); },
     async logout() { await signOut(auth); },
 
     async updateProfile(uid, data) {

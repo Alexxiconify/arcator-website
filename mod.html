@@ -7,84 +7,59 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body x-data="adminStore">
+<body>
 <div id="navbar-placeholder"></div>
 
-<template x-if="loading"><div class="container py-5 text-center"><div class="loading-spinner mx-auto"></div></div></template>
-<template x-if="!loading && !isAdmin">
-    <main class="container py-5 text-center">
-        <h1 class="display-4 fw-bold mb-4">Access Denied</h1>
-        <p class="lead text-secondary mb-4">You do not have permission to access moderator tools.</p>
-        <a href="./index.html" class="btn btn-primary">Return Home</a>
+<div id="loading-view" class="container py-5 text-center"><div class="loading-spinner mx-auto"></div></div>
+
+<div id="denied-view" class="container py-5 text-center" style="display:none">
+    <h1 class="display-4 fw-bold mb-4">Access Denied</h1>
+    <p class="lead text-secondary mb-4">You do not have permission to access moderator tools.</p>
+    <a href="./index.html" class="btn btn-primary">Return Home</a>
+</div>
+
+<div id="admin-view" style="display:none">
+    <section class="hero-section">
+        <img src="./creativespawn.png" alt="Hero" loading="lazy">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1 class="display-4 fw-bold mb-3">Moderator Tools</h1>
+            <p class="lead">Manage pages, moderate content, and oversee conversations.</p>
+        </div>
+    </section>
+
+    <main class="container py-5">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header"><h5 class="mb-0">User Management</h5></div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead><tr><th>User</th><th>Email</th><th>Actions</th></tr></thead>
+                                <tbody id="users-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Custom Pages</h5>
+                        <button class="btn btn-primary btn-sm" id="create-page-btn">Create Page</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="pages-empty" class="text-secondary">No pages</div>
+                        <div class="list-group list-group-flush" id="pages-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
-</template>
-
-<template x-if="!loading && isAdmin">
-    <div>
-        <section class="hero-section">
-            <img src="./creativespawn.png" alt="Hero" loading="lazy">
-            <div class="hero-overlay"></div>
-            <div class="hero-content">
-                <h1 class="display-4 fw-bold mb-3">Moderator Tools</h1>
-                <p class="lead">Manage pages, moderate content, and oversee conversations.</p>
-            </div>
-        </section>
-
-        <main class="container py-5">
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <div class="card">
-                        <div class="card-header"><h5 class="mb-0">User Management</h5></div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead><tr><th>User</th><th>Email</th><th>Actions</th></tr></thead>
-                                    <tbody>
-                                        <template x-for="u in users" :key="u.id">
-                                            <tr>
-                                                <td class="d-flex align-items-center gap-2">
-                                                    <img :src="u.photoURL || './defaultuser.png'" class="profile-img" style="width:24px;height:24px;">
-                                                    <span x-text="u.displayName || 'Unknown'"></span>
-                                                </td>
-                                                <td x-text="u.email || '-'"></td>
-                                                <td><button class="btn btn-outline-primary btn-sm" @click="editUser(u)">Edit</button></td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Custom Pages</h5>
-                            <button class="btn btn-primary btn-sm" @click="createPage">Create Page</button>
-                        </div>
-                        <div class="card-body">
-                            <template x-if="pages.length === 0"><div class="text-secondary">No pages</div></template>
-                            <div class="list-group list-group-flush">
-                                <template x-for="p in pages" :key="p.id">
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <span x-text="p.title || 'Untitled'"></span>
-                                        <div class="btn-group btn-group-sm">
-                                            <a :href="'./page.html?id=' + p.id" class="btn btn-outline-secondary">View</a>
-                                            <button class="btn btn-outline-danger" @click="deletePage(p.id)">Delete</button>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-</template>
+</div>
 
 <div id="footer-placeholder"></div>
 
@@ -94,52 +69,116 @@
     import DataService from './DataService.js';
     import { initPage } from './UIService.js';
 
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('adminStore', () => ({
-            loading: true, isAdmin: false, users: [], pages: [],
+    let currentProfile = null;
 
-            async init() {
-                await initPage(AuthService);
-                AuthService.onAuthChange(async ({ user, profile }) => {
-                    this.isAdmin = profile?.isAdmin === true;
-                    if (this.isAdmin) {
-                        this.users = await DataService.getUsers();
-                        this.pages = await DataService.getPages();
-                    }
-                    this.loading = false;
-                });
-            },
-
-            async editUser(u) {
-                const { value } = await Swal.fire({
-                    title: 'Edit User',
-                    html: `<input id="swal-name" class="swal2-input" placeholder="Display Name" value="${u.displayName || ''}"><input id="swal-email" class="swal2-input" placeholder="Email" value="${u.email || ''}">`,
-                    preConfirm: () => ({ displayName: document.getElementById('swal-name').value, email: document.getElementById('swal-email').value })
-                });
-                if (value) {
-                    await AuthService.updateProfile(u.id, value);
-                    this.users = await DataService.getUsers();
-                    Swal.fire('Updated', '', 'success');
+    async function init() {
+        try {
+            await initPage(AuthService);
+            
+            AuthService.onAuthChange(async ({ user, profile }) => {
+                console.log('Auth change:', user?.uid, profile?.isAdmin);
+                document.getElementById('loading-view').style.display = 'none';
+                
+                if (!profile?.isAdmin) {
+                    document.getElementById('denied-view').style.display = 'block';
+                    document.getElementById('admin-view').style.display = 'none';
+                    return;
                 }
-            },
+                
+                currentProfile = profile;
+                document.getElementById('denied-view').style.display = 'none';
+                document.getElementById('admin-view').style.display = 'block';
+                
+                await loadUsers();
+                await loadPages();
+            });
+        } catch (e) {
+            console.error('Init error:', e);
+            document.getElementById('loading-view').innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+        }
+    }
 
-            async createPage() {
-                const { value } = await Swal.fire({
-                    title: 'Create Page',
-                    html: `<input id="swal-title" class="swal2-input" placeholder="Title"><textarea id="swal-content" class="swal2-textarea" placeholder="Content (Markdown)"></textarea>`,
-                    preConfirm: () => ({ title: document.getElementById('swal-title').value, content: document.getElementById('swal-content').value })
-                });
-                if (value && value.title) {
-                    Swal.fire('Created', 'Page creation would save to Firestore', 'info');
-                }
-            },
+    async function loadUsers() {
+        const users = await DataService.getUsers();
+        const tbody = document.getElementById('users-table');
+        tbody.innerHTML = users.map(u => `
+            <tr>
+                <td class="d-flex align-items-center gap-2">
+                    <img src="${u.photoURL || './defaultuser.png'}" class="profile-img" style="width:24px;height:24px;">
+                    <span>${u.displayName || 'Unknown'}</span>
+                </td>
+                <td>${u.email || '-'}</td>
+                <td><button class="btn btn-outline-primary btn-sm" data-uid="${u.id}">Edit</button></td>
+            </tr>
+        `).join('');
+        
+        tbody.querySelectorAll('button').forEach(btn => {
+            btn.onclick = () => editUser(users.find(u => u.id === btn.dataset.uid));
+        });
+    }
 
-            async deletePage(id) {
-                const { isConfirmed } = await Swal.fire({ title: 'Delete page?', icon: 'warning', showCancelButton: true });
-                if (isConfirmed) Swal.fire('Deleted', '', 'success');
-            }
-        }));
-    });
+    async function loadPages() {
+        const pages = await DataService.getPages();
+        const list = document.getElementById('pages-list');
+        const empty = document.getElementById('pages-empty');
+        
+        if (pages.length === 0) {
+            empty.style.display = 'block';
+            list.innerHTML = '';
+            return;
+        }
+        
+        empty.style.display = 'none';
+        list.innerHTML = pages.map(p => `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span>${p.title || 'Untitled'}</span>
+                <div class="btn-group btn-group-sm">
+                    <a href="./page.html?id=${p.id}" class="btn btn-outline-secondary">View</a>
+                    <button class="btn btn-outline-danger" data-pid="${p.id}">Delete</button>
+                </div>
+            </div>
+        `).join('');
+        
+        list.querySelectorAll('button').forEach(btn => {
+            btn.onclick = () => deletePage(btn.dataset.pid);
+        });
+    }
+
+    async function editUser(u) {
+        const { value } = await Swal.fire({
+            title: 'Edit User',
+            html: `<input id="swal-name" class="swal2-input" placeholder="Display Name" value="${u.displayName || ''}">
+                   <input id="swal-email" class="swal2-input" placeholder="Email" value="${u.email || ''}">`,
+            preConfirm: () => ({ displayName: document.getElementById('swal-name').value, email: document.getElementById('swal-email').value })
+        });
+        if (value) {
+            await AuthService.updateProfile(u.id, value);
+            await loadUsers();
+            Swal.fire('Updated', '', 'success');
+        }
+    }
+
+    async function deletePage(id) {
+        const { isConfirmed } = await Swal.fire({ title: 'Delete page?', icon: 'warning', showCancelButton: true });
+        if (isConfirmed) {
+            await loadPages();
+            Swal.fire('Deleted', '', 'success');
+        }
+    }
+
+    document.getElementById('create-page-btn').onclick = async () => {
+        const { value } = await Swal.fire({
+            title: 'Create Page',
+            html: `<input id="swal-title" class="swal2-input" placeholder="Title">
+                   <textarea id="swal-content" class="swal2-textarea" placeholder="Content (Markdown)"></textarea>`,
+            preConfirm: () => ({ title: document.getElementById('swal-title').value, content: document.getElementById('swal-content').value })
+        });
+        if (value && value.title) {
+            Swal.fire('Created', 'Page creation would save to Firestore', 'info');
+        }
+    };
+
+    init();
 </script>
 </body>
 </html>

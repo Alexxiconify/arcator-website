@@ -4,6 +4,7 @@ const NAV_LINKS = [
     { href: './forms.html', label: 'Forums' },
     { href: './pages.html', label: 'Pages' },
     { href: './about.html', label: 'About' },
+    { href: './privacy.html', label: 'Legal' },
     { href: './mod.html', label: 'Admin' }
 ];
 
@@ -13,12 +14,12 @@ export function renderNavbar(container) {
     
     container.innerHTML = `
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top border-bottom border-primary">
-    <div class="container">
+    <div class="container-fluid px-4">
         <a class="navbar-brand fw-bold" href="./index.html">Arcator</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">${links}</ul>
-            <div id="user-section" class="d-flex align-items-center"></div>
+            <div id="user-section" class="d-flex align-items-center"><a href="./users.html" class="btn btn-primary btn-sm">Sign In</a></div>
         </div>
     </div>
 </nav>`;
@@ -40,7 +41,7 @@ export function renderUserSection(user, profile) {
 export function renderFooter(container) {
     container.innerHTML = `
 <footer class="mt-auto py-4 bg-dark border-top border-primary">
-    <div class="container">
+    <div class="container-fluid px-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap">
             <div class="d-flex gap-3">
                 <a href="https://bluemaps.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Blue Maps</a>
@@ -52,30 +53,21 @@ export function renderFooter(container) {
 </footer>`;
 }
 
-export function renderHero(container, title, subtitle) {
-    container.innerHTML = `
-<section class="hero-section">
-    <img src="./creativespawn.png" alt="Hero" loading="lazy">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-        <h1 class="display-4 fw-bold mb-3">${title}</h1>
-        ${subtitle ? `<p class="lead">${subtitle}</p>` : ''}
-    </div>
-</section>`;
-}
-
 export async function initPage(AuthService) {
-    await AuthService.ready();
-    
     const navbar = document.getElementById('navbar-placeholder');
     const footer = document.getElementById('footer-placeholder');
     
     if (navbar) renderNavbar(navbar);
     if (footer) renderFooter(footer);
     
-    AuthService.onAuthChange(({ user, profile }) => {
-        renderUserSection(user, profile);
-        const theme = profile?.themePreference || 'dark';
-        document.documentElement.setAttribute('data-bs-theme', theme);
-    });
+    try {
+        await AuthService.ready();
+        AuthService.onAuthChange(({ user, profile }) => {
+            renderUserSection(user, profile);
+            const theme = profile?.themePreference || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        });
+    } catch (e) {
+        console.error('Auth init error:', e);
+    }
 }
