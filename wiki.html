@@ -8,6 +8,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
 <body>
 <div id="navbar-placeholder"></div>
@@ -26,8 +29,11 @@
         <div class="col-md-3 mb-4">
             <div class="list-group sticky-top" style="top: 100px;">
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'home' }" @click="tab = 'home'">Welcome</button>
-                <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'hub' }" @click="tab = 'hub'">Hub (Creative)</button>
-                <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'ssmp' }" @click="tab = 'ssmp'">SSMP (Survival)</button>
+                <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'servers' }" @click="tab = 'servers'">Servers</button>
+                <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'software' }" @click="tab = 'software'">Software</button>
+                <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'sysadmin' }" @click="tab = 'sysadmin'">Sysadmin</button>
+                <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'machines' }" @click="tab = 'machines'">Machines</button>
+                <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'staff' }" @click="tab = 'staff'">Staff</button>
             </div>
         </div>
         <div class="col-md-9">
@@ -43,22 +49,23 @@
                 <p>This is Arcator's official trailer, made in 2016. It showcased the server with a small tour.</p>
                 <p>Here you can find the older videos:</p>
                 <ul>
-                    <li><a href="https://www.youtube.com/watch?v=-HsGRt4OKpE" target="_blank">2010 Trailer</a></li>
-                    <li><a href="https://www.youtube.com/watch?v=ywVljjljLvs" target="_blank">2011 Trailer</a></li>
+                    <li><a href="https://www.youtube.com/watch?v=-HsGRt4OKpE" target="_blank" rel="noopener noreferrer">2010 Trailer</a></li>
+                    <li><a href="https://www.youtube.com/watch?v=ywVljjljLvs" target="_blank" rel="noopener noreferrer">2011 Trailer</a></li>
                 </ul>
                 
                 <hr class="my-5">
                 
                 <h3>Arcator Social Media</h3>
                 <ul>
-                    <li><a href="https://www.youtube.com/@arcator.network" target="_blank">YouTube</a></li>
-                    <li><a href="https://www.tumblr.com/arcator" target="_blank">Tumblr</a></li>
+                    <li><a href="https://www.youtube.com/@arcator.network" target="_blank" rel="noopener noreferrer">YouTube</a></li>
+                    <li><a href="https://www.tumblr.com/arcator" target="_blank" rel="noopener noreferrer">Tumblr</a></li>
                 </ul>
             </div>
 
-            <!-- Hub Tab -->
-            <div x-show="tab === 'hub'" class="fade-in" style="display: none;">
-                <h2 class="mb-4">Hub (MC1)</h2>
+            <!-- servers Tab -->
+            <div x-show="tab === 'servers'" class="fade-in" x-cloak>
+                <h2 class="mb-4">Servers</h2>
+                <h3 class="mb-4">Hub (MC1)</h3>
                 
                 <h4>Overview</h4>
                 <p>MC1, or Hub, was the first Arcator server, and was released to the public in December 2010. The server held four different modes, it provided Freebuild, Plots, Peaceful Survival, and Modified Survival.</p>
@@ -99,11 +106,7 @@
                 <h4>Plots</h4>
                 <p>Plots are creative but in a flat environment. You can build to the freedom of your own plot! From houses to landscaping, you have the freedom to create without Minecraft's land generation! Of course sticking to your own plot. You can also explore the many builds left behind.</p>
                 <blockquote class="blockquote footer">“A builder's dream!”</blockquote>
-            </div>
-
-            <!-- SSMP Tab -->
-            <div x-show="tab === 'ssmp'" class="fade-in" style="display: none;">
-                <h2 class="mb-4">SSMP (Strawberry SMP)</h2>
+                <h3 class="mb-4">SSMP (Strawberry SMP)</h2>
                 
                 <h4>Overview</h4>
                 <p>SSMP or Strawberry SMP. This SMP is a vanilla survival SMP, SMP standing for survival multiplayer. You can meet people, build with people, team with people or go solo. Wars don’t happen. We will be happy to see you on this history rich server.</p>
@@ -135,6 +138,335 @@
                 
                 <h4>Locations</h4>
                 <p>This is the Strawberry SMP spawn where you first start in the SMP.</p>
+            </div>
+
+            <!-- Software Tab -->
+            <div x-show="tab === 'software'" class="fade-in" x-cloak>
+                <h2 class="mb-4">Software</h2>
+                <h3 class="mb-4">Tools</h3>
+                <h4 class="mb-4">JengaManager</h4>
+                <p>This program has been replaced with RamCheck</p>
+                <p>Located in ~/Services/RamCheck this simplified Python rewrite uses a hard coded 90% threshold and then runs rcon to gradually shutdown more servers.</p>
+                <h5 class="mb-4">JengaManager</h4>
+                <p>JengaManager, also known simply as JM, is a systems administration application used to manage processes in the event that system resources become scarce. This process is essential as it ensures that servers do not have to be physically reset when they crash due to a lack of resources (either excess CPU or memory usage), thus maintaining a sufficient uptime so that we may tend to other priorities without the hinderance of machine failure.</p>
+                <p>While JengaManager is written in C++ for the utmost efficiency due to the fact that it is continuously running in the background, these types of processes are referred to as daemons.  Although the portions of the application that run continuously are written in C++, part of JengaManager is written in Perl so that the portions of code relating to reading the configuration file are not so heavily obfuscated especially in the event that one would wish to change the conditions with which JengaManager starts with.</p>
+                <p>To expand upon the ideology that programs used for systems administration should be able to chain together to effectively adapt to novel issues within any system, it is theoretically possible to write scripts to edit the configuration file, so that it may automatically be generated when starting JengaManager.</p>
+                <h5 class="mb-4">Editing .config File</h5>
+                <p>To edit the configuration file for JengaManager, the process is as follows:</p>
+                <p>Navigate to JengaManager directory in console:</p>
+                <p>cd ~/JengaManager</p>
+                <p>Open the .config file in a text editor, such as nano:</p>
+                <p>nano .config</p>
+                <p>Now, you should see two lines with the words “src” and “sensitivity”. What do these mean?</p>
+                <p>“src” represents where the process IDs are coming from. The default is set to “pgrep java”, which is a command that returns the processes which run using Java. This allows us to indirectly target the servers (and other Java processes) to be sacrificed in the event that we hit as certain threshold.</p>
+                <p>“sensitivity” is this threshold. By default, it is set to “0.95”, which means we will begin terminating our source processes when either memory or CPU usage reaches 95%. </p>
+                <p>You may edit these lines to fit the needs of the system, to save and exit press CTRL, X, ENTER.</p>
+                <h5 class="mb-4">Starting JengaManager</h5>
+                <p>Once you are sure that you have configured the start conditions appropriately, you may move on to starting the program. We want JengaManager to run continuously as it is intended to be a daemon process. Therefore, we will use “tmux” to accomplish this.</p>
+                <p>The process is as follows:</p>
+                <p>1. Navigate to the JengaManager directory:</p>
+                <p>cd ~/JengaManager</p>
+                <p>2. Open a new tmux session:</p>
+                <p>tmux new -s JengaManager</p>
+                <p>3. Run JengaManager:</p>
+                <p>./JengaManager</p>
+                <p>If all is well, you may now exit the tmux session by pressing CTRL+B+D simultaneously.</p>
+                <h5 class="mb-4">Checking Logs and the Attaching to the Session</h5>
+                <p>JengaManager provides comprehensive data to a log with each iteration, this data can be extremely useful for diagnosis issues with the behavior of our systems. For instance, if JengaManager is terminating processes continuously, we may have a deeper issue that needs to be remedied. </p>
+                <p>To access these logs:</p>
+                <p>1. Navigate to the JengaManager directory:</p>
+                <p>cd ~/JengaManager</p>
+                <p>2. Print the log:</p>
+                <p>cat JM.log</p>
+                <p>What is display is the time of that iteration started as well as several columns of data. These columns display information the following format:</p>
+                <p>[ Process_X(PID) | Priority | Memory Usage%, CPU Usage% ]</p>
+                <p>This is not the only information provided by the program however, if we attach to the tmux session, we are also provided information about the efficiency of JengaManager as well as how many processes it can see.</p>
+                <p>To attach to the session:</p>
+                <p>tmux a -t JengaManager</p>
+                <p>Once again, to exit the tmux session you press CTRL+B+D simultaneously.</p>
+                <h4 class="mb-4">MC Backup</h4>
+                <p>Warning. This program hasn't been used since 2022.</p>
+                <p>To run, type ./mcbkp.pl in the home directory (cd ~)</p>
+                <p>Select a server to load the backup for, options will appear in a list format, enter the number from the list</p>
+                <p>Type the name of the person you would like to target for the backup. I.e., X griefed, type in X's name EXACTLY to print their joins to the server.</p>
+                <p>Joins are printed in a list just like the servers from step 2, enter the number from the list to specify which join you want to backup the server before.</p>
+                <p>You will be prompted on whether you would like to continue or not. This is a CRUCIAL step, pay attention. The point of no return. Make sure you know what you are doing, if you made a mistake you can say n and the process will be terminated (or alternatively CTRL-C).</p>
+                <p>Upon entering Y/y, the script will shut down the server and attempt to load a backup via rsync, then it will start the server again. This will open a tmux so you can see if the server successfully started. At this point, if you are sure all is well, you can detach with CTRL-B+D (don't use CTRL-C).</p>
+                <h3>Onfim Auto Updater</h3>
+                <h4>Plugin Autoupdater</h4>
+                <p>These scripts auto update plugins for Minecraft. Updates are reported to onfim-log on the Discord channel.</p>
+                <h5>Entry point</h5>
+                <p>On startup, ~/sync/scripts/startup.sh will call ~/sync/scripts/update.sh.</p>
+                <h5>Overview</h5>
+                <p>Scripts will typically add files to ~/plugindb/autospigot or ~/plugindb/spigot. We call these plugin repositories.</p>
+                <p>Server scripts automatically pull jar files from autospigot. But ~/plugindb/spigot must be synced manually with "psync".</p>
+                <p>All scripts will only download if the local last modified and file size are different from the URL.</p>
+                <h5>Scripts in ~/curium/updater/</h5>
+                <p>download_jenkins</p>
+                <p>A single argument --tar to the plugin repository is required. Within it there must be a jenkins.txt with one link per line to an "latestSuccesfulBuild/artifacts Jenkins path OR a Github "releases/latest/download" path. For example</p>
+                <p>https://ci.viaversion.com/job/ViaVersion/lastSuccessfulBuild/artifact/build/libs/</p>
+                <p>https://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/build/libs/</p>
+                <p>Jar files are crawled and added to the target path if there is an update. This is usually ~/plugindb/autospigot.</p>
+                <p>download_spiget</p>
+                <p>Similarly, download_spiget will read from spiget.csv with a plugin name and spigotmc ID.</p>
+                <p>oget</p>
+                <p>oget accepts two arguments. One link and one local path indicated with -O. It it used to update one file at a time.</p>
+                <p>pruneDb</p>
+                <p>This script accepts one argument to a plugin repository removes any old plugins. (Since the other scripts will not remove duplicates.) Deduplication is done by reading the plugin.yml within each jar and comparing the plugin id and version.</p>
+                <p>psync</p>
+                <p>Common Example: ~/curium/updater/psync.py --src /mnt/Main/shared/spigot/ --tar plugins/</p>
+                <p>psync will automatically sync a --src and target and delete old plugins in the target.</p>
+                <p>-n will start a dry run.</p>
+                <p>-y will auto accept. (Otherwise the user will be prompted).</p>
+                <p>updateServerJar</p>
+                <p>This updates paper to the latest release of the given version. For example</p>
+                <p>~/curium/updater/updateServerJar.py paper 1.20.4 .</p>
+                <p>Servers</p>
+                <p>Servers typically contain an optional <a href="https://blog.update.sh/about-en" target="_blank" rel="noopener noreferrer">update.sh</a> which is called by <a href="https://github.com/tmux/tmux/wiki" target="_blank" rel="noopener noreferrer">tmux.sh</a>. This pulls plugins from autospigot and updates the paper jar.</p>
+                <h3>Onfim MC Integration</h3>
+                <h4>Minecraft Functionality</h4>
+                <ul>
+                    <li>Velocity</li>
+                    <ul>
+                        <li>https://github.com/Restitutor/OnfimVelocity</li>
+                        <li>Read the GitHub for more detail on all features</li>
+                    </ul>
+                    <li>Paper</li>
+                    <ul>
+                        <li>Relays death messages</li>
+                        <li>File is OnfimPaper.jar</li>
+                    </ul>
+                    <li>Forge Servers</li>
+                    <ul>
+                        <li>Relays chat and death messages</li>
+                        <li>Requires kotlinforforge https://github.com/thedarkcolour/KotlinForForge/</li>
+                        <li>File is OnfimForge-1.20.jar</li>
+                    </ul>
+                    <li>Requires SCTP enabled (see Fedora Guide)</li>
+                    <ul>
+                        <li>Errors will appear in console if misconfigured</li>
+                    </ul>
+                </ul>
+            </div>
+
+            <!-- Sysadmin Tab -->
+            <div x-show="tab === 'sysadmin'" class="fade-in" x-cloak>
+                <h2 class="mb-4">Sysadmin</h2>
+                <p>Subpages are materials for SSH 3 and above. (How to manage the machines and services.)</p>
+                <p>Connection guide. (If anything is out of date tell us! Termius changes their menus often.)</p>
+                <h4>STEP 1 - Termius</h4>
+                <ol>
+                    <li><a href="https://www.termius.com/windows" target="_blank" rel="noopener noreferrer">Download Termius</a></li>
+                    <li>Optionally make an account.</li>
+                    <li>Skip migration assistant.</li>
+                    <li>Click Menu -> Settings -> Shortcuts. Change PC hotkeys to Disabled.</li>
+                    <li>Go to Terminal. Disable "Import shell history" and "Detect OS".</li>
+                </ol>
+                <h4>STEP 2 - Adding a Key</h4>
+                <ol>
+                    <li>Close Settings. Click Keychain.</li>
+                    <li>Click "Generate new key". Label: Arcator, Key type: ED25519.</li>
+                    <li>Pick a passphrase. Generate & Save.</li>
+                    <li>Copy your Public key (ssh-ed25519...) to Res.</li>
+                </ol>
+                <h4>STEP 3 - Adding Hosts</h4>
+                <p>Click New Host. Add info:</p>
+                <pre class="bg-dark p-3 rounded">Address: jylina.arcator.co.uk. Label: Jylina. Port: 220. Username: mcsa Key: (Select generated key). Select Mosh.</pre>
+                <p>Vann provided a useful guide with commands here: <a href="https://docs.google.com/document/d/1jKN_u7avWxKKHo89VrR9TCtFX5Zv1A7DCgnsJtVSID4/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Google Doc</a></p>
+                <h3 class="mt-4">Infrequent</h3>
+                <h4 class="mt-4">Old Ubuntu</h4>
+                <p>Install VNC Server to Ubuntu Machine 1. Install required packages sudo apt install tigervnc-standalone-server tigervnc-common tigervnc-xorg-extension tigervnc-viewer 2. Configure VNC server startup (Probably differs for other Desktop Environments) cp /usr/bin/budgie-desktop ~/.vnc/xstartup 3. Set VNC password vncpasswd 4. Turn on the VNC server vncserver</p>
+                <h4 class="mt-4">Rename Hub World (Old)</h4>
+                <p>This guide is from 2016. It renames survival_pvp to msurvival. First use grep to find all cases of "survival_pvp" in all files. Since MC1's folder contains about 70 GB of files, we'll skip all zips (backups), mca (world files), and log files. grep -r survival_pvp --exclude=\*.{zip,log,mca} --exclude=report.txt MC1 > grep.txt This creates a list of all the files that contain survival_pvp and their path. Now a script was made that looks at all files only in a given folder and non-recursively prompts whether to make the text replacement. The script was run on each directory reported by grep and also blocked zip, log, mca. However, filenames were still not imported and needed to be done manually. In plugins/LogBlock run, the following were renamed. mv survival_pvp_nether.yml msurvival_nether.yml mv survival_pvp.yml msurvival.yml Next, start.sh was given a few edits as it had a simple mirroring system from 2015. Now, check over folders to rename. find MC1 -type d -name "survival_pvp*" -print Rename worlds. mv survival_pvp msurvival mv survival_pvp_nether msurvival_nether mv survival_pvp_the_end msurvival_the_end Similar commands run in backups/worlds and plugins/WorldGuard/worlds. Rename mysql tables and data mysql -u mcsa -p hub RENAME TABLE `lb-survival_pvp` TO `lb-msurvival`; RENAME TABLE `lb-survival_pvp-chest` TO `lb-msurvival-chest`; RENAME TABLE `lb-survival_pvp-sign` TO `lb-msurvival-sign`; RENAME TABLE `lb-survival_pvp_nether` TO `lb-msurvival_nether`; RENAME TABLE `lb-survival_pvp_nether-chest` TO `lb-msurvival_nether-chest`; RENAME TABLE `lb-survival_pvp_nether-sign` TO `lb-msurvival_nether-sign`; Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names. UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp'; UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether'; UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end'; Now let's rename survivalPVPGroup to msurvivalGroup within MultInv's database. UPDATE `multiinv_multiinv` SET inv_group='msurvivalGroup' WHERE inv_group='survivalPVPGroup'; Next, use grep on survivalPVPGroup to see if it stored as a flatfile anywhere in MC1. grep -r survivalPVPGroup --exclude=\*.{zip,log,mca} --exclude=report.txt MC1 The output isn't piped into a file unlike the previous example which means it's displayed directly to console. Results show occurences in MultiInv folder, config.yml, groups.yml, logoutworld.yml Next, script was modified to replace survivalPVPGroup with msurvivalGroup in plugins/MultiInv. Server was started up.</p>
+                <h4 class="mt-4">Rename Hub World 2023</h4>
+                <p>This guide is from 2023. It renames Endspawn to creative the end First use grep to find all cases of "Endspawn" in all files. Use ripgrep to exclude binaries. rg -l Endspawn This creates a list of all the files that contain Endspawn and their path. Now we find replace text. rg -l Endspawn | xargs sed -i ‘s|Endspawn|creativetheend|g’ However, filenames were still not imported and needed to be done manually. First find them: fd Endspawn Example in plugins/LogBlock run, the following were renamed. mv Endspawn.yml creaitve the end.yml Next, start.sh was given a few edits as it had a simple mirroring system from 2015. Rename mysql tables and data mysql -u mcsa -p hub rename table `lb-Endspawn` to `lb-creative_the_end`; rename table `lb-Endspawn-blocks` to `lb-creative_the_end-blocks`; rename table `lb-Endspawn-chest` to `lb-creative_the_end-chest`; rename table `lb-Endspawn-chestdata` to `lb-creative_the_end-chestdata`; rename table `lb-Endspawn-entities` to `lb-creative_the_end-entities`; rename table `lb-Endspawn-entityids` to `lb-creative_the_end-entityids`; rename table `lb-Endspawn-sign` to `lb-creative_the_end-sign`; rename table `lb-Endspawn-state` to `lb-creative_the_end-state`; Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names. UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp'; UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether'; UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end'; Remember to do the same for plugins/CoreProtect/database.db Server was started up.</p>
+                <h4 class="mt-4">Rename User by UUID</h4>
+                <p>It's much better to rename a user before they log in with their new account so an Old → New can be done rather than a 3 way switch Old ←> New which requires an intermediate UUID. Required dnf install rename Strongly recommended to use the script ~/sync/scripts/rename_uuid.sh which does safety checks Update the CoreProtect and LuckPerms database For co user and luckperms players run these. update co_user/luckperms_players set uuid='069a79f4-44e9-4726-a5be-fca90e38aaf5' where uuid='09ec192c-4abe-48da-892d-d13639817bc5'; update luckperms_user_permissions set uuid='a12b4ad1-d5b8-4dae-bb4e-4e6b03f3fba8' where uuid='00000000-0000-0000-0009-01fd6b3640fa'; Hub PlotsSquared storage.db sqlite3 storage.db update plot set owner='864cff60-0b54-4757-a1f3-f7d4828b7d29' where owner='d85338cf-bbf5-4ae0-9a53-62194b765754'; Update the CoreProtect database MySQL > show databases\g; Save results in Python a = '''acc               bedwars           bentobox           captive   ...''' Generate SQL in Python to Insert into DB for i in a:     print(f"update {i.strip()}.co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';") Towny Go to TSMP/plugins/Towny/data/residents Find the corresponding username file and rename it. Then edit the contained UUID. Old Notes Use dnf install rename Example command to rename all files with one UUID in name to another. find . -name d85338cf-bbf5-4ae0-9a53-62194b765754\* -exec rename -avn ‘d85338cf-bbf5-4ae0-9a53-62194b765754’ '864cff60-0b54-4757-a1f3-f7d4828b7d29' {} \;</p>
+                <h4 class="mt-4">Rename World</h4>
+                <p>In this example we use farlands to rename world to legacy and world_nether to legacy_nether.CoreProtect. 1. mysql -u farlands -p farlands 2. View: SELECT * FROM co_world; 3. UPDATE co_world SET world='legacy' WHERE rowid=1; 4. UPDATE co_world SET world='legacy_nether' WHERE rowid=3; PerWorldInv: use text replacement, sed -i 's|"world":"world|"world":"legacy|g' */last*. Use this cool to rename remaining files and folders: https://manpages.debian.org/testing/rename/file-rename.1p.en.html </p>
+            </div>
+
+            <!-- Machines Tab -->
+            <div x-show="tab === 'machines'" class="fade-in" x-cloak>
+                <h2 class="mb-4">Machines</h2>
+                <h4 class="mt-4">Jylina</h4>
+                <ul>
+                    <li>Main machine @ Utah USA</li>
+                    <li>Very High performance</li>
+                    <li>Partitions</li>
+                    <ul>
+                        <li>/mnt/Main is 1 TB RAID 1 on 2x NVME</li>
+                        <ul>
+                            <li>OS, servers, recent backups</li>
+                        </ul>
+                        <li>/mnt/Received is for older backups and Apollo data</li>
+                    </ul>
+                    <li>Specs</li>
+                    <ul>
+                        <li>1TB and 2 TB NVME SSDs</li>
+                        <li>300 + 500 GB encrypted HDDs for backups</li>
+                        <li>Ryzen 7 5800x</li>
+                        <li>64 GB RAM (RGB)</li>
+                        <li>Gigabit connection</li>
+                    </ul>
+                </ul>
+                <h4 class="mt-4">Apollo</h4>
+                <ul>
+                    <li>High performance @ UK</li>
+                    <li>Kieraan's host in VM with hypervisor</li>
+                    <ul>
+                        <li>AMD Ryzen 9 5900X with 6 threads</li>
+                    </ul>
+                    <li>Specs</li>
+                    <ul>
+                        <li>24 GB RAM</li>
+                        <li>320 GB main volume</li>
+                        <li>Ryzen 7 5800x</li>
+                        <li>40 GB /mnt/Received for Jylina backups</li>
+                        <li>Fallback for MC servers</li>
+                    </ul>
+                    <li>Used for services and as free hosting for trusted members (guinea pigs to ensure apollo is working)</li>
+                </ul>
+                <h4 class="mt-4">Icarus and Styx</h4>
+                <ul>
+                    <li>Dust's cluster pi he uses for Slimefun and his Velocity</li>
+                </ul>
+                <h4 class="mt-4">Vulcan</h4>
+                <ul>
+                    <li>Medium performance</li>
+                    <li>Backup for MC servers</li>
+                    <li>Specs</li>
+                    <ul>
+                        <li>500 GB SSD (WDC WDS480G2G0A-)</li>
+                        <li>1 TB 7200 RPM HDD (WDC WD10EZEX-08W)</li>
+                        <li>500 GB 7200 RPM HDD (WDC WD5000AAKX-6)</li>
+                        <li>16 GB RAM</li>
+                        <li>Intel Xeon E3-1225 v3 @ 3.20 GHz</li>
+                        <li>50mbps down, 10mbps up</li>
+                        <li>No Bandwidth limitations</li>
+                    </ul>
+                    <li>Partitions
+                        <ul>
+                            <li>/mnt/Main is SSD (OS, Servers)</li>
+                            <li>/mnt/Backups is RAID 1 (500 GB)
+                                <ul>
+                                    <li>Top half of 1 TB drive and all of 500 GB drive</li>
+                                    <li>Encrypted</li>
+                                </ul>
+                            </li>
+                            <li>/mnt/Slow is bottom half of 1 TB drive
+                                <ul>
+                                    <li>Encrypted</li>
+                                </ul>
+                            </li>
+                        </ul>
+                </ul>
+            </div>
+
+            <!-- Staff Tab -->
+            <div x-show="tab === 'staff'" class="fade-in" x-cloak>
+                <h2 class="mb-4">Staff</h2>
+                
+                <h3 class="mt-4">Backups</h3>
+                <h4>Loading Backups</h4>
+                <ul>
+                    <li><strong>Minecraft Usage</strong>
+                        <ul>
+                            <li>~/Backups/Snapshot (servers, every 10 minutes up to 6 hours)</li>
+                            <li>~/Backups/Server (servers, everyday)</li>
+                            <li>~/Backups/World (worlds, every 6 hours)</li>
+                            <li>Onfim will read backups from here to populate /snapshot list. You can do //restore (world name)/(timestamp)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Home directory</strong>: ~/HomeSnapshots</li>
+                    <li><strong>Backend</strong>
+                        <ul>
+                            <li>Local Snapshots: /mnt/Main/Sync</li>
+                            <li>Remote Snapshots vary by machine: example /mnt/Backups/Received/MACHINE_NAME/</li>
+                        </ul>
+                    </li>
+                </ul>
+                <figure class="image image_resized" style="width: 591px;"><img src="https://lh5.googleusercontent.com/1Q1lNPGeA2ub5J9rXRS1ksh4-0mv6GSeSxAnqr-hoD-vgRKDNa7d8FGnqEyUjxR-P_32viIT7GZ4lO7gaYkFDQ-P7Q-SEeBA7Qw_INrzoSJEX4y2VAA8_7SXBv1q2Cl-KRcGCZnO"></figure>
+                <hr class="my-5">
+                
+                <h3 class="mt-4">Roles</h3>
+                
+                <h4>SA 2 (Everyday use)</h4>
+                <ul>
+                    <li>Absolute vs Relative paths</li>
+                    <li>ls, ll, cp, cd, mv, mkdir, rm (using arguments)</li>
+                    <li>mosh (to jump between machines)</li>
+                    <li>micro (or nano, vim, etc)</li>
+                    <li>htop -d3 (or bottom, btop, etc)</li>
+                    <li>wget, wget -N</li>
+                    <li>man, tldr</li>
+                    <li>grep or ripgrep</li>
+                    <li>tmux</li>
+                    <li>Using the SFTP feature on Termius to upload stuff</li>
+                </ul>
+                
+                <h4>SSH 2+ (Optional)</h4>
+                <ul>
+                    <li>Autocomplete with right arrow</li>
+                    <li>Tab completion with files</li>
+                    <li>fz, lf (To search files)</li>
+                    <li>micro keys (ctrl-f to search, ctrl-n to find next)</li>
+                    <li>Piping and redirection |, >, <</li>
+                    <li>wc, head, tail</li>
+                    <li>sed OR sd</li>
+                </ul>
+                
+                <h4>SA 3 (Sysadmin)</h4>
+                <ul>
+                    <li>Managing SSH keys (.ssh/authorized_keys)</li>
+                    <li>Managing node projects with pnpm</li>
+                    <li>Starting mcsa@onfim</li>
+                    <li>Installing and removing programs (dnf)</li>
+                    <li>rsync incremental data transfer</li>
+                    <li>Octal permissions (chmod)</li>
+                    <li>File ownership (chown)</li>
+                    <li>Switch users (su -l)</li>
+                    <li>hardlinks vs symbolic links (ln)</li>
+                    <li>Niceness (Priority)</li>
+                    <li>mount -o [options] [device] [path]</li>
+                    <li>cron and systemd</li>
+                    <li>regex OR glob patterns</li>
+                    <li>Password configuration (passwd)</li>
+                    <li>Btrfs (send/receive, snapshots, subvolumes)</li>
+                    <li>SMART disk checks</li>
+                    <li>Tar commands</li>
+                </ul>
+                
+                <h4>SA 4 (Machine Setup)</h4>
+                <ul>
+                    <li>Fstab (Mount options)</li>
+                    <li>Partitioning (GPT, EFI)</li>
+                    <li>Wireguard</li>
+                    <li>Advanced BTRFS (Software RAID, Compression)</li>
+                </ul>
+                
+                <h4>LuckPerms</h4>
+                <ul>
+                    <li>Understanding of the inheritance system of groups.</li>
+                    <li>Users contain one of these 5 main roles: admin, mod, builder, trusted, default.</li>
+                    <li>"trusted" bypasses the creative blacklist and anticheat.</li>
+                    <li>"owner" contains no inheritance or permissions.</li>
+                    <li>"admin" has * node and negation perms.</li>
+                    <li>"mod" has regular staff perms.</li>
+                    <li>"builder" provides creative perms without staff perms.</li>
+                </ul>
+                
+                <h4>DB</h4>
+                <ul>
+                    <li>SQL (SELECT, UPDATE, DELETE)</li>
+                    <li>Install Mariadb</li>
+                    <li>Indexes</li>
+                    <li>Replication</li>
+                    <li>Maxscale</li>
+                    <li>Promoting slave to master manually</li>
+                    <li>Partitions</li>
+                    <li>Backups (Mariabackup)</li>
+                </ul>
             </div>
         </div>
     </div>
