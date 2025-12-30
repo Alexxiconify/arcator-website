@@ -297,10 +297,10 @@
                 <img src="https://wiki.arcator.co.uk/sshkey.png" alt="SSH Key" class="wiki-image">
                 <h4>STEP 3 - Adding Hosts</h4>
                 <ol>
-                    <li>Click New Host. 
-                        Add info:</li>
+                    <li>Click New Host. Add info:</li>
                 </ol>
-                <pre class="bg-dark p-3 rounded"><p>Address: jylina.arcator.co.uk. </p>
+                <blockquote>
+                    <p>Address: jylina.arcator.co.uk. </p>
                     <p>Label: Jylina. </p>
                     <p>Skip Groups and Tags</p>
                     <p>Check "Mosh" (for high-speed)</p>
@@ -310,7 +310,7 @@
                     <p>Skip Password and SSH Agent Forwarding.</p>
                     <p>Select Mosh.</p>
                     <p>Click top right to finish and save.</p>
-                </pre>
+                </blockquote>
                 <p>Now you can connect to the server by double clicking the host.</p>
                 <img src="https://wiki.arcator.co.uk/donessh.png" alt="Donessh" class="wiki-image">
                 <p>Other Notes - Mosh vs SSH Mosh is faster but can't refresh the screen. Mosh also doesn't allow for scrolling up through console. (Would require tmux to do so).</p>
@@ -520,6 +520,7 @@
                 </ol>
                 </div>
             </div>
+        </div>
 
             <!-- Machines Tab -->
             <div x-show="tab === 'machines'" class="fade-in" x-cloak>
@@ -713,6 +714,8 @@
                     <li>Partitions</li>
                     <li>Backups (Mariabackup)</li>
                 </ul>
+                    </div>
+                </div>
             </div>
             <!-- McAdmin Tab -->
             <div x-show="tab === 'mcadmin'" class="fade-in" x-cloak>
@@ -733,77 +736,77 @@
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Chunk Pruning
                     </h3>
                     <div x-show="open" x-collapse>
-                <h4>Summary</h4>
-                <p>To prune chunks we first identify all chunks with player activity using CoreProtect. Then we can use mcaselector to delete all chunks which do not match. This is useful when updating servers to the latest version since Minecraft will regenerate the chunks.</p>
-                <p><a href="https://github.com/Querz/mcaselector">https://github.com/Querz/mcaselector</a></p>
-                <h4>Steps</h4>
-                <p>We also find chunks by using a prior copy of the chunk list from last prune. (This lets us avoid rereading LogBlock, CoreProtect sqlite3, and other legacy sources for 2010s data.)</p>
-                <p>Instead you will only need to pull data from CoreProtect and run scripts. OLD CHUNK LIST (step 0) + CoreProtect (step 1); merged (step 2) with added radius (step 3) => New Chunk List.</p>
-                <p>We also add a radius of +1 (step 2) to leave safe room away from builds. Since chunk smoothing might modify adjacent chunks. (0 was used before without issue but 1 is a safer estimate so future chunk smoothing doesn't modify any builds.)</p>
-                <p>The final file we write is a list of chunks. We edit the header with a flag to indicate mcaselector should delete everything else.</p>
-                <p>Below is an example with SSMP.</p>
-                <h4>0. Loading the last chunk list</h4>
-                <p>From mcsa@jylina run the following. Adjust commands accordingly.</p>
-                <p>cd ~/sync/scripts/listchunks/ssmp</p>
-                <p>Note there are 3 folders.</p>
-                <p>distinctsources/ (distinct data sources)</p>
-                <p>merged/ (the data from chunks/ merged together)</p>
-                <p>final/ (the total list of chunks from last time)</p>
-                <p>Now we will move the previous final/ and use it as a data source.</p>
-                <p>If final/ already exists and distinctsources/lastprune exists then it's probably an old copy. Run rm -r distinctsources/lastprune</p>
-                <p>Then continue with the move</p>
-                <p>mv final/ distinctsources/lastprune</p>
-                <h4>1. Pulling CoreProtect DB data</h4>
-                <p>To read the mariadb ssmp database and CoreProtect sqlite3 fallback file and output to distinctsources/. Adjust the server name and run the following.</p>
-                <p>python3 ../readco/codb.py ssmp ~/Servers/SSMP/plugins/CoreProtect/database.db distinctsources/</p>
-                <h4>2. Merge the data sources</h4>
-                <p>Now merge all the sources into a single csv file per world (grouping based on filenames.)</p>
-                <p>python3 ../merge.py distinctsources/ merged/</p>
-                <p>Note the new files made in merged/ with ls</p>
-                <h4>3. Creating the delete chunk list.</h4>
-                <p>1 is the radius of chunks to keep. Repeat this command for each world csv in merged/.</p>
-                <p>python3 ../addRadius.py merged/survival.csv 1 final/survival.csv</p>
-                <p>Now manually replace the first line of each csv file in final/ with "inverted"</p>
-                <p>Example</p>
-                <p>inverted</p>
-                <p>-26;12;-826;395</p>
-                <p>...</p>
-                <p>This will reverse the behaviour of mcaselector so that only the chunks that are not in this list will be deleted!</p>
-                <h4>4. The visualizer</h4>
-                <p>This step is optional but can be used to be certain the right chunks are deleted.</p>
-                <p>Inside listchunks/visualize is an example file auditHub.sh which uses mcaselector to create a list of all chunks. There are comments in the file explaining how to use it to make a before and after (step 5) chunk list. Afterwards you can use visualize.py to compare the two (and download the pngs).</p>
-                <h4>5. Using mcaselector</h4>
-                <p>Verify there is a backup of the world. ~/Backups/Snapshot can work but automatically prunes within an hour.</p>
-                <p>Usually the latest version of java is needed.</p>
-                <p>For each file in final/ and corresponding world folder. Run:</p>
-                <p>java -jar mcaselector-2.5.2.jar --mode delete --world ~/Servers/SSMP/survival --selection final/survival.csv</p>
-                <p>Note nether and end use a slightly different --world survival_nether/DIM-1 and --world survival_the_end/DIM1</p>
-                <p>Now check the map size and test it in game. If there is a mistake then revert the map to a backup. For example: rsync -av --checksum --inplace --delete ~/Backups/Snapshot/20250827_1400/SSMP/ ~/Servers/SSMP/</p>
-                <p>You can use the visualizer as well after purging.</p>
-                <h4>6. Optional MariaDB Notes</h4>
-                <p>Each server has a corresponding database. Scripts handle this on their own but these are useful commands if you wish to run custom commands. You should understand SQL databses, tables, and joins to follow this section.</p>
-                <p>To connect to the mariadb console using hub database.</p>
-                <p>mariadb -u root hub</p>
-                <p>To list all databases (within the mariadb console)</p>
-                <p>show databases;</p>
-                <p>To change databases (within the mariadb console)</p>
-                <p>use hub;</p>
-                <p>At this point SELECT statements are used. SELECT statements are safe because they do not modify tables.</p>
-                <p>Logical Breakdown of codb.py query</p>
-                <p>The select statement can be found in readco/const.py.</p>
-                <p>It converts the xz coordinates into chunk coordinates. The count parameter is not used but stores the number of block changes in a block.</p>
-                <p>The co_block table stores all block changes.</p>
-                <p>The where clause checks for all block edits besides a black list of natural blocks. This list would be improved.</p>
-                <p>The check co_user.uuid is not null filters out all non-users such as lava and entity changes.</p>
-                <p>co_block.wid is HARD CODED for the proper id.</p>
-                <p>Finding the wid</p>
-                <p>select * from co_world;</p>
-                <p>Simplified Pruning</p>
-                <p>A good heuristic is to use the InhabitedTime (measured in ticks, a twentieth of a second).</p>
-                <p>Here's an example of commmands</p>
-                <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world --mode delete</p>
-                <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world_nether/DIM-1 --mode delete</p>
-                <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world_the_end/DIM1 --mode delete</p>
+                        <h4>Summary</h4>
+                        <p>To prune chunks we first identify all chunks with player activity using CoreProtect. Then we can use mcaselector to delete all chunks which do not match. This is useful when updating servers to the latest version since Minecraft will regenerate the chunks.</p>
+                        <p><a href="https://github.com/Querz/mcaselector">https://github.com/Querz/mcaselector</a></p>
+                        <h4>Steps</h4>
+                        <p>We also find chunks by using a prior copy of the chunk list from last prune. (This lets us avoid rereading LogBlock, CoreProtect sqlite3, and other legacy sources for 2010s data.)</p>
+                        <p>Instead you will only need to pull data from CoreProtect and run scripts. OLD CHUNK LIST (step 0) + CoreProtect (step 1); merged (step 2) with added radius (step 3) => New Chunk List.</p>
+                        <p>We also add a radius of +1 (step 2) to leave safe room away from builds. Since chunk smoothing might modify adjacent chunks. (0 was used before without issue but 1 is a safer estimate so future chunk smoothing doesn't modify any builds.)</p>
+                        <p>The final file we write is a list of chunks. We edit the header with a flag to indicate mcaselector should delete everything else.</p>
+                        <p>Below is an example with SSMP.</p>
+                        <h4>0. Loading the last chunk list</h4>
+                        <p>From mcsa@jylina run the following. Adjust commands accordingly.</p>
+                        <p>cd ~/sync/scripts/listchunks/ssmp</p>
+                        <p>Note there are 3 folders.</p>
+                        <p>distinctsources/ (distinct data sources)</p>
+                        <p>merged/ (the data from chunks/ merged together)</p>
+                        <p>final/ (the total list of chunks from last time)</p>
+                        <p>Now we will move the previous final/ and use it as a data source.</p>
+                        <p>If final/ already exists and distinctsources/lastprune exists then it's probably an old copy. Run rm -r distinctsources/lastprune</p>
+                        <p>Then continue with the move</p>
+                        <p>mv final/ distinctsources/lastprune</p>
+                        <h4>1. Pulling CoreProtect DB data</h4>
+                        <p>To read the mariadb ssmp database and CoreProtect sqlite3 fallback file and output to distinctsources/. Adjust the server name and run the following.</p>
+                        <p>python3 ../readco/codb.py ssmp ~/Servers/SSMP/plugins/CoreProtect/database.db distinctsources/</p>
+                        <h4>2. Merge the data sources</h4>
+                        <p>Now merge all the sources into a single csv file per world (grouping based on filenames.)</p>
+                        <p>python3 ../merge.py distinctsources/ merged/</p>
+                        <p>Note the new files made in merged/ with ls</p>
+                        <h4>3. Creating the delete chunk list.</h4>
+                        <p>1 is the radius of chunks to keep. Repeat this command for each world csv in merged/.</p>
+                        <p>python3 ../addRadius.py merged/survival.csv 1 final/survival.csv</p>
+                        <p>Now manually replace the first line of each csv file in final/ with "inverted"</p>
+                        <p>Example</p>
+                        <p>inverted</p>
+                        <p>-26;12;-826;395</p>
+                        <p>...</p>
+                        <p>This will reverse the behaviour of mcaselector so that only the chunks that are not in this list will be deleted!</p>
+                        <h4>4. The visualizer</h4>
+                        <p>This step is optional but can be used to be certain the right chunks are deleted.</p>
+                        <p>Inside listchunks/visualize is an example file auditHub.sh which uses mcaselector to create a list of all chunks. There are comments in the file explaining how to use it to make a before and after (step 5) chunk list. Afterwards you can use visualize.py to compare the two (and download the pngs).</p>
+                        <h4>5. Using mcaselector</h4>
+                        <p>Verify there is a backup of the world. ~/Backups/Snapshot can work but automatically prunes within an hour.</p>
+                        <p>Usually the latest version of java is needed.</p>
+                        <p>For each file in final/ and corresponding world folder. Run:</p>
+                        <p>java -jar mcaselector-2.5.2.jar --mode delete --world ~/Servers/SSMP/survival --selection final/survival.csv</p>
+                        <p>Note nether and end use a slightly different --world survival_nether/DIM-1 and --world survival_the_end/DIM1</p>
+                        <p>Now check the map size and test it in game. If there is a mistake then revert the map to a backup. For example: rsync -av --checksum --inplace --delete ~/Backups/Snapshot/20250827_1400/SSMP/ ~/Servers/SSMP/</p>
+                        <p>You can use the visualizer as well after purging.</p>
+                        <h4>6. Optional MariaDB Notes</h4>
+                        <p>Each server has a corresponding database. Scripts handle this on their own but these are useful commands if you wish to run custom commands. You should understand SQL databses, tables, and joins to follow this section.</p>
+                        <p>To connect to the mariadb console using hub database.</p>
+                        <p>mariadb -u root hub</p>
+                        <p>To list all databases (within the mariadb console)</p>
+                        <p>show databases;</p>
+                        <p>To change databases (within the mariadb console)</p>
+                        <p>use hub;</p>
+                        <p>At this point SELECT statements are used. SELECT statements are safe because they do not modify tables.</p>
+                        <p>Logical Breakdown of codb.py query</p>
+                        <p>The select statement can be found in readco/const.py.</p>
+                        <p>It converts the xz coordinates into chunk coordinates. The count parameter is not used but stores the number of block changes in a block.</p>
+                        <p>The co_block table stores all block changes.</p>
+                        <p>The where clause checks for all block edits besides a black list of natural blocks. This list would be improved.</p>
+                        <p>The check co_user.uuid is not null filters out all non-users such as lava and entity changes.</p>
+                        <p>co_block.wid is HARD CODED for the proper id.</p>
+                        <p>Finding the wid</p>
+                        <p>select * from co_world;</p>
+                        <p>Simplified Pruning</p>
+                        <p>A good heuristic is to use the InhabitedTime (measured in ticks, a twentieth of a second).</p>
+                        <p>Here's an example of commmands</p>
+                        <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world --mode delete</p>
+                        <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world_nether/DIM-1 --mode delete</p>
+                        <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world_the_end/DIM1 --mode delete</p>
                     </div>
                 </div>
                 <div x-data="{ open: false }" class="mb-3">
@@ -837,41 +840,53 @@
                         <p>Compilation error. Requires -Xlint:unchecked</p>
                         <p>No edits are required. Simply run.</p>
                 <p>./gradlew build</p>
-                <h3>Coreprotect Database Tasks</h3>
-                <h4>Pruning Data in Region</h4>
-                <p>1. Login MySQL</p>
-                <p>2. Explore schema</p>
-                <p>1.select * from co_world;</p>
-                <p>2.select * from co_world where world='creative';</p>
-                <p>3.select * from co_user limit 5;</p>
-                <p>4.select * from co_user where user='#water';</p>
-                <p>5.select * from co_block limit 5;</p>
-                <p>3. Example</p>
-                <p>1. select count(*) from co_block where wid=1 and user=97 and x < -250 and x > -267 and z > 635 and z < 663;</p>
-                <p>Deleting world eater edits within an X Z range.</p>
-                <p>delete cob FROM co_block cob LEFT JOIN co_material_map com ON com.id = cob.type LEFT JOIN co_user cou ON cob.user = cou.rowid WHERE cob.wid = 1   AND cou.user LIKE '#%'   AND cob.x < -1988   AND cob.x > -2285   AND cob.z < 11630   AND cob.z > 11330   AND com.material not LIKE '%ore%';</p>
-                <h3>Custom Plugins</h3>
-                <h4>GitHub links</h4>
-                <p><a href="https://github.com/Restitutor/AFKLog">AFKLog</a></p>
-                <p><a href="https://github.com/Darrionat/StaffWarn">StaffWarn</a></p>
-                <p><a href="https://github.com/Restitutor/StaffToggleBG">StaffToggleBG</a></p>
-                <p><a href="https://github.com/sylviameows/StaffToggle">StaffToggle</a></p>
-                <p><a href="https://github.com/Restitutor/SDI">SDI</a></p>
-                <h4>PAPI Extension</h4>
-                <p>Darrion wrote an extension to PAPI which allows us to have aliases for worlds. We use this to color code VentureChat prefixes.</p>
-                <p>Plugin location: ~/Servers/NAME/plugins/PlaceholderAPI/expansions/WorldAliasExpansion-1.0.0.jar</p>
-                <p>Config location: ~/Servers/NAME/plugins/PlaceholderAPI/expansions/worldAliases.yml</p>
-                <p>survival: "&aSSMP&f"</p>
-                <p>survival_nether: "&cSSMP&f"</p>
-                <p>survival_the_end: "&dSSMP&f"</p>
-                <p>Unique yml file for each server. Mapping worlds to custom strings. If there is no alias defined, the fallback is simply the name of the world.</p>
-                <p>Placeholder: %worldAlias%</p>
-                <h4>Server Selector</h4>
-                <p>Completely recreate the server selector plugin on Hub</p>
-                <p>New features:</p>
-                <p>Players can toggle if they receive one. Removes servers that are offline from the GUI. Label the server selector with an NBT tag (NBTTagEditor), so if the item’s name, material, etc. ever changes, the old ones can be wiped+replaced</p>
-                <p>Current bugs:</p>
-                <p>Duplicates in inventory sometime. Make GUI editing easier + version compatible with XSeries</p>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Coreprotect Database Tasks
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>Pruning Data in Region</h4>
+                        <p>1. Login MySQL</p>
+                        <p>2. Explore schema</p>
+                        <p>1.select * from co_world;</p>
+                        <p>2.select * from co_world where world='creative';</p>
+                        <p>3.select * from co_user limit 5;</p>
+                        <p>4.select * from co_user where user='#water';</p>
+                        <p>5.select * from co_block limit 5;</p>
+                        <p>3. Example</p>
+                        <p>1. select count(*) from co_block where wid=1 and user=97 and x < -250 and x > -267 and z > 635 and z < 663;</p>
+                        <p>Deleting world eater edits within an X Z range.</p>
+                        <p>delete cob FROM co_block cob LEFT JOIN co_material_map com ON com.id = cob.type LEFT JOIN co_user cou ON cob.user = cou.rowid WHERE cob.wid = 1   AND cou.user LIKE '#%'   AND cob.x < -1988   AND cob.x > -2285   AND cob.z < 11630   AND cob.z > 11330   AND com.material not LIKE '%ore%';</p>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Custom Plugins
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>GitHub links</h4>
+                        <p><a href="https://github.com/Restitutor/AFKLog">AFKLog</a></p>
+                        <p><a href="https://github.com/Darrionat/StaffWarn">StaffWarn</a></p>
+                        <p><a href="https://github.com/Restitutor/StaffToggleBG">StaffToggleBG</a></p>
+                        <p><a href="https://github.com/sylviameows/StaffToggle">StaffToggle</a></p>
+                        <p><a href="https://github.com/Restitutor/SDI">SDI</a></p>
+                        <h4>PAPI Extension</h4>
+                        <p>Darrion wrote an extension to PAPI which allows us to have aliases for worlds. We use this to color code VentureChat prefixes.</p>
+                        <p>Plugin location: ~/Servers/NAME/plugins/PlaceholderAPI/expansions/WorldAliasExpansion-1.0.0.jar</p>
+                        <p>Config location: ~/Servers/NAME/plugins/PlaceholderAPI/expansions/worldAliases.yml</p>
+                        <p>survival: "&aSSMP&f"</p>
+                        <p>survival_nether: "&cSSMP&f"</p>
+                        <p>survival_the_end: "&dSSMP&f"</p>
+                        <p>Unique yml file for each server. Mapping worlds to custom strings. If there is no alias defined, the fallback is simply the name of the world.</p>
+                        <p>Placeholder: %worldAlias%</p>
+                        <h4>Server Selector</h4>
+                        <p>Completely recreate the server selector plugin on Hub</p>
+                        <p>New features:</p>
+                        <p>Players can toggle if they receive one. Removes servers that are offline from the GUI. Label the server selector with an NBT tag (NBTTagEditor), so if the item’s name, material, etc. ever changes, the old ones can be wiped+replaced</p>
+                        <p>Current bugs:</p>
+                        <p>Duplicates in inventory sometime. Make GUI editing easier + version compatible with XSeries</p>
                     </div>
                 </div>
                 <div x-data="{ open: false }" class="mb-3">
@@ -914,55 +929,55 @@
                         <h4>2. Initial set up</h4>
                         <p>Make a new folder in /mnt/Main/Sync/Servers</p>
                         <p>cp *sh and banned*json files from another server.</p>
-                        <p>Update th    e server names where needed such as update.sh.</p>
-                <p>Copy over these jars (standard plugin list)</p>
-                <p>AFKLog, Bluemap, CoreProtect, EssentialsX, InventoryRollbackPlus, LastLog, LuckPerms-Bukkit, GrimAC (for survival), OnfimPaper, PlaceholderAPI, Plan, ProtocolLib, Replay, SDI, Vault, ViaVersion, ViaBackwards</p>
-                <p><a href="https://github.com/Lumine1909/Panilla_Continue">Panilla Continue</a></p>
-                <p>Always use gamerule spawnChunkRadius 0 to save resources for other servers</p>
-                <h4>3. To update configs.</h4>
-                <p>Edit server.properties motd and port.</p>
-                <p>If you copied another server (not recommended): rg -i Hardcore (server folder)  // to find any server-specific strings in configs</p>
-                <p>Update configs as needed.</p>
-                <p>Clear any Essentials userdata.</p>
-                <p>Delete Multiverse-Core/worlds.yml</p>
-                <p>Enable nether (server.properties) and end (bukkit.yml) as needed.</p>
-                <p>Configure Plan config and VentureChat/config.yml</p>
-                <p>Reconfigure CoreProtect config.yml</p>
-                <p>Copy PlaceholderAPI/expansions/WorldAliasExpansion-1.0.0.jar from another server</p>
-                <p>Update PlaceholderAPI/expansions/worldAliases.yml</p>
-                <p>papi ecloud download Luckperms</p>
-                <h4>4. LUCKPERMS SETUP</h4>
-                <h5>4.1 Create the groups</h5>
-                <p>lp creategroup hatrusted</p>
-                <p>lp creategroup hadefault</p>
-                <h5>4.2 Fix the inheritance.</h5>
-                <p>lp group trusted parent add hatrusted server=hardcore</p>
-                <p>lp group default parent add hadefault server=hardcore</p>
-                <p>You may use paperadmin, papermod, papertrusted, paperdefault if you don't need special perms</p>
-                <p>Example</p>
-                <p>lp group default parent add paperdefault server=hardcore</p>
-                <p>lp group default parent add survivaldefault server=hardcore</p>
-                <h4>5. VELOCITY SETUP</h4>
-                <p>Add server to Velocity's velocity.toml and plugins/SlashServer/config.yml</p>
-                <p>Modify config/paper-global.yml</p>
-                <p>Copy the forwarding secret into proxies.velocity.secret and set enabled: true</p>
-                <h4>6. Enable anti-seed cracking by setting seeds in spigot.yml</h4>
-                <p>Don't remember exactly how to use this toggle. But here's the safest way to do it.</p>
-                <p>Run the server</p>
-                <p>Set config/paper-world-defaults.yml generate-random-seeds-for-all: true</p>
-                <p>Delete all the “seed-” lines in spigot.yml so they regen</p>
-                <p>Delete the world</p>
-                <h4>7. Modify config/paper-world-defaults.yml</h4>
-                <p>keep-spawn-loaded: false</p>
-                <p>Follow <a href="https://docs.papermc.io/paper/anti-xray#engine-mode-3">https://docs.papermc.io/paper/anti-xray#engine-mode-3</a></p>
-                <h4>8. Paper chat setup</h4>
-                <p>Copy plugins/VentureChat/config.yml and plugins/PlaceholderAPI/expansions/WorldAliasExpansion-1.0.0.jar</p>
-                <p>Copy and modify plugins/PlaceholderAPI/expansions/worldAliases.yml</p>
-                <h4>9. Survival setup</h4>
-                <p>Copy the survival*/paper-world.yml files from SSMP as a good template for blocking xray and randomizing nether and end feature seeds.</p>
-                <h4>## Modded Setup</h4>
-                <p>Set B:enabled=false in config/ftbbackups.cfg after the server has run.</p>
-                <p>Or check auto: false for ./config/ftbbackups3-server.snbt to disable them.</p>
+                        <p>Update the server names where needed such as update.sh.</p>
+                        <p>Copy over these jars (standard plugin list)</p>
+                        <p>AFKLog, Bluemap, CoreProtect, EssentialsX, InventoryRollbackPlus, LastLog, LuckPerms-Bukkit, GrimAC (for survival), OnfimPaper, PlaceholderAPI, Plan, ProtocolLib, Replay, SDI, Vault, ViaVersion, ViaBackwards</p>
+                        <p><a href="https://github.com/Lumine1909/Panilla_Continue">Panilla Continue</a></p>
+                        <p>Always use gamerule spawnChunkRadius 0 to save resources for other servers</p>
+                        <h4>3. To update configs.</h4>
+                        <p>Edit server.properties motd and port.</p>
+                        <p>If you copied another server (not recommended): rg -i Hardcore (server folder)  // to find any server-specific strings in configs</p>
+                        <p>Update configs as needed.</p>
+                        <p>Clear any Essentials userdata.</p>
+                        <p>Delete Multiverse-Core/worlds.yml</p>
+                        <p>Enable nether (server.properties) and end (bukkit.yml) as needed.</p>
+                        <p>Configure Plan config and VentureChat/config.yml</p>
+                        <p>Reconfigure CoreProtect config.yml</p>
+                        <p>Copy PlaceholderAPI/expansions/WorldAliasExpansion-1.0.0.jar from another server</p>
+                        <p>Update PlaceholderAPI/expansions/worldAliases.yml</p>
+                        <p>papi ecloud download Luckperms</p>
+                        <h4>4. LUCKPERMS SETUP</h4>
+                        <h5>4.1 Create the groups</h5>
+                        <p>lp creategroup hatrusted</p>
+                        <p>lp creategroup hadefault</p>
+                        <h5>4.2 Fix the inheritance.</h5>
+                        <p>lp group trusted parent add hatrusted server=hardcore</p>
+                        <p>lp group default parent add hadefault server=hardcore</p>
+                        <p>You may use paperadmin, papermod, papertrusted, paperdefault if you don't need special perms</p>
+                        <p>Example</p>
+                        <p>lp group default parent add paperdefault server=hardcore</p>
+                        <p>lp group default parent add survivaldefault server=hardcore</p>
+                        <h4>5. VELOCITY SETUP</h4>
+                        <p>Add server to Velocity's velocity.toml and plugins/SlashServer/config.yml</p>
+                        <p>Modify config/paper-global.yml</p>
+                        <p>Copy the forwarding secret into proxies.velocity.secret and set enabled: true</p>
+                        <h4>6. Enable anti-seed cracking by setting seeds in spigot.yml</h4>
+                        <p>Don't remember exactly how to use this toggle. But here's the safest way to do it.</p>
+                        <p>Run the server</p>
+                        <p>Set config/paper-world-defaults.yml generate-random-seeds-for-all: true</p>
+                        <p>Delete all the “seed-” lines in spigot.yml so they regen</p>
+                        <p>Delete the world</p>
+                        <h4>7. Modify config/paper-world-defaults.yml</h4>
+                        <p>keep-spawn-loaded: false</p>
+                        <p>Follow <a href="https://docs.papermc.io/paper/anti-xray#engine-mode-3">https://docs.papermc.io/paper/anti-xray#engine-mode-3</a></p>
+                        <h4>8. Paper chat setup</h4>
+                        <p>Copy plugins/VentureChat/config.yml and plugins/PlaceholderAPI/expansions/WorldAliasExpansion-1.0.0.jar</p>
+                        <p>Copy and modify plugins/PlaceholderAPI/expansions/worldAliases.yml</p>
+                        <h4>9. Survival setup</h4>
+                        <p>Copy the survival*/paper-world.yml files from SSMP as a good template for blocking xray and randomizing nether and end feature seeds.</p>
+                        <h4>## Modded Setup</h4>
+                        <p>Set B:enabled=false in config/ftbbackups.cfg after the server has run.</p>
+                        <p>Or check auto: false for ./config/ftbbackups3-server.snbt to disable them.</p>
                     </div>
                 </div>
                 <div x-data="{ open: false }" class="mb-3">
