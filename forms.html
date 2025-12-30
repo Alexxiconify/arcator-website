@@ -13,7 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+
     <style>
         .ql-editor{min-height:60px;background:#1a1a1a;color:#fff}
         .ql-toolbar{background:#222;border-color:#333!important}
@@ -219,8 +219,8 @@
 
 <script type="module" src="./app.js"></script>
 <script type="module">
-    import { db, COLLECTIONS, collection, query, orderBy, getDocs, addDoc, updateDoc, doc, increment, serverTimestamp, where, onSnapshot } from './firebase-init.js';
-    import { formatDate } from './utils.js';
+    import { db, COLLECTIONS, collection, query, orderBy, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, increment, serverTimestamp, where, onSnapshot } from './firebase-init.js';
+    import { formatDate } from './helpers.js';
 
     document.addEventListener('alpine:init', () => {
         Alpine.data('forumData', () => ({
@@ -229,6 +229,7 @@
             showCreateModal: false,
             newThread: { title: '', category: '', tags: '' },
             quill: null,
+            userCache: {},
 
             async init() {
                 this.loadThreads();
@@ -245,7 +246,25 @@
                 const q = query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'));
                 const snap = await getDocs(q);
                 this.threads = snap.docs.map(d => ({ id: d.id, ...d.data(), expanded: false, comments: [], loadingComments: false, quill: null }));
+                
+                const authorIds = [...new Set(this.threads.map(t => t.authorId).filter(Boolean))];
+                await Promise.all(authorIds.map(id => this.fetchAuthor(id)));
+                
                 this.loading = false;
+            },
+            
+            async fetchAuthor(uid) {
+                if (!uid || this.userCache[uid]) return;
+                try {
+                    const snap = await getDoc(doc(db, 'user_profiles', uid));
+                    if (snap.exists()) {
+                        this.userCache[uid] = snap.data();
+                    }
+                } catch (e) { console.error('Failed to fetch author:', e); }
+            },
+            
+            getAuthor(uid) {
+                return this.userCache[uid] || { displayName: 'Unknown', handle: '', photoURL: './defaultuser.png' };
             },
 
             async createThread() {
@@ -296,9 +315,10 @@
             formatDate(ts) { return formatDate(ts); },
 
             getThreadMeta(thread) {
+                const author = this.getAuthor(thread.authorId);
                 const cat = thread.category || 'General';
                 const date = formatDate(thread.createdAt);
-                return `${cat} • ${date}`;
+                return `<img src="${author.photoURL || './defaultuser.png'}" class="profile-img-sm me-1" alt=""> ${author.displayName} • ${cat} • ${date}`;
             },
 
             async postComment(forumId) {
@@ -482,5 +502,6 @@
         }));
     });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
 </body>
 </html>

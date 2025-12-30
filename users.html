@@ -9,7 +9,6 @@
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 </head>
 <body>
 <div id="navbar-placeholder"></div>
@@ -23,31 +22,29 @@
     </div>
 </section>
 
-<main class="container py-5" x-data="userData">
-    <!-- Auth Section -->
-    <div x-show="!$store.auth.user" class="row justify-content-center">
+<main class="container py-5" x-data="{ email: '', password: '', profile: {}, get user() { return this.$store.auth?.user }, get storeProfile() { return this.$store.auth?.profile } }" x-init="$watch('storeProfile', v => { if(v) profile = {...v} }); if($store.auth?.profile) profile = {...$store.auth.profile}">
+    <div x-show="!user" class="row justify-content-center">
         <div class="col-md-6 col-lg-4">
             <div class="card">
                 <div class="card-body">
                     <h4 class="card-title mb-4">Sign In</h4>
-                    <form @submit.prevent="login">
+                    <form @submit.prevent="$store.auth.login(email, password).catch(e => Swal.fire('Error', e.message, 'error'))">
                         <div class="mb-3"><input type="email" x-model="email" class="form-control" placeholder="Email" autocomplete="email" required></div>
                         <div class="mb-3"><input type="password" x-model="password" class="form-control" placeholder="Password" autocomplete="current-password" required></div>
                         <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
                     </form>
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-secondary" @click="loginWithProvider('google')">Sign in with Google</button>
-                        <button class="btn btn-outline-secondary" @click="loginWithProvider('github')">Sign in with GitHub</button>
-                        <button class="btn btn-outline-secondary" @click="loginWithProvider('twitter')">Sign in with Twitter</button>
-                        <button class="btn btn-outline-secondary" @click="loginWithProvider('discord')">Sign in with Discord</button>
+                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('google').catch(e => Swal.fire('Error', e.message, 'error'))">Sign in with Google</button>
+                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('github').catch(e => Swal.fire('Error', e.message, 'error'))">Sign in with GitHub</button>
+                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('twitter').catch(e => Swal.fire('Error', e.message, 'error'))">Sign in with Twitter</button>
+                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('discord').catch(e => Swal.fire('Error', e.message, 'error'))">Sign in with Discord</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Settings Section -->
-    <div x-show="$store.auth.user" class="row justify-content-center">
+    <div x-show="user" class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -55,7 +52,7 @@
                     <button class="btn btn-outline-danger btn-sm" @click="$store.auth.logout()">Sign Out</button>
                 </div>
                 <div class="card-body">
-                    <form @submit.prevent="saveProfile">
+                    <form @submit.prevent="(async () => { const u = $store.auth.user; if(!u) return; await $store.auth.saveProfile(u.uid, profile); Swal.fire('Success', 'Profile updated', 'success'); })().catch(e => Swal.fire('Error', e.message, 'error'))">
                         <div class="d-flex align-items-center gap-4 mb-4">
                             <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary profile-pic-preview profile-preview-lg" alt="Profile Preview">
                             <div class="flex-grow-1">
@@ -102,65 +99,6 @@
 <div id="footer-placeholder"></div>
 
 <script type="module" src="./app.js"></script>
-<script type="module">
-    import { db, COLLECTIONS, updateDoc, doc, updateProfile, auth } from './firebase-init.js';
-
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('userData', () => ({
-            email: '',
-            password: '',
-            profile: {},
-
-            init() {
-                this.$watch('$store.auth.profile', val => {
-                    if (val) this.profile = { ...val };
-                });
-                if (Alpine.store('auth').profile) this.profile = { ...Alpine.store('auth').profile };
-            },
-
-            async login() {
-                try {
-                    await Alpine.store('auth').login(this.email, this.password);
-                } catch (e) {
-                    Swal.fire('Error', e.message, 'error');
-                }
-            },
-
-            async loginWithProvider(provider) {
-                try {
-                    await Alpine.store('auth').loginWithProvider(provider);
-                } catch (e) {
-                    Swal.fire('Error', e.message, 'error');
-                }
-            },
-
-            async saveProfile() {
-                try {
-                    const user = Alpine.store('auth').user;
-                    if (!user) return;
-                    
-                    await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.uid), this.profile);
-                    
-                    // Update Auth profile if needed
-                    if (this.profile.displayName !== user.displayName || this.profile.photoURL !== user.photoURL) {
-                        await updateProfile(user, { 
-                            displayName: this.profile.displayName, 
-                            photoURL: this.profile.photoURL 
-                        });
-                    }
-                    
-                    // Update store
-                    Alpine.store('auth').profile = { ...this.profile };
-                    Alpine.store('auth').cacheUser(user, this.profile);
-                    Alpine.store('auth').updateTheme(this.profile.themePreference, this.profile.fontScaling);
-                    
-                    Swal.fire('Success', 'Profile updated', 'success');
-                } catch (e) {
-                    Swal.fire('Error', e.message, 'error');
-                }
-            }
-        }));
-    });
-</script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
 </body>
 </html>

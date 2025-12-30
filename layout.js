@@ -14,16 +14,12 @@ const NAV_HTML = `
                 <li class="nav-item"><a class="nav-link" href="./privacy.html">Legal</a></li>
                 <li class="nav-item"><a class="nav-link" href="./mod.html">Admin</a></li>
             </ul>
-            <div class="d-flex align-items-center" x-data>
-                <template x-if="$store.auth.user">
-                    <a href="./users.html" class="d-flex align-items-center text-decoration-none gap-2">
-                        <img :src="$store.auth.profile?.photoURL || './defaultuser.png'" class="profile-img" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
-                        <span class="text-light" x-text="$store.auth.profile?.displayName || 'User'"></span>
-                    </a>
-                </template>
-                <template x-if="!$store.auth.user">
-                    <a href="./users.html" class="btn btn-primary btn-sm">Sign In</a>
-                </template>
+            <div id="user-section" class="d-flex align-items-center">
+                <a href="./users.html" class="btn btn-primary btn-sm" id="sign-in-btn">Sign In</a>
+                <a href="./users.html" class="d-none align-items-center text-decoration-none gap-2" id="user-profile-link">
+                    <img src="./defaultuser.png" class="profile-img" alt="Profile" id="user-avatar">
+                    <span class="text-light" id="user-name">User</span>
+                </a>
             </div>
         </div>
     </div>
@@ -57,4 +53,26 @@ export function initLayout() {
 
     const footerPlaceholder = document.getElementById('footer-placeholder');
     if (footerPlaceholder) footerPlaceholder.innerHTML = FOOTER_HTML;
+}
+
+// Update user section when auth state changes
+export function updateUserSection(user, profile) {
+    const signInBtn = document.getElementById('sign-in-btn');
+    const profileLink = document.getElementById('user-profile-link');
+    const avatar = document.getElementById('user-avatar');
+    const userName = document.getElementById('user-name');
+    
+    if (!signInBtn || !profileLink) return;
+    
+    if (user) {
+        signInBtn.classList.add('d-none');
+        profileLink.classList.remove('d-none');
+        profileLink.classList.add('d-flex');
+        if (avatar) avatar.src = profile?.photoURL || user.photoURL || './defaultuser.png';
+        if (userName) userName.textContent = profile?.displayName || user.displayName || 'User';
+    } else {
+        signInBtn.classList.remove('d-none');
+        profileLink.classList.add('d-none');
+        profileLink.classList.remove('d-flex');
+    }
 }

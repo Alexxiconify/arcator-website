@@ -9,7 +9,6 @@
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 </head>
 <body>
 <div id="navbar-placeholder"></div>
@@ -18,9 +17,8 @@
     <div x-show="loading" class="container py-5 text-center"><div class="spinner-border text-primary"></div></div>
 
     <div x-show="!loading && !isAdmin" class="container py-5 text-center">
-        <h1 class="display-4 fw-bold mb-4">Access Denied</h1>
-        <p class="lead text-secondary mb-4">You do not have permission to access moderator tools.</p>
-        <a href="./index.html" class="btn btn-primary">Return Home</a>
+        <div class="alert alert-warning">You must be an admin to access this page.</div>
+        <a href="./users.html" class="btn btn-primary">Sign In</a>
     </div>
 
     <div x-show="!loading && isAdmin">
@@ -28,49 +26,42 @@
             <img src="./creativespawn.png" alt="Hero" loading="lazy">
             <div class="hero-overlay"></div>
             <div class="hero-content">
-                <h1 class="display-4 fw-bold mb-3">Moderator Tools</h1>
-                <p class="lead">Manage pages, moderate content, and oversee conversations.</p>
+                <h1 class="display-4 fw-bold mb-3">Admin Panel</h1>
+                <p class="lead">Manage users, pages, and forums</p>
             </div>
         </section>
 
         <main class="container py-5">
             <div class="row g-4">
-                <!-- User Management -->
                 <div class="col-lg-6">
                     <div class="card">
-                        <div class="card-header"><h5 class="mb-0">User Management</h5></div>
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Users</h5>
+                        </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead><tr><th>User</th><th>Email</th><th>Actions</th></tr></thead>
-                                    <tbody>
-                                        <template x-for="user in users" :key="user.id">
-                                            <tr>
-                                                <td class="d-flex align-items-center gap-2">
-                                                    <img :src="user.photoURL || './defaultuser.png'" class="profile-img-sm" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
-                                                    <span x-text="user.displayName || 'Unknown'"></span>
-                                                </td>
-                                                <td x-text="user.email || '-'"></td>
-                                                <td><button class="btn btn-outline-primary btn-sm" @click="editUser(user)">Edit</button></td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
+                            <div class="list-group list-group-flush admin-list-scroll">
+                                <template x-for="user in users" :key="user.id">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <img :src="user.photoURL || './defaultuser.png'" class="profile-img-sm" alt="">
+                                            <span x-text="user.displayName || user.email || 'Unknown'"></span>
+                                        </div>
+                                        <button class="btn btn-outline-primary btn-sm" @click="editUser(user)">Edit</button>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Custom Pages -->
                 <div class="col-lg-6">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Custom Pages</h5>
-                            <button class="btn btn-primary btn-sm" @click="createPage">Create Page</button>
+                            <h5 class="mb-0">Pages</h5>
+                            <button class="btn btn-primary btn-sm" @click="createPage">New Page</button>
                         </div>
                         <div class="card-body">
-                            <div x-show="pages.length === 0" class="text-secondary">No pages</div>
-                            <div class="list-group list-group-flush">
+                            <div class="list-group list-group-flush admin-list-scroll">
                                 <template x-for="page in pages" :key="page.id">
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <span x-text="page.title || 'Untitled'"></span>
@@ -86,7 +77,6 @@
                     </div>
                 </div>
 
-                <!-- Forum Threads -->
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header"><h5 class="mb-0">Forum Threads</h5></div>
@@ -122,8 +112,8 @@
 
 <script type="module" src="./app.js"></script>
 <script type="module">
-    import { db, COLLECTIONS, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from './firebase-init.js';
-    import { formatDate } from './utils.js';
+    import { db, COLLECTIONS, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from './firebase-init.js';
+    import { formatDate } from './helpers.js';
 
     document.addEventListener('alpine:init', () => {
         Alpine.data('adminData', () => ({
@@ -144,11 +134,10 @@
                     this.loading = false;
                 });
                 
-                // Initial check if user is already loaded
                 if (Alpine.store('auth').user) {
-                     this.isAdmin = await Alpine.store('auth').checkAdmin(Alpine.store('auth').user.uid);
-                     if (this.isAdmin) await this.refreshAll();
-                     this.loading = false;
+                    this.isAdmin = await Alpine.store('auth').checkAdmin(Alpine.store('auth').user.uid);
+                    if (this.isAdmin) await this.refreshAll();
+                    this.loading = false;
                 }
             },
 
@@ -173,11 +162,7 @@
             async createPage() {
                 const { value } = await Swal.fire({
                     title: 'Create Page',
-                    html: `
-                        <input id="new-page-title" class="form-control mb-2" placeholder="Title">
-                        <input id="new-page-slug" class="form-control mb-2" placeholder="Slug">
-                        <textarea id="new-page-content" class="form-control" rows="10" placeholder="Content"></textarea>
-                    `,
+                    html: '<input id="new-page-title" class="form-control mb-2" placeholder="Title"><input id="new-page-slug" class="form-control mb-2" placeholder="Slug"><textarea id="new-page-content" class="form-control" rows="10" placeholder="Content"></textarea>',
                     showCancelButton: true,
                     preConfirm: () => ({
                         title: document.getElementById('new-page-title').value,
@@ -196,11 +181,7 @@
             async editPage(page) {
                 const { value } = await Swal.fire({
                     title: 'Edit Page',
-                    html: `
-                        <input id="ed-page-title" class="form-control mb-2" placeholder="Title" value="${page.title || ''}">
-                        <input id="ed-page-slug" class="form-control mb-2" placeholder="Slug" value="${page.slug || ''}">
-                        <textarea id="ed-page-content" class="form-control" rows="10" placeholder="Content (HTML/Markdown)">${page.content || ''}</textarea>
-                    `,
+                    html: `<input id="ed-page-title" class="form-control mb-2" placeholder="Title" value="${page.title || ''}"><input id="ed-page-slug" class="form-control mb-2" placeholder="Slug" value="${page.slug || ''}"><textarea id="ed-page-content" class="form-control" rows="10">${page.content || ''}</textarea>`,
                     showCancelButton: true,
                     preConfirm: () => ({
                         title: document.getElementById('ed-page-title').value,
@@ -225,15 +206,7 @@
             async editThread(thread) {
                 const { value } = await Swal.fire({
                     title: 'Edit Thread',
-                    html: `
-                        <input id="ed-thread-title" class="form-control mb-2" placeholder="Title" value="${thread.title || ''}">
-                        <select id="ed-thread-category" class="form-select mb-2">
-                            <option value="General" ${thread.category === 'General' ? 'selected' : ''}>General</option>
-                            <option value="Announcements" ${thread.category === 'Announcements' ? 'selected' : ''}>Announcements</option>
-                            <option value="Support" ${thread.category === 'Support' ? 'selected' : ''}>Support</option>
-                        </select>
-                        <textarea id="ed-thread-content" class="form-control" rows="10" placeholder="Content">${thread.description || ''}</textarea>
-                    `,
+                    html: `<input id="ed-thread-title" class="form-control mb-2" value="${thread.title || ''}"><select id="ed-thread-category" class="form-select mb-2"><option value="General" ${thread.category === 'General' ? 'selected' : ''}>General</option><option value="Announcements" ${thread.category === 'Announcements' ? 'selected' : ''}>Announcements</option><option value="Support" ${thread.category === 'Support' ? 'selected' : ''}>Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10">${thread.description || ''}</textarea>`,
                     showCancelButton: true,
                     preConfirm: () => ({
                         title: document.getElementById('ed-thread-title').value,
@@ -256,12 +229,9 @@
             },
 
             async editUser(user) {
-                 const { value } = await Swal.fire({
+                const { value } = await Swal.fire({
                     title: 'Edit User',
-                    html: `
-                        <input id="ed-displayName" class="form-control mb-2" placeholder="Display Name" value="${user.displayName || ''}">
-                        <input id="ed-handle" class="form-control mb-2" placeholder="Handle" value="${user.handle || ''}">
-                    `,
+                    html: `<input id="ed-displayName" class="form-control mb-2" placeholder="Display Name" value="${user.displayName || ''}"><input id="ed-handle" class="form-control mb-2" placeholder="Handle" value="${user.handle || ''}">`,
                     showCancelButton: true,
                     preConfirm: () => ({
                         displayName: document.getElementById('ed-displayName').value,
@@ -277,5 +247,6 @@
         }));
     });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
 </body>
 </html>

@@ -2,7 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
@@ -11,32 +10,18 @@ service cloud.firestore {
     }
     function isAdmin() {
       return isSignedIn() && 
-        (request.auth.uid == '712JqVj7XQNHYx64sXqX' || // Hardcoded admin UID from old code
+        (request.auth.uid == 'CEch8cXWemSDQnM3dHVKPt0RGpn2' ||
          exists(/databases/$(database)/documents/artifacts/arcator-web/public/data/whitelisted_admins/$(request.auth.uid)));
     }
     
-    // User Profiles
-    match /users/{userId} {
-      allow read: if true;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow delete: if isAdmin();
-      
-      match /notifications/{notificationId} {
-        allow read: if isSignedIn() && isOwner(userId);
-        allow write: if isSignedIn() && isOwner(userId); // Or system/admin
-      }
-    }
-    
-    // Forums
-    match /forums/{forumId} {
+    // Artifact-based paths
+    match /artifacts/arcator-web/public/data/{collection}/{docId} {
       allow read: if true;
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin() || 
-                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'votes', 'viewCount']))); 
+      allow update: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin() ||
+                     (collection == 'forms' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'votes', 'viewCount'])));
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
       
-      // Comments (Submissions)
       match /submissions/{commentId} {
         allow read: if true;
         allow create: if isSignedIn();
@@ -44,30 +29,17 @@ service cloud.firestore {
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
         allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
       }
-    }
-    
-    // Pages (Custom Pages)
-    match /pages/{pageId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    // Conversations
-    match /conversations/{convId} {
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
       
       match /messages/{msgId} {
-        allow read: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
-        allow create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
       }
     }
     
-    // Notification Queue (if still used)
-    match /notification_queue/{docId} {
-      allow create: if isSignedIn();
-      allow read, update, delete: if false; // System only
+    // Admin whitelist
+    match /artifacts/arcator-web/public/data/whitelisted_admins/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }

@@ -57,21 +57,7 @@ main { flex: 1; }
 .view-comments-btn:hover { text-decoration: underline; }
 .toggle-icon { display: inline-block; transition: transform .2s; font-size: 0.75em; }
 
-/* Profile Page */
-.profile-pic-preview {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-}
-
-.manual-pic-preview {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-}
-
-.profile-preview-lg {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-}
+.profile-pic-preview { width: 100px; height: 100px; object-fit: cover; }
+.manual-pic-preview { width: 40px; height: 40px; object-fit: cover; }
+.profile-preview-lg { width: 80px; height: 80px; object-fit: cover; }
+.admin-list-scroll { max-height: 300px; overflow-y: auto; }

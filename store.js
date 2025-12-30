@@ -1,10 +1,34 @@
-import { auth, db, COLLECTIONS, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, doc, getDoc, setDoc, updateDoc, serverTimestamp, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, GithubAuthProvider, TwitterAuthProvider, OAuthProvider, linkWithPopup, unlink } from './firebase-init.js';
-import { generateProfilePic, randomIdentity } from './utils.js';
+import { auth, db, COLLECTIONS, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, doc, getDoc, setDoc, updateDoc, serverTimestamp, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, GithubAuthProvider, TwitterAuthProvider, OAuthProvider } from './firebase-init.js';
+import { generateProfilePic, randomIdentity } from './helpers.js';
+import { updateUserSection } from './layout.js';
 
 const DEFAULT_THEME_NAME = 'dark';
 const ADMIN_UID = 'CEch8cXWemSDQnM3dHVKPt0RGpn2';
 
-document.addEventListener('alpine:init', () => {
+function cacheUser(user, profile) {
+    localStorage.setItem('arcator_user_cache', JSON.stringify({
+        uid: user.uid,
+        displayName: profile?.displayName || user.displayName,
+        photoURL: profile?.photoURL || user.photoURL,
+        themePreference: profile?.themePreference || 'dark',
+        fontScaling: profile?.fontScaling || 'normal'
+    }));
+}
+
+function updateTheme(theme = 'dark', fontSize = 'normal') {
+    document.documentElement.setAttribute('data-bs-theme', theme);
+    document.documentElement.setAttribute('data-font-size', fontSize);
+}
+
+async function checkAdmin(uid) {
+    if (uid === ADMIN_UID) return true;
+    try {
+        const snap = await getDoc(doc(db, 'artifacts', 'arcator-web', 'public', 'data', 'whitelisted_admins', uid));
+        return snap.exists();
+    } catch { return false; }
+}
+
+function registerStore() {
     Alpine.store('auth', {
         user: null,
         profile: null,
@@ -12,24 +36,32 @@ document.addEventListener('alpine:init', () => {
         isAdmin: false,
 
         async init() {
-            // Load from cache first
+            // Load from cache first for instant UI
             const cached = localStorage.getItem('arcator_user_cache');
             if (cached) {
-                const data = JSON.parse(cached);
-                this.user = { uid: data.uid, ...data }; // Mock user object
-                this.profile = data;
-                this.updateTheme(data.themePreference, data.fontScaling);
+                try {
+                    const data = JSON.parse(cached);
+                    this.user = { uid: data.uid, ...data };
+                    this.profile = data;
+                    updateTheme(data.themePreference, data.fontScaling);
+                    updateUserSection(this.user, this.profile);
+                } catch (e) {}
             }
 
+            // Listen for auth state
             onAuthStateChanged(auth, async (u) => {
                 this.user = u;
                 if (u) {
-                    const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, u.uid));
-                    if (snap.exists()) {
-                        this.profile = snap.data();
-                        this.cacheUser(u, this.profile);
-                        this.updateTheme(this.profile.themePreference, this.profile.fontScaling);
-                        this.isAdmin = await this.checkAdmin(u.uid);
+                    try {
+                        const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, u.uid));
+                        if (snap.exists()) {
+                            this.profile = snap.data();
+                            cacheUser(u, this.profile);
+                            updateTheme(this.profile.themePreference, this.profile.fontScaling);
+                            this.isAdmin = await checkAdmin(u.uid);
+                        }
+                    } catch (e) {
+                        console.error('Profile load error:', e);
                     }
                 } else {
                     this.profile = null;
@@ -37,30 +69,8 @@ document.addEventListener('alpine:init', () => {
                     localStorage.removeItem('arcator_user_cache');
                 }
                 this.loading = false;
+                updateUserSection(this.user, this.profile);
             });
-        },
-
-        cacheUser(user, profile) {
-            localStorage.setItem('arcator_user_cache', JSON.stringify({
-                uid: user.uid,
-                displayName: profile.displayName || user.displayName,
-                photoURL: profile.photoURL || user.photoURL,
-                themePreference: profile.themePreference || 'dark',
-                fontScaling: profile.fontScaling || 'normal'
-            }));
-        },
-
-        updateTheme(theme = 'dark', fontSize = 'normal') {
-            document.documentElement.setAttribute('data-bs-theme', theme);
-            document.documentElement.setAttribute('data-font-size', fontSize);
-        },
-
-        async checkAdmin(uid) {
-            if (uid === ADMIN_UID) return true;
-            try {
-                const snap = await getDoc(doc(db, 'artifacts', 'arcator-web', 'public', 'data', 'whitelisted_admins', uid));
-                return snap.exists();
-            } catch { return false; }
         },
 
         async login(email, password) {
@@ -83,6 +93,7 @@ document.addEventListener('alpine:init', () => {
             this.user = null;
             this.profile = null;
             localStorage.removeItem('arcator_user_cache');
+            updateUserSection(null, null);
         },
 
         async loginWithProvider(providerName) {
@@ -95,24 +106,37 @@ document.addEventListener('alpine:init', () => {
                 case 'discord': provider = new OAuthProvider('discord.com'); break;
             }
             
-            try {
-                const result = await signInWithPopup(auth, provider);
-                if (result._tokenResponse?.isNewUser) {
-                    const { displayName: rn, handle } = randomIdentity();
-                    const displayName = result.user.displayName || rn;
-                    const photoURL = result.user.photoURL || generateProfilePic(displayName);
-                    await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { 
-                        uid: result.user.uid, displayName, email: result.user.email || '', photoURL, handle, 
-                        themePreference: DEFAULT_THEME_NAME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: providerName 
-                    });
-                } else {
-                    await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
-                }
-                return result.user;
-            } catch (e) {
-                console.error(e);
-                throw e;
+            const result = await signInWithPopup(auth, provider);
+            if (result._tokenResponse?.isNewUser) {
+                const { displayName: rn, handle } = randomIdentity();
+                const displayName = result.user.displayName || rn;
+                const photoURL = result.user.photoURL || generateProfilePic(displayName);
+                await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { 
+                    uid: result.user.uid, displayName, email: result.user.email || '', photoURL, handle, 
+                    themePreference: DEFAULT_THEME_NAME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: providerName 
+                });
+            } else {
+                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
             }
-        }
+            return result.user;
+        },
+
+        async saveProfile(uid, profileData) {
+            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, uid), profileData);
+            this.profile = { ...this.profile, ...profileData };
+            cacheUser(this.user, this.profile);
+            updateTheme(this.profile.themePreference, this.profile.fontScaling);
+            updateUserSection(this.user, this.profile);
+        },
+
+        checkAdmin,
+        cacheUser,
+        updateTheme
     });
-});
+}
+
+if (window.Alpine) {
+    registerStore();
+} else {
+    document.addEventListener('alpine:init', registerStore);
+}
