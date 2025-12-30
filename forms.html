@@ -114,16 +114,45 @@
                     <div class="card-footer py-2" x-show="thread.expanded" x-transition>
                         <div x-show="thread.loadingComments" class="text-center py-1"><div class="spinner-border spinner-border-sm"></div></div>
                         <div class="comments-list mb-2">
-                            <template x-for="comment in thread.comments" :key="comment.id">
+                            <template x-for="comment in thread.comments.filter(c => !c.parentCommentId)" :key="comment.id">
                                 <div class="comment mb-2 ms-0">
                                     <div class="d-flex">
                                         <div class="d-flex flex-column align-items-center me-2">
                                             <button class="btn btn-link btn-sm p-0" :class="hasVoted(comment, '👍') ? 'text-success' : 'text-secondary'" @click="vote(thread.id, comment, '👍')">▲</button>
                                             <span x-text="getVoteCount(comment)" :class="getVoteCount(comment) > 0 ? 'text-success' : getVoteCount(comment) < 0 ? 'text-danger' : ''"></span>
-                                            <button class="btn btn-link btn-sm p-0" :class="hasVoted(comment, '�') ? 'text-danger' : 'text-secondary'" @click="vote(thread.id, comment, '�')">▼</button>
+                                            <button class="btn btn-link btn-sm p-0" :class="hasVoted(comment, '👎') ? 'text-danger' : 'text-secondary'" @click="vote(thread.id, comment, '👎')">▼</button>
                                         </div>
                                         <div class="flex-grow-1">
-                                                                <span x-text="getVoteCount(reply)"></span>
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <img :src="getAuthor(comment.authorId).photoURL || './defaultuser.png'" class="profile-img-sm">
+                                                <strong x-text="getAuthor(comment.authorId).displayName || 'Unknown'"></strong>
+                                                <small class="text-secondary" x-text="formatDate(comment.createdAt)"></small>
+                                                <template x-if="$store.auth.isAdmin">
+                                                    <div class="dropdown d-inline-block">
+                                                        <button class="btn btn-link btn-sm p-0 text-secondary" data-bs-toggle="dropdown">⋮</button>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" href="#" @click.prevent="softDeleteComment(thread.id, comment)" x-text="comment.censored ? 'Un-censor' : 'Censor'"></a></li>
+                                                            <li><a class="dropdown-item text-danger" href="#" @click.prevent="deleteComment(thread.id, comment.id)">Delete</a></li>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <div x-show="!comment.censored || $store.auth.isAdmin">
+                                                <div class="mb-1" x-html="DOMPurify.sanitize(comment.content)"></div>
+                                            </div>
+                                            <div x-show="comment.censored && !$store.auth.isAdmin" class="alert alert-warning py-1 mt-1 mb-0 small">
+                                                [Censored]
+                                            </div>
+                                            <button class="btn btn-link btn-sm p-0 text-secondary" @click="replyTo(thread, comment)">Reply</button>
+                                            
+                                            <!-- Replies -->
+                                            <div class="replies ms-4 mt-2 border-start ps-3">
+                                                <template x-for="reply in getReplies(thread, comment.id)" :key="reply.id">
+                                                    <div class="comment mb-2">
+                                                        <div class="d-flex">
+                                                            <div class="d-flex flex-column align-items-center me-2">
+                                                                <button class="btn btn-link btn-sm p-0" :class="hasVoted(reply, '👍') ? 'text-success' : 'text-secondary'" @click="vote(thread.id, reply, '👍')">▲</button>
+                                                                <span x-text="getVoteCount(reply)" :class="getVoteCount(reply) > 0 ? 'text-success' : getVoteCount(reply) < 0 ? 'text-danger' : ''"></span>
                                                                 <button class="btn btn-link btn-sm p-0" :class="hasVoted(reply, '👎') ? 'text-danger' : 'text-secondary'" @click="vote(thread.id, reply, '👎')">▼</button>
                                                             </div>
                                                             <div class="flex-grow-1">
@@ -131,8 +160,22 @@
                                                                     <img :src="getAuthor(reply.authorId).photoURL || './defaultuser.png'" class="profile-img-sm">
                                                                     <strong x-text="getAuthor(reply.authorId).displayName || 'Unknown'"></strong>
                                                                     <small class="text-secondary" x-text="formatDate(reply.createdAt)"></small>
+                                                                    <template x-if="$store.auth.isAdmin">
+                                                                        <div class="dropdown d-inline-block">
+                                                                            <button class="btn btn-link btn-sm p-0 text-secondary" data-bs-toggle="dropdown">⋮</button>
+                                                                            <ul class="dropdown-menu">
+                                                                                <li><a class="dropdown-item" href="#" @click.prevent="softDeleteComment(thread.id, reply)" x-text="reply.censored ? 'Un-censor' : 'Censor'"></a></li>
+                                                                                <li><a class="dropdown-item text-danger" href="#" @click.prevent="deleteComment(thread.id, reply.id)">Delete</a></li>
+                                                                            </ul>
+                                                                        </div>
+                                                                    </template>
                                                                 </div>
-                                                                <div class="mb-1" x-html="DOMPurify.sanitize(reply.content)"></div>
+                                                                <div x-show="!reply.censored || $store.auth.isAdmin">
+                                                                    <div class="mb-1" x-html="DOMPurify.sanitize(reply.content)"></div>
+                                                                </div>
+                                                                <div x-show="reply.censored && !$store.auth.isAdmin" class="alert alert-warning py-1 mt-1 mb-0 small">
+                                                                    [Censored]
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -443,7 +486,7 @@
                 return count;
             },
             
-            async reply(forumId, parentId) {
+            async replyTo(thread, parentComment) {
                 const { value } = await Swal.fire({
                     title: 'Reply',
                     input: 'textarea',
@@ -452,19 +495,23 @@
                 if (value) {
                     const user = Alpine.store('auth').user;
                     const profile = Alpine.store('auth').profile;
-                    await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), {
+                    
+                    // Flatten threading: If parentComment is already a reply, use its parent.
+                    const actualParentId = parentComment.parentCommentId || parentComment.id;
+                    
+                    await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), {
                         content: value,
                         authorId: user.uid,
                         authorName: profile?.displayName || 'Anonymous',
                         authorPhoto: profile?.photoURL || './defaultuser.png',
                         createdAt: serverTimestamp(),
-                        parentCommentId: parentId
+                        parentCommentId: actualParentId
                     });
-                    await updateDoc(doc(db, COLLECTIONS.FORMS, forumId), { commentCount: increment(1) });
-                    const q = query(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), orderBy('createdAt', 'asc'));
+                    await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), { commentCount: increment(1) });
+                    
+                    const q = query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc'));
                     const snap = await getDocs(q);
-                    const thread = this.threads.find(t => t.id === forumId);
-                    if (thread) thread.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    thread.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 }
             },
 

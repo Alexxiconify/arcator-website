@@ -42,6 +42,7 @@ function registerStore() {
         profile: null,
         loading: true,
         isAdmin: false,
+        checkAdmin: checkAdmin,
 
         async init() {
             // Load from cache first for instant UI

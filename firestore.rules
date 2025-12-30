@@ -24,13 +24,15 @@ service cloud.firestore {
     
     // Conversations at root level
     match /conversations/{convId} {
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow update: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
+      allow delete: if isAdmin();
       
       match /messages/{msgId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn();
+        allow delete: if isAdmin();
       }
     }
     
