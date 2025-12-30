@@ -68,3 +68,4 @@ main { flex: 1; }
 .cursor-pointer { cursor: pointer; }
 .collapsible-header { background-color: var(--bs-tertiary-bg); transition: background-color 0.2s; }
 .collapsible-header:hover { background-color: var(--bs-secondary-bg); }
+.rotate-90 { transform: rotate(90deg); }

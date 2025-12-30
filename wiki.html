@@ -27,7 +27,7 @@
 <main class="container py-5" x-data="{ tab: 'home' }">
     <div class="row">
         <div class="col-md-3 mb-4">
-            <div class="list-group sticky-top" style="top: 100px;">
+            <div class="list-group sticky-top wiki-nav-sticky">
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'home' }" @click="tab = 'home'">Welcome</button>
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'servers' }" @click="tab = 'servers'">Servers</button>
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'software' }" @click="tab = 'software'">Software</button>
@@ -43,9 +43,6 @@
                 <h2 class="mb-4">Welcome to Arcator! (the wiki)</h2>
                 <p>Here at Arcator, we want to give the best possible experience people can have. If you are new we have a server that may be for you.</p>
                 <p>We have <a href="#" @click.prevent="tab = 'hub'">Freebuild Creative</a>, to build without restrictions or claims. <a href="#" @click.prevent="tab = 'ssmp'">SSMP is survival</a> with Essentials plugins to add more to vanilla gameplay. We also have modded servers and casual vc's to keep things new.</p>
-                
-                <hr class="my-5">
-                
                 <h3>Arcator Trailer</h3>
                 <p>This is Arcator's official trailer, made in 2016. It showcased the server with a small tour.</p>
                 <p>Here you can find the older videos:</p>
@@ -53,9 +50,6 @@
                     <li><a href="https://www.youtube.com/watch?v=-HsGRt4OKpE" target="_blank" rel="noopener noreferrer">2010 Trailer</a></li>
                     <li><a href="https://www.youtube.com/watch?v=ywVljjljLvs" target="_blank" rel="noopener noreferrer">2011 Trailer</a></li>
                 </ul>
-                
-                <hr class="my-5">
-                
                 <h3>Arcator Social Media</h3>
                 <ul>
                     <li><a href="https://www.youtube.com/@arcator.network" target="_blank" rel="noopener noreferrer">YouTube</a></li>
@@ -72,38 +66,27 @@
                 <p>MC1, or Hub, was the first Arcator server, and was released to the public in December 2010. The server held four different modes, it provided Freebuild, Plots, Peaceful Survival, and Modified Survival.</p>
                 <p>Freebuild allows players to build without restrictions or claiming. Plots allow players to build in specified pieces of land without worrying about griefs. Peaceful Survival gives players a peaceful mode survival experience. Modified Survival is Survival but with some plugins, like Brewery, added to it.</p>
                 
-                <hr class="my-4">
-                
                 <h4>New Spawn</h4>
                 <p>New spawn was created to be a new age spawn for new players. It was later decided that instead of using the new spawn we keep the old spawn because of the many buildings, art and memories that are at the old spawn. You are still teleported to it if you leave peaceful survival or modified survival.</p>
                 <blockquote class="blockquote footer">“Where am I?”</blockquote>
                 
-                <hr class="my-4">
                 
                 <h4>Peaceful Survival</h4>
                 <p>Peaceful Survival is survival without worrying about monsters, griefing or theft. Fall damage is also disabled. You can play in peace, without worrying about creepers or dying to monsters! Lots of adventures to go on and much to explore! From the many builds and memories that are left by old members who used to play and no longer play on the server.</p>
                 <blockquote class="blockquote footer">“So peaceful!”</blockquote>
-                
-                <hr class="my-4">
-                
+                                
                 <h4>Sky City</h4>
                 <p>Built in 2013-2014, the server was quiet and hope was dwindling. Built as an attempt to spark up creative energy and get people back into playing on the server, they built Sky City. Hope prevailed as it boosted the servers' activity once again.</p>
                 <blockquote class="blockquote footer">“Reminds me of Rome!”</blockquote>
-                
-                <hr class="my-4">
                 
                 <h4>Modified Survival</h4>
                 <p>Modified survival is basic survival but it has hostile mobs but no pvp/raiding/griefing! It is a game-mode that contains several plugins that changes survival in various ways! Plus it wouldn't be modified survival without the many plugins! There is much to do, much to do, come have fun in Modified Survival!</p>
                 <blockquote class="blockquote footer">“What is this drink?”</blockquote>
                 
-                <hr class="my-4">
-                
                 <h4>Freebuild</h4>
                 <p>You can build whatever with creative freedom in creative in Freebuild! There are many sights to see from the spawn and the many spawn builds to the many towns! You can travel by rail too many old builds and see plenty of cool sights along the way! As someone wise once said, “It's about the friends we make along the way.” From a fully operational nuclear reactor powered by redstone. There are many memories you can make from somber, heartbreaking, too happy! There are countless builds to be made, and plenty old builds to be found!</p>
                 <blockquote class="blockquote footer">"If you want an adventure of the lifetime, follow the railway!"</blockquote>
-                
-                <hr class="my-4">
-                
+                                
                 <h4>Plots</h4>
                 <p>Plots are creative but in a flat environment. You can build to the freedom of your own plot! From houses to landscaping, you have the freedom to create without Minecraft's land generation! Of course sticking to your own plot. You can also explore the many builds left behind.</p>
                 <blockquote class="blockquote footer">“A builder's dream!”</blockquote>
@@ -112,9 +95,7 @@
                 <h4>Overview</h4>
                 <p>SSMP or Strawberry SMP. This SMP is a vanilla survival SMP, SMP standing for survival multiplayer. You can meet people, build with people, team with people or go solo. Wars don’t happen. We will be happy to see you on this history rich server.</p>
                 <blockquote class="blockquote footer">“Let’s play the SSMP!”</blockquote>
-                
-                <hr class="my-4">
-                
+                                
                 <h4>History</h4>
                 <p><strong>THE BEGINNING</strong> It was summer 2019, Arcator was inactive for six months prior. The SSMP was a brighter side of the summer, a true revival something to bring life back into the server. Everyone got together to make the server. People invited friends from other communities. 20 friends got together, many of them not seeing each other in years. Needing a name for the newly founded SMP. A few weeks went by before finally deciding a name Strawberry SMP, and the SSMP was made.</p>
                 <blockquote class="blockquote footer">“Strawberries!”</blockquote>
@@ -128,15 +109,11 @@
                 <p>Crashes came and went. The city soon became empty. The red stone of the gates stopped working. They tried to repair the gates, but as there were only so many people, things fell into disrepair. The small town returned to its roots. The nether portal remained the heart of the spawn. Once again, the distant bases grew. Then the server crashed, and it took a while to find out that the original SSMP couldn't be repaired. People left and didn't return, others stayed.</p>
                 <p>December 2019 the SSMP returned as a new server. 2020 brought new people and activates for Minecraft and the discord. 2022 and the server is still up and running today.</p>
                 <blockquote class="blockquote footer">“Still going…”</blockquote>
-                
-                <hr class="my-4">
-                
+                                
                 <h4>The Six Hour War</h4>
                 <blockquote class="blockquote footer">“The war no one wanted!”</blockquote>
                 <p>A bunch of people lived together in peace, many cities across the map were all connected. No one wanted war. Everyone tried to avoid war from occurring. Peace remained for a while until people slowly changed. Others tried to back out and show they wanted peace. It did not happen; it kept going. After a battle, the victims tries to take items that were dropped and put them into a chest as a sign of goodwill, but it was too late. A counter attack was already was being planned. War was inevitable. Nobody wanted to lose, so they all tried to strike first. Cites burned and people banded together into teams to fight back against the chaos that rained down upon them.</p>
-                
-                <hr class="my-4">
-                
+                                
                 <h4>Locations</h4>
                 <p>This is the Strawberry SMP spawn where you first start in the SMP.</p>
             </div>
@@ -591,7 +568,7 @@
                         </ul>
                     </li>
                 </ul>
-                <figure class="image image_resized" style="width: 591px;"><img src="https://lh5.googleusercontent.com/1Q1lNPGeA2ub5J9rXRS1ksh4-0mv6GSeSxAnqr-hoD-vgRKDNa7d8FGnqEyUjxR-P_32viIT7GZ4lO7gaYkFDQ-P7Q-SEeBA7Qw_INrzoSJEX4y2VAA8_7SXBv1q2Cl-KRcGCZnO"></figure>
+                <figure class="image wiki-image_resized"><img src="https://lh5.googleusercontent.com/1Q1lNPGeA2ub5J9rXRS1ksh4-0mv6GSeSxAnqr-hoD-vgRKDNa7d8FGnqEyUjxR-P_32viIT7GZ4lO7gaYkFDQ-P7Q-SEeBA7Qw_INrzoSJEX4y2VAA8_7SXBv1q2Cl-KRcGCZnO"></figure>
                 <hr class="my-5">
                 
                 <h3 class="mt-4">Roles</h3>
@@ -673,6 +650,7 @@
                     <li>Backups (Mariabackup)</li>
                 </ul>
             </div>
+            <!-- McAdmin Tab -->
             <div x-show="tab === 'mcadmin'" class="fade-in" x-cloak>
                 <h2 class="mb-4">MCAdmin</h2>
                 <h3>Useful Resources</h3>
