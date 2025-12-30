@@ -312,14 +312,20 @@
             async viewThread(thread) {
                 const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc')));
                 const comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.currentThreadComments = comments;
                 
                 const commentsHtml = comments.map(c => `
                     <div class="mb-2 border-bottom pb-1">
                         <div class="d-flex justify-content-between">
                             <small class="text-muted">${this.getAuthorName(c.authorId)} (${formatDate(c.createdAt)}):</small>
-                            <button class="btn btn-link btn-sm p-0 text-danger" onclick="window.deleteThreadComment('${thread.id}', '${c.id}')">Delete</button>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-link btn-sm p-0 text-primary me-2" onclick="window.editThreadComment('${thread.id}', '${c.id}')">Edit</button>
+                                <button class="btn btn-link btn-sm p-0 text-warning me-2" onclick="window.censorThreadComment('${thread.id}', '${c.id}')">Redact</button>
+                                <button class="btn btn-link btn-sm p-0 text-danger" onclick="window.deleteThreadComment('${thread.id}', '${c.id}')">Delete</button>
+                            </div>
                         </div>
                         <div>${c.content}</div>
+                        ${c.censored ? '<div class="text-warning small">[Redacted by Staff]</div>' : ''}
                     </div>
                 `).join('');
 
@@ -330,6 +336,44 @@
                         this.viewThread(thread); // Refresh
                     }
                 };
+                
+                window.censorThreadComment = async (threadId, commentId) => {
+                    const comment = window.currentThreadComments.find(c => c.id === commentId);
+                    if(!comment) return;
+
+                    const { value } = await Swal.fire({
+                        title: 'Redact Comment',
+                        input: 'textarea',
+                        inputValue: comment.content.replace(/<[^>]*>?/gm, ''),
+                        inputLabel: 'Modify text (e.g. replace with [Redacted by Staff])',
+                        showCancelButton: true
+                    });
+
+                    if (value !== undefined) {
+                        await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), commentId), { 
+                            content: value, 
+                            censored: true 
+                        });
+                        Swal.close();
+                        this.viewThread(thread);
+                    }
+                };
+                
+                window.editThreadComment = async (threadId, commentId) => {
+                    const comment = window.currentThreadComments.find(c => c.id === commentId);
+                    if(!comment) return;
+                    const { value } = await Swal.fire({
+                        title: 'Edit Comment',
+                        input: 'textarea',
+                        inputValue: comment.content.replace(/<[^>]*>?/gm, ''),
+                        showCancelButton: true
+                    });
+                    if (value) {
+                        await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), commentId), { content: value });
+                        Swal.close();
+                        this.viewThread(thread);
+                    }
+                };
 
                 Swal.fire({
                     title: thread.title,
@@ -338,27 +382,6 @@
                            <div style="max-height: 400px; overflow-y: auto; text-align: left;">${commentsHtml || 'No comments'}</div>`,
                     width: 800
                 });
-            },
-            
-            async editPost(post) {
-                const { value } = await Swal.fire({
-                    title: 'Edit Post',
-                    html: `<textarea id="ed-post-content" class="form-control" rows="5">${post.content || ''}</textarea>`,
-                    showCancelButton: true,
-                    preConfirm: () => document.getElementById('ed-post-content').value
-                });
-                if (value) {
-                    await updateDoc(post.ref, { content: value, editedByAdmin: true });
-                    await this.refreshAll();
-                    Swal.fire('Updated', '', 'success');
-                }
-            },
-            
-            async deletePost(post) {
-                if (confirm('Delete this post?')) {
-                    await deleteDoc(post.ref);
-                    await this.refreshAll();
-                }
             },
             
             async viewDM(dm) {
