@@ -43,188 +43,228 @@
                 <h2 class="mb-4">Welcome to Arcator! (the wiki)</h2>
                 <p>Here at Arcator, we want to give the best possible experience people can have. If you are new we have a server that may be for you.</p>
                 <p>We have <a href="#" @click.prevent="tab = 'hub'">Freebuild Creative</a>, to build without restrictions or claims. <a href="#" @click.prevent="tab = 'ssmp'">SSMP is survival</a> with Essentials plugins to add more to vanilla gameplay. We also have modded servers and casual vc's to keep things new.</p>
-                <h3>Arcator Trailer</h3>
-                <p>This is Arcator's official trailer, made in 2016. It showcased the server with a small tour.</p>
-                <p>Here you can find the older videos:</p>
-                <ul>
-                    <li><a href="https://www.youtube.com/watch?v=-HsGRt4OKpE" target="_blank" rel="noopener noreferrer">2010 Trailer</a></li>
-                    <li><a href="https://www.youtube.com/watch?v=ywVljjljLvs" target="_blank" rel="noopener noreferrer">2011 Trailer</a></li>
-                </ul>
-                <h3>Arcator Social Media</h3>
-                <ul>
-                    <li><a href="https://www.youtube.com/@arcator.network" target="_blank" rel="noopener noreferrer">YouTube</a></li>
-                    <li><a href="https://www.tumblr.com/arcator" target="_blank" rel="noopener noreferrer">Tumblr</a></li>
-                </ul>
+                <div x-data="{ open: true }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Arcator Trailer
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <p>This is Arcator's official trailer, made in 2016. It showcased the server with a small tour.</p>
+                        <p>Here you can find the older videos:</p>
+                        <ul>
+                            <li><a href="https://www.youtube.com/watch?v=-HsGRt4OKpE" target="_blank" rel="noopener noreferrer">2010 Trailer</a></li>
+                            <li><a href="https://www.youtube.com/watch?v=ywVljjljLvs" target="_blank" rel="noopener noreferrer">2011 Trailer</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div x-data="{ open: true }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Arcator Social Media
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <ul>
+                            <li><a href="https://www.youtube.com/@arcator.network" target="_blank" rel="noopener noreferrer">YouTube</a></li>
+                            <li><a href="https://www.tumblr.com/arcator" target="_blank" rel="noopener noreferrer">Tumblr</a></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
             <!-- servers Tab -->
             <div x-show="tab === 'servers'" class="fade-in" x-cloak>
                 <h2 class="mb-4">Servers</h2>
-                <h3 class="mb-4">Hub (MC1)</h3>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Hub (MC1)
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>Overview</h4>
+                        <p>MC1, or Hub, was the first Arcator server, and was released to the public in December 2010. The server held four different modes, it provided Freebuild, Plots, Peaceful Survival, and Modified Survival.</p>
+                        <p>Freebuild allows players to build without restrictions or claiming. Plots allow players to build in specified pieces of land without worrying about griefs. Peaceful Survival gives players a peaceful mode survival experience. Modified Survival is Survival but with some plugins, like Brewery, added to it.</p>
+                        
+                        <h4>New Spawn</h4>
+                        <p>New spawn was created to be a new age spawn for new players. It was later decided that instead of using the new spawn we keep the old spawn because of the many buildings, art and memories that are at the old spawn. You are still teleported to it if you leave peaceful survival or modified survival.</p>
+                        <blockquote class="blockquote footer">“Where am I?”</blockquote>
                 
-                <h4>Overview</h4>
-                <p>MC1, or Hub, was the first Arcator server, and was released to the public in December 2010. The server held four different modes, it provided Freebuild, Plots, Peaceful Survival, and Modified Survival.</p>
-                <p>Freebuild allows players to build without restrictions or claiming. Plots allow players to build in specified pieces of land without worrying about griefs. Peaceful Survival gives players a peaceful mode survival experience. Modified Survival is Survival but with some plugins, like Brewery, added to it.</p>
-                
-                <h4>New Spawn</h4>
-                <p>New spawn was created to be a new age spawn for new players. It was later decided that instead of using the new spawn we keep the old spawn because of the many buildings, art and memories that are at the old spawn. You are still teleported to it if you leave peaceful survival or modified survival.</p>
-                <blockquote class="blockquote footer">“Where am I?”</blockquote>
-                
-                
-                <h4>Peaceful Survival</h4>
-                <p>Peaceful Survival is survival without worrying about monsters, griefing or theft. Fall damage is also disabled. You can play in peace, without worrying about creepers or dying to monsters! Lots of adventures to go on and much to explore! From the many builds and memories that are left by old members who used to play and no longer play on the server.</p>
-                <blockquote class="blockquote footer">“So peaceful!”</blockquote>
+                        <h4>Peaceful Survival</h4>
+                        <p>Peaceful Survival is survival without worrying about monsters, griefing or theft. Fall damage is also disabled. You can play in peace, without worrying about creepers or dying to monsters! Lots of adventures to go on and much to explore! From the many builds and memories that are left by old members who used to play and no longer play on the server.</p>
+                        <blockquote class="blockquote footer">“So peaceful!”</blockquote>
                                 
-                <h4>Sky City</h4>
-                <p>Built in 2013-2014, the server was quiet and hope was dwindling. Built as an attempt to spark up creative energy and get people back into playing on the server, they built Sky City. Hope prevailed as it boosted the servers' activity once again.</p>
-                <blockquote class="blockquote footer">“Reminds me of Rome!”</blockquote>
+                        <h4>Sky City</h4>
+                        <p>Built in 2013-2014, the server was quiet and hope was dwindling. Built as an attempt to spark up creative energy and get people back into playing on the server, they built Sky City. Hope prevailed as it boosted the servers' activity once again.</p>
+                        <blockquote class="blockquote footer">“Reminds me of Rome!”</blockquote>
                 
-                <h4>Modified Survival</h4>
-                <p>Modified survival is basic survival but it has hostile mobs but no pvp/raiding/griefing! It is a game-mode that contains several plugins that changes survival in various ways! Plus it wouldn't be modified survival without the many plugins! There is much to do, much to do, come have fun in Modified Survival!</p>
-                <blockquote class="blockquote footer">“What is this drink?”</blockquote>
+                        <h4>Modified Survival</h4>
+                        <p>Modified survival is basic survival but it has hostile mobs but no pvp/raiding/griefing! It is a game-mode that contains several plugins that changes survival in various ways! Plus it wouldn't be modified survival without the many plugins! There is much to do, much to do, come have fun in Modified Survival!</p>
+                        <blockquote class="blockquote footer">“What is this drink?”</blockquote>
                 
-                <h4>Freebuild</h4>
-                <p>You can build whatever with creative freedom in creative in Freebuild! There are many sights to see from the spawn and the many spawn builds to the many towns! You can travel by rail too many old builds and see plenty of cool sights along the way! As someone wise once said, “It's about the friends we make along the way.” From a fully operational nuclear reactor powered by redstone. There are many memories you can make from somber, heartbreaking, too happy! There are countless builds to be made, and plenty old builds to be found!</p>
-                <blockquote class="blockquote footer">"If you want an adventure of the lifetime, follow the railway!"</blockquote>
+                        <h4>Freebuild</h4>
+                        <p>You can build whatever with creative freedom in creative in Freebuild! There are many sights to see from the spawn and the many spawn builds to the many towns! You can travel by rail too many old builds and see plenty of cool sights along the way! As someone wise once said, “It's about the friends we make along the way.” From a fully operational nuclear reactor powered by redstone. There are many memories you can make from somber, heartbreaking, too happy! There are countless builds to be made, and plenty old builds to be found!</p>
+                        <blockquote class="blockquote footer">"If you want an adventure of the lifetime, follow the railway!"</blockquote>
                                 
-                <h4>Plots</h4>
-                <p>Plots are creative but in a flat environment. You can build to the freedom of your own plot! From houses to landscaping, you have the freedom to create without Minecraft's land generation! Of course sticking to your own plot. You can also explore the many builds left behind.</p>
-                <blockquote class="blockquote footer">“A builder's dream!”</blockquote>
-                <h3 class="mb-4">SSMP (Strawberry SMP)</h2>
+                        <h4>Plots</h4>
+                        <p>Plots are creative but in a flat environment. You can build to the freedom of your own plot! From houses to landscaping, you have the freedom to create without Minecraft's land generation! Of course sticking to your own plot. You can also explore the many builds left behind.</p>
+                        <blockquote class="blockquote footer">“A builder's dream!”</blockquote>
+                </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>SSMP (Strawberry SMP)
+                    </h3>
+                    <div x-show="open" x-collapse>
                 
-                <h4>Overview</h4>
-                <p>SSMP or Strawberry SMP. This SMP is a vanilla survival SMP, SMP standing for survival multiplayer. You can meet people, build with people, team with people or go solo. Wars don’t happen. We will be happy to see you on this history rich server.</p>
-                <blockquote class="blockquote footer">“Let’s play the SSMP!”</blockquote>
+                        <h4>Overview</h4>
+                        <p>SSMP or Strawberry SMP. This SMP is a vanilla survival SMP, SMP standing for survival multiplayer. You can meet people, build with people, team with people or go solo. Wars don’t happen. We will be happy to see you on this history rich server.</p>
+                        <blockquote class="blockquote footer">“Let’s play the SSMP!”</blockquote>
                                 
-                <h4>History</h4>
-                <p><strong>THE BEGINNING</strong> It was summer 2019, Arcator was inactive for six months prior. The SSMP was a brighter side of the summer, a true revival something to bring life back into the server. Everyone got together to make the server. People invited friends from other communities. 20 friends got together, many of them not seeing each other in years. Needing a name for the newly founded SMP. A few weeks went by before finally deciding a name Strawberry SMP, and the SSMP was made.</p>
-                <blockquote class="blockquote footer">“Strawberries!”</blockquote>
-                <p>The first day of the SSMP you spawn at a piece of land jutting out of the water a cape. On this land was a small village. Some raided the village for supplies, others started building bases around it. Others went sailing out to other places and made their bases on other islands. Some made road systems, others made homes, gardens. The SSMP averaged six people. There was always something to do, people to talk to. They created many cities and kingdoms. Everyone traded supplies peacefully. Everything connected by the nether.</p>
-                <p>As September came, a couple crashes happened, but nothing that killed the server. More people started coming back to spawn to build bases. They paved more roads; they built new land over old. New houses made and public buildings. Villagers were traded with, eventually to the point of max trades. Offering a ton of supplies to everyone who lived at spawn and the people who came to trade at spawn.</p>
-                <p>To protect villagers, walls were constructed. New raids were starting with them came pillagers. Raids happened almost daily from people coming to spawn with bad omen. People came to the village to trade with it more villagers spawning. Everyone got together and donated stone to build walls. It was a team effort to keep the pillagers out. It caused the villager population to skyrocket. Redstone was wired to open and close gates that lead into the village. While the Redstone was being wired, someone found tunnels and underground roadway systems and it was perfect for wiring.</p>
-                <blockquote class="blockquote footer">“Creativity inspires those to build”</blockquote>
-                <p>When raids would happen, people would call others for help on the Discord. People would get on and fight off the incoming raid. Some would take a position on roofs, some would melee everyone would fight side by side. People would shout out mobs positions where they were coming from. People would get totems and would hang up the banners from the defeated pillagers. Raids became something of an event and would bring others together.</p>
-                <p>As the population of spawn grew. More crashes came and went. As October came, so did discussion of expansion. Some thought it was a bad idea, others thought it was a good idea, more room for people to build. So the spawn was expanded. With it the raids came, pillagers instead of spawning outside of the walls spawned inside them. Monsters spawned inside the walls, people thought “Maybe if we light everything up it will be better”, “Bring back the inner walls”. Raid after raid, more villagers met the same fate. The iron golems in the city could only fend off so many. People in the city left. Spawn became ran down and eventually no more villagers were there.</p>
-                <blockquote class="blockquote footer">“The walls of our city!”</blockquote>
-                <p>Crashes came and went. The city soon became empty. The red stone of the gates stopped working. They tried to repair the gates, but as there were only so many people, things fell into disrepair. The small town returned to its roots. The nether portal remained the heart of the spawn. Once again, the distant bases grew. Then the server crashed, and it took a while to find out that the original SSMP couldn't be repaired. People left and didn't return, others stayed.</p>
-                <p>December 2019 the SSMP returned as a new server. 2020 brought new people and activates for Minecraft and the discord. 2022 and the server is still up and running today.</p>
-                <blockquote class="blockquote footer">“Still going…”</blockquote>
+                        <h4>History</h4>
+                        <p><strong>THE BEGINNING</strong> It was summer 2019, Arcator was inactive for six months prior. The SSMP was a brighter side of the summer, a true revival something to bring life back into the server. Everyone got together to make the server. People invited friends from other communities. 20 friends got together, many of them not seeing each other in years. Needing a name for the newly founded SMP. A few weeks went by before finally deciding a name Strawberry SMP, and the SSMP was made.</p>
+                        <blockquote class="blockquote footer">“Strawberries!”</blockquote>
+                        <p>The first day of the SSMP you spawn at a piece of land jutting out of the water a cape. On this land was a small village. Some raided the village for supplies, others started building bases around it. Others went sailing out to other places and made their bases on other islands. Some made road systems, others made homes, gardens. The SSMP averaged six people. There was always something to do, people to talk to. They created many cities and kingdoms. Everyone traded supplies peacefully. Everything connected by the nether.</p>
+                        <p>As September came, a couple crashes happened, but nothing that killed the server. More people started coming back to spawn to build bases. They paved more roads; they built new land over old. New houses made and public buildings. Villagers were traded with, eventually to the point of max trades. Offering a ton of supplies to everyone who lived at spawn and the people who came to trade at spawn.</p>
+                        <p>To protect villagers, walls were constructed. New raids were starting with them came pillagers. Raids happened almost daily from people coming to spawn with bad omen. People came to the village to trade with it more villagers spawning. Everyone got together and donated stone to build walls. It was a team effort to keep the pillagers out. It caused the villager population to skyrocket. Redstone was wired to open and close gates that lead into the village. While the Redstone was being wired, someone found tunnels and underground roadway systems and it was perfect for wiring.</p>
+                        <blockquote class="blockquote footer">“Creativity inspires those to build”</blockquote>
+                        <p>When raids would happen, people would call others for help on the Discord. People would get on and fight off the incoming raid. Some would take a position on roofs, some would melee everyone would fight side by side. People would shout out mobs positions where they were coming from. People would get totems and would hang up the banners from the defeated pillagers. Raids became something of an event and would bring others together.</p>
+                        <p>As the population of spawn grew. More crashes came and went. As October came, so did discussion of expansion. Some thought it was a bad idea, others thought it was a good idea, more room for people to build. So the spawn was expanded. With it the raids came, pillagers instead of spawning outside of the walls spawned inside them. Monsters spawned inside the walls, people thought “Maybe if we light everything up it will be better”, “Bring back the inner walls”. Raid after raid, more villagers met the same fate. The iron golems in the city could only fend off so many. People in the city left. Spawn became ran down and eventually no more villagers were there.</p>
+                        <blockquote class="blockquote footer">“The walls of our city!”</blockquote>
+                        <p>Crashes came and went. The city soon became empty. The red stone of the gates stopped working. They tried to repair the gates, but as there were only so many people, things fell into disrepair. The small town returned to its roots. The nether portal remained the heart of the spawn. Once again, the distant bases grew. Then the server crashed, and it took a while to find out that the original SSMP couldn't be repaired. People left and didn't return, others stayed.</p>
+                        <p>December 2019 the SSMP returned as a new server. 2020 brought new people and activates for Minecraft and the discord. 2022 and the server is still up and running today.</p>
+                        <blockquote class="blockquote footer">“Still going…”</blockquote>
                                 
-                <h4>The Six Hour War</h4>
-                <blockquote class="blockquote footer">“The war no one wanted!”</blockquote>
-                <p>A bunch of people lived together in peace, many cities across the map were all connected. No one wanted war. Everyone tried to avoid war from occurring. Peace remained for a while until people slowly changed. Others tried to back out and show they wanted peace. It did not happen; it kept going. After a battle, the victims tries to take items that were dropped and put them into a chest as a sign of goodwill, but it was too late. A counter attack was already was being planned. War was inevitable. Nobody wanted to lose, so they all tried to strike first. Cites burned and people banded together into teams to fight back against the chaos that rained down upon them.</p>
+                        <h4>The Six Hour War</h4>
+                        <blockquote class="blockquote footer">“The war no one wanted!”</blockquote>
+                        <p>A bunch of people lived together in peace, many cities across the map were all connected. No one wanted war. Everyone tried to avoid war from occurring. Peace remained for a while until people slowly changed. Others tried to back out and show they wanted peace. It did not happen; it kept going. After a battle, the victims tries to take items that were dropped and put them into a chest as a sign of goodwill, but it was too late. A counter attack was already was being planned. War was inevitable. Nobody wanted to lose, so they all tried to strike first. Cites burned and people banded together into teams to fight back against the chaos that rained down upon them.</p>
                                 
-                <h4>Locations</h4>
-                <p>This is the Strawberry SMP spawn where you first start in the SMP.</p>
+                        <h4>Locations</h4>
+                        <p>This is the Strawberry SMP spawn where you first start in the SMP.</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Software Tab -->
             <div x-show="tab === 'software'" class="fade-in" x-cloak>
                 <h2 class="mb-4">Software</h2>
-                <h3 class="mb-4">Tools</h3>
-                <h4 class="mb-4">JengaManager</h4>
-                <p>This program has been replaced with RamCheck</p>
-                <p>Located in ~/Services/RamCheck this simplified Python rewrite uses a hard coded 90% threshold and then runs rcon to gradually shutdown more servers.</p>
-                <h5 class="mb-4">JengaManager</h4>
-                <p>JengaManager, also known simply as JM, is a systems administration application used to manage processes in the event that system resources become scarce. This process is essential as it ensures that servers do not have to be physically reset when they crash due to a lack of resources (either excess CPU or memory usage), thus maintaining a sufficient uptime so that we may tend to other priorities without the hinderance of machine failure.</p>
-                <p>While JengaManager is written in C++ for the utmost efficiency due to the fact that it is continuously running in the background, these types of processes are referred to as daemons.  Although the portions of the application that run continuously are written in C++, part of JengaManager is written in Perl so that the portions of code relating to reading the configuration file are not so heavily obfuscated especially in the event that one would wish to change the conditions with which JengaManager starts with.</p>
-                <p>To expand upon the ideology that programs used for systems administration should be able to chain together to effectively adapt to novel issues within any system, it is theoretically possible to write scripts to edit the configuration file, so that it may automatically be generated when starting JengaManager.</p>
-                <h5 class="mb-4">Editing .config File</h5>
-                <p>To edit the configuration file for JengaManager, the process is as follows:</p>
-                <p>Navigate to JengaManager directory in console:</p>
-                <p>cd ~/JengaManager</p>
-                <p>Open the .config file in a text editor, such as nano:</p>
-                <p>nano .config</p>
-                <p>Now, you should see two lines with the words “src” and “sensitivity”. What do these mean?</p>
-                <p>“src” represents where the process IDs are coming from. The default is set to “pgrep java”, which is a command that returns the processes which run using Java. This allows us to indirectly target the servers (and other Java processes) to be sacrificed in the event that we hit as certain threshold.</p>
-                <p>“sensitivity” is this threshold. By default, it is set to “0.95”, which means we will begin terminating our source processes when either memory or CPU usage reaches 95%. </p>
-                <p>You may edit these lines to fit the needs of the system, to save and exit press CTRL, X, ENTER.</p>
-                <h5 class="mb-4">Starting JengaManager</h5>
-                <p>Once you are sure that you have configured the start conditions appropriately, you may move on to starting the program. We want JengaManager to run continuously as it is intended to be a daemon process. Therefore, we will use “tmux” to accomplish this.</p>
-                <p>The process is as follows:</p>
-                <p>1. Navigate to the JengaManager directory:</p>
-                <p>cd ~/JengaManager</p>
-                <p>2. Open a new tmux session:</p>
-                <p>tmux new -s JengaManager</p>
-                <p>3. Run JengaManager:</p>
-                <p>./JengaManager</p>
-                <p>If all is well, you may now exit the tmux session by pressing CTRL+B+D simultaneously.</p>
-                <h5 class="mb-4">Checking Logs and the Attaching to the Session</h5>
-                <p>JengaManager provides comprehensive data to a log with each iteration, this data can be extremely useful for diagnosis issues with the behavior of our systems. For instance, if JengaManager is terminating processes continuously, we may have a deeper issue that needs to be remedied. </p>
-                <p>To access these logs:</p>
-                <p>1. Navigate to the JengaManager directory:</p>
-                <p>cd ~/JengaManager</p>
-                <p>2. Print the log:</p>
-                <p>cat JM.log</p>
-                <p>What is display is the time of that iteration started as well as several columns of data. These columns display information the following format:</p>
-                <p>[ Process_X(PID) | Priority | Memory Usage%, CPU Usage% ]</p>
-                <p>This is not the only information provided by the program however, if we attach to the tmux session, we are also provided information about the efficiency of JengaManager as well as how many processes it can see.</p>
-                <p>To attach to the session:</p>
-                <p>tmux a -t JengaManager</p>
-                <p>Once again, to exit the tmux session you press CTRL+B+D simultaneously.</p>
-                <h4 class="mb-4">MC Backup</h4>
-                <p>Warning. This program hasn't been used since 2022.</p>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Tools
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>JengaManager</h4>
+                        <p>This program has been replaced with RamCheck</p>
+                        <p>Located in ~/Services/RamCheck this simplified Python rewrite uses a hard coded 90% threshold and then runs rcon to gradually shutdown more servers.</p>
+                        <h5>JengaManager</h5>
+                        <p>JengaManager, also known simply as JM, is a systems administration application used to manage processes in the event that system resources become scarce. This process is essential as it ensures that servers do not have to be physically reset when they crash due to a lack of resources (either excess CPU or memory usage), thus maintaining a sufficient uptime so that we may tend to other priorities without the hinderance of machine failure.</p>
+                        <p>While JengaManager is written in C++ for the utmost efficiency due to the fact that it is continuously running in the background, these types of processes are referred to as daemons.  Although the portions of the application that run continuously are written in C++, part of JengaManager is written in Perl so that the portions of code relating to reading the configuration file are not so heavily obfuscated especially in the event that one would wish to change the conditions with which JengaManager starts with.</p>
+                        <p>To expand upon the ideology that programs used for systems administration should be able to chain together to effectively adapt to novel issues within any system, it is theoretically possible to write scripts to edit the configuration file, so that it may automatically be generated when starting JengaManager.</p>
+                        <h5>Editing .config File</h5>
+                        <p>To edit the configuration file for JengaManager, the process is as follows:</p>
+                        <p>Navigate to JengaManager directory in console:</p>
+                        <p>cd ~/JengaManager</p>
+                        <p>Open the .config file in a text editor, such as nano:</p>
+                        <p>nano .config</p>
+                        <p>Now, you should see two lines with the words “src” and “sensitivity”. What do these mean?</p>
+                        <p>“src” represents where the process IDs are coming from. The default is set to “pgrep java”, which is a command that returns the processes which run using Java. This allows us to indirectly target the servers (and other Java processes) to be sacrificed in the event that we hit as certain threshold.</p>
+                        <p>“sensitivity” is this threshold. By default, it is set to “0.95”, which means we will begin terminating our source processes when either memory or CPU usage reaches 95%. </p>
+                        <p>You may edit these lines to fit the needs of the system, to save and exit press CTRL, X, ENTER.</p>
+                        <h5>Starting JengaManager</h5>
+                        <p>Once you are sure that you have configured the start conditions appropriately, you may move on to starting the program. We want JengaManager to run continuously as it is intended to be a daemon process. Therefore, we will use “tmux” to accomplish this.</p>
+                        <p>The process is as follows:</p>
+                        <p>1. Navigate to the JengaManager directory:</p>
+                        <p>cd ~/JengaManager</p>
+                        <p>2. Open a new tmux session:</p>
+                        <p>tmux new -s JengaManager</p>
+                        <p>3. Run JengaManager:</p>
+                        <p>./JengaManager</p>
+                        <p>If all is well, you may now exit the tmux session by pressing CTRL+B+D simultaneously.</p>
+                        <h5 class="mb-4">Checking Logs and the Attaching to the Session</h5>
+                        <p>JengaManager provides comprehensive data to a log with each iteration, this data can be extremely useful for diagnosis issues with the behavior of our systems. For instance, if JengaManager is terminating processes continuously, we may have a deeper issue that needs to be remedied. </p>
+                        <p>To access these logs:</p>
+                        <p>1. Navigate to the JengaManager directory:</p>
+                        <p>cd ~/JengaManager</p>
+                        <p>2. Print the log:</p>
+                        <p>cat JM.log</p>
+                        <p>What is display is the time of that iteration started as well as several columns of data. These columns display information the following format:</p>
+                        <p>[ Process_X(PID) | Priority | Memory Usage%, CPU Usage% ]</p>
+                        <p>This is not the only information provided by the program however, if we attach to the tmux session, we are also provided information about the efficiency of JengaManager as well as how many processes it can see.</p>
+                        <p>To attach to the session:</p>
+                        <p>tmux a -t JengaManager</p>
+                        <p>Once again, to exit the tmux session you press CTRL+B+D simultaneously.</p>
+                        <h4 class="mb-4">MC Backup</h4>
+                        <p>Warning. This program hasn't been used since 2022.</p>
                 <p>To run, type ./mcbkp.pl in the home directory (cd ~)</p>
                 <p>Select a server to load the backup for, options will appear in a list format, enter the number from the list</p>
                 <p>Type the name of the person you would like to target for the backup. I.e., X griefed, type in X's name EXACTLY to print their joins to the server.</p>
                 <p>Joins are printed in a list just like the servers from step 2, enter the number from the list to specify which join you want to backup the server before.</p>
                 <p>You will be prompted on whether you would like to continue or not. This is a CRUCIAL step, pay attention. The point of no return. Make sure you know what you are doing, if you made a mistake you can say n and the process will be terminated (or alternatively CTRL-C).</p>
                 <p>Upon entering Y/y, the script will shut down the server and attempt to load a backup via rsync, then it will start the server again. This will open a tmux so you can see if the server successfully started. At this point, if you are sure all is well, you can detach with CTRL-B+D (don't use CTRL-C).</p>
-                <h3>Onfim Auto Updater</h3>
-                <h4>Plugin Autoupdater</h4>
-                <p>These scripts auto update plugins for Minecraft. Updates are reported to onfim-log on the Discord channel.</p>
-                <h5>Entry point</h5>
-                <p>On startup, ~/sync/scripts/startup.sh will call ~/sync/scripts/update.sh.</p>
-                <h5>Overview</h5>
-                <p>Scripts will typically add files to ~/plugindb/autospigot or ~/plugindb/spigot. We call these plugin repositories.</p>
-                <p>Server scripts automatically pull jar files from autospigot. But ~/plugindb/spigot must be synced manually with "psync".</p>
-                <p>All scripts will only download if the local last modified and file size are different from the URL.</p>
-                <h5>Scripts in ~/curium/updater/</h5>
-                <p>download_jenkins</p>
-                <p>A single argument --tar to the plugin repository is required. Within it there must be a jenkins.txt with one link per line to an "latestSuccesfulBuild/artifacts Jenkins path OR a Github "releases/latest/download" path. For example</p>
-                <p>https://ci.viaversion.com/job/ViaVersion/lastSuccessfulBuild/artifact/build/libs/</p>
-                <p>https://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/build/libs/</p>
-                <p>Jar files are crawled and added to the target path if there is an update. This is usually ~/plugindb/autospigot.</p>
-                <p>download_spiget</p>
-                <p>Similarly, download_spiget will read from spiget.csv with a plugin name and spigotmc ID.</p>
-                <p>oget</p>
-                <p>oget accepts two arguments. One link and one local path indicated with -O. It it used to update one file at a time.</p>
-                <p>pruneDb</p>
-                <p>This script accepts one argument to a plugin repository removes any old plugins. (Since the other scripts will not remove duplicates.) Deduplication is done by reading the plugin.yml within each jar and comparing the plugin id and version.</p>
-                <p>psync</p>
-                <p>Common Example: ~/curium/updater/psync.py --src /mnt/Main/shared/spigot/ --tar plugins/</p>
-                <p>psync will automatically sync a --src and target and delete old plugins in the target.</p>
-                <p>-n will start a dry run.</p>
-                <p>-y will auto accept. (Otherwise the user will be prompted).</p>
-                <p>updateServerJar</p>
-                <p>This updates paper to the latest release of the given version. For example</p>
-                <p>~/curium/updater/updateServerJar.py paper 1.20.4 .</p>
-                <p>Servers</p>
-                <p>Servers typically contain an optional <a href="https://blog.update.sh/about-en" target="_blank" rel="noopener noreferrer">update.sh</a> which is called by <a href="https://github.com/tmux/tmux/wiki" target="_blank" rel="noopener noreferrer">tmux.sh</a>. This pulls plugins from autospigot and updates the paper jar.</p>
-                <h3>Onfim MC Integration</h3>
-                <h4>Minecraft Functionality</h4>
-                <ul>
-                    <li>Velocity</li>
-                    <ul>
-                        <li>https://github.com/Restitutor/OnfimVelocity</li>
-                        <li>Read the GitHub for more detail on all features</li>
-                    </ul>
-                    <li>Paper</li>
-                    <ul>
-                        <li>Relays death messages</li>
-                        <li>File is OnfimPaper.jar</li>
-                    </ul>
-                    <li>Forge Servers</li>
-                    <ul>
-                        <li>Relays chat and death messages</li>
-                        <li>Requires kotlinforforge https://github.com/thedarkcolour/KotlinForForge/</li>
-                        <li>File is OnfimForge-1.20.jar</li>
-                    </ul>
-                    <li>Requires SCTP enabled (see Fedora Guide)</li>
-                    <ul>
-                        <li>Errors will appear in console if misconfigured</li>
-                    </ul>
-                </ul>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Onfim Auto Updater
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>Plugin Autoupdater</h4>
+                        <p>These scripts auto update plugins for Minecraft. Updates are reported to onfim-log on the Discord channel.</p>
+                        <h5>Entry point</h5>
+                        <p>On startup, ~/sync/scripts/startup.sh will call ~/sync/scripts/update.sh.</p>
+                        <h5>Overview</h5>
+                        <p>Scripts will typically add files to ~/plugindb/autospigot or ~/plugindb/spigot. We call these plugin repositories.</p>
+                        <p>Server scripts automatically pull jar files from autospigot. But ~/plugindb/spigot must be synced manually with "psync".</p>
+                        <p>All scripts will only download if the local last modified and file size are different from the URL.</p>
+                        <h5>Scripts in ~/curium/updater/</h5>
+                        <p>download_jenkins</p>
+                        <p>A single argument --tar to the plugin repository is required. Within it there must be a jenkins.txt with one link per line to an "latestSuccesfulBuild/artifacts Jenkins path OR a Github "releases/latest/download" path. For example</p>
+                        <p><a href="https://ci.viaversion.com/job/ViaVersion/lastSuccessfulBuild/artifact/build/libs/">https://ci.viaversion.com/job/ViaVersion/lastSuccessfulBuild/artifact/build/libs/</a></p>
+                        <p><a href="https://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/build/libs/">https://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/build/libs/</a></p>
+                        <p>Jar files are crawled and added to the target path if there is an update. This is usually ~/plugindb/autospigot.</p>
+                        <p>download_spiget</p>
+                        <p>Similarly, download_spiget will read from spiget.csv with a plugin name and spigotmc ID.</p>
+                        <p>oget</p>
+                        <p>oget accepts two arguments. One link and one local path indicated with -O. It it used to update one file at a time.</p>
+                        <p>pruneDb</p>
+                        <p>This script accepts one argument to a plugin repository removes any old plugins. (Since the other scripts will not remove duplicates.) Deduplication is done by reading the plugin.yml within each jar and comparing the plugin id and version.</p>
+                        <p>psync</p>
+                        <p>Common Example: ~/curium/updater/psync.py --src /mnt/Main/shared/spigot/ --tar plugins/</p>
+                        <p>psync will automatically sync a --src and target and delete old plugins in the target.</p>
+                        <p>-n will start a dry run.</p>
+                        <p>-y will auto accept. (Otherwise the user will be prompted).</p>
+                        <p>updateServerJar</p>
+                        <p>This updates paper to the latest release of the given version. For example</p>
+                        <p>~/curium/updater/updateServerJar.py paper 1.20.4 .</p>
+                        <p>Servers</p>
+                        <p>Servers typically contain an optional <a href="https://blog.update.sh/about-en" target="_blank" rel="noopener noreferrer">update.sh</a> which is called by <a href="https://github.com/tmux/tmux/wiki" target="_blank" rel="noopener noreferrer">tmux.sh</a>. This pulls plugins from autospigot and updates the paper jar.</p>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Onfim MC Integration
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>Minecraft Functionality</h4>
+                        <ul>
+                            <li>Velocity</li>
+                            <ul>
+                                <li>https://github.com/Restitutor/OnfimVelocity</li>
+                                <li>Read the GitHub for more detail on all features</li>
+                            </ul>
+                            <li>Paper</li>
+                            <ul>
+                                <li>Relays death messages</li>
+                                <li>File is OnfimPaper.jar</li>
+                            </ul>
+                            <li>Forge Servers</li>
+                            <ul>
+                                <li>Relays chat and death messages</li>
+                                <li>Requires kotlinforforge https://github.com/thedarkcolour/KotlinForForge/</li>
+                                <li>File is OnfimForge-1.20.jar</li>
+                            </ul>
+                            <li>Requires SCTP enabled (see Fedora Guide)</li>
+                            <ul>
+                                <li>Errors will appear in console if misconfigured</li>
+                            </ul>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
             <!-- Sysadmin Tab -->
@@ -241,7 +281,7 @@
                     <li>Go to Terminal. Disable "Import shell history" and "Detect OS".</li>
                 </ol>
                 <h4>STEP 2 - Adding a Key</h4>
-                <img src="https://wiki.arcator.co.uk/keychain.png" alt="Keychain">
+                <img src="https://wiki.arcator.co.uk/keychain.png" alt="Keychain" class="wiki-image">
                 <ol>
                     <li>Close Settings. Click Keychain.</li>
                     <li>Click "Generate new key".</li>
@@ -254,7 +294,7 @@
                     <li>But copy your Public key beginning with "ssh-ed25519" to Res.</li>
                     <li>Now exit settings.</li>
                 </ol>
-                <img src="https://wiki.arcator.co.uk/sshkey.png" alt="SSH Key">
+                <img src="https://wiki.arcator.co.uk/sshkey.png" alt="SSH Key" class="wiki-image">
                 <h4>STEP 3 - Adding Hosts</h4>
                 <ol>
                     <li>Click New Host. 
@@ -272,200 +312,213 @@
                     <p>Click top right to finish and save.</p>
                 </pre>
                 <p>Now you can connect to the server by double clicking the host.</p>
-                <img src="https://wiki.arcator.co.uk/donessh.png" alt="Donessh">
+                <img src="https://wiki.arcator.co.uk/donessh.png" alt="Donessh" class="wiki-image">
                 <p>Other Notes - Mosh vs SSH Mosh is faster but can't refresh the screen. Mosh also doesn't allow for scrolling up through console. (Would require tmux to do so).</p>
                 <p>Vann provided a useful guide with commands <a href="https://docs.google.com/document/d/1jKN_u7avWxKKHo89VrR9TCtFX5Zv1A7DCgnsJtVSID4/edit?usp=sharing" target="_blank" rel="noopener noreferrer">here</a>.</p>
-                <h3 class="mt-4">Infrequent</h3>
-                <h4 class="mt-4">Old Ubuntu</h4>
-                <p>Install VNC Server to Ubuntu Machine</p>
-                <ol>
-                    <li>Install required packages <pre>sudo apt install tigervnc-standalone-server tigervnc-common tigervnc-xorg-extension tigervnc-viewer</pre></li>
-                    <li>Configure VNC server startup (Probably differs for other Desktop Environments) <pre>cp /usr/bin/budgie-desktop ~/.vnc/xstartup</pre></li>
-                    <li>Set VNC <pre>password vncpasswd</pre></li>
-                    <li>Turn on the VNC <pre>server vncserver</pre></li>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Infrequent
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4 class="mt-4">Old Ubuntu</h4>
+                        <p>Install VNC Server to Ubuntu Machine</p>
+                        <ol>
+                            <li>Install required packages <pre>sudo apt install tigervnc-standalone-server tigervnc-common tigervnc-xorg-extension tigervnc-viewer</pre></li>
+                            <li>Configure VNC server startup (Probably differs for other Desktop Environments) <pre>cp /usr/bin/budgie-desktop ~/.vnc/xstartup</pre></li>
+                            <li>Set VNC <pre>password vncpasswd</pre></li>
+                            <li>Turn on the VNC <pre>server vncserver</pre></li>
+                        </ol>
+                        <h4 class="mt-4">Rename Hub World (Old)</h4>
+                        <p>This guide is from 2016. It renames survival_pvp to msurvival.</p>
+                        <p>First use grep to find all cases of "survival_pvp" in all files. Since MC1's folder contains about 70 GB of files, we'll skip all zips (backups), mca (world files), and log files.</p>
+                        <p>grep -r survival_pvp --exclude=\*.{zip,log,mca} --exclude=report.txt MC1 > grep.txt</p>
+                        <p>This creates a list of all the files that contain survival_pvp and their path.</p>
+                        <p>Now a script was made that looks at all files only in a given folder and non-recursively prompts whether to make the text replacement.</p>
+                        <p>The script was run on each directory reported by grep and also blocked zip, log, mca.</p>
+                        <p>However, filenames were still not imported and needed to be done manually.</p>
+                        <p>In plugins/LogBlock run, the following were renamed.</p>
+                        <p>mv survival_pvp_nether.yml msurvival_nether.yml</p>
+                        <p>mv survival_pvp.yml msurvival.yml</p>
+                        <p>Next, start.sh was given a few edits as it had a simple mirroring system from 2015.</p>
+                        <p>Now, check over folders to rename.</p>
+                        <p>find MC1 -type d -name "survival_pvp*" -print</p>
+                        <p>Rename worlds.</p>
+                        <p>mv survival_pvp msurvival</p>
+                        <p>mv survival_pvp_nether msurvival_nether</p>
+                        <p>mv survival_pvp_the_end msurvival_the_end</p>
+                        <p>Similar commands run in backups/worlds and plugins/WorldGuard/worlds.</p>
+                        <p>Rename mysql tables and data</p>
+                        <p>mysql -u mcsa -p hub</p>
+                        <p>RENAME TABLE `lb-survival_pvp` TO `lb-msurvival`;</p>
+                        <p>RENAME TABLE `lb-survival_pvp-chest` TO `lb-msurvival-chest`;</p>
+                        <p>RENAME TABLE `lb-survival_pvp-sign` TO `lb-msurvival-sign`;</p>
+                        <p>RENAME TABLE `lb-survival_pvp_nether` TO `lb-msurvival_nether`;</p>
+                        <p>RENAME TABLE `lb-survival_pvp_nether-chest` TO `lb-msurvival_nether-chest`;</p>
+                        <p>RENAME TABLE `lb-survival_pvp_nether-sign` TO `lb-msurvival_nether-sign`;</p>
+                        <p>Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names.</p>
+                        <p>UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp';</p>
+                        <p>UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether';</p>
+                        <p>UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end';</p>
+                        <p>Now let's rename survivalPVPGroup to msurvivalGroup within MultInv's database.</p>
+                        <p>UPDATE `multiinv_multiinv` SET inv_group='msurvivalGroup' WHERE inv_group='survivalPVPGroup';</p>
+                        <p>Next, use grep on survivalPVPGroup to see if it stored as a flatfile anywhere in MC1.</p>
+                        <p>grep -r survivalPVPGroup --exclude=\*.{zip,log,mca} --exclude=report.txt MC1</p>
+                        <p>The output isn't piped into a file unlike the previous example which means it's displayed directly to console.</p>
+                        <p>Results show occurences in MultiInv folder, config.yml, groups.yml, logoutworld.yml</p>
+                        <p>Next, script was modified to replace survivalPVPGroup with msurvivalGroup in plugins/MultiInv.</p>
+                        <p>Server was started up.</p>
+                        <h4 class="mt-4">Rename Hub World 2023</h4>
+                        <p>This guide is from 2023.</p>
+                        <p>It renames Endspawn to creative the end</p>
+                        <p>First use grep to find all cases of "Endspawn" in all files. Use ripgrep to exclude binaries.</p>
+                        <p>rg -l Endspawn</p>
+                        <p>This creates a list of all the files that contain Endspawn and their path.</p>
+                        <p>Now we find replace text.</p>
+                        <p>rg -l Endspawn | xargs sed -i ‘s|Endspawn|creativetheend|g’</p>
+                        <p>However, filenames were still not imported and needed to be done manually.</p>
+                        <p>First find them: fd Endspawn</p>
+                        <p>Example in plugins/LogBlock run, the following were renamed.</p>
+                        <p>mv Endspawn.yml creative the end.yml</p>
+                        <p>Next, start.sh was given a few edits as it had a simple mirroring system from 2015.</p>
+                        <p>Rename mysql tables and data</p>
+                        <p>mysql -u mcsa -p hub</p>
+                        <p>rename table `lb-Endspawn` to `lb-creative_the_end`;</p>
+                        <p>rename table `lb-Endspawn-blocks` to `lb-creative_the_end-blocks`;</p>
+                        <p>rename table `lb-Endspawn-chest` to `lb-creative_the_end-chest`;</p>
+                        <p>rename table `lb-Endspawn-chestdata` to `lb-creative_the_end-chestdata`;</p>
+                        <p>rename table `lb-Endspawn-entities` to `lb-creative_the_end-entities`;</p>
+                        <p>rename table `lb-Endspawn-entityids` to `lb-creative_the_end-entityids`;</p>
+                        <p>rename table `lb-Endspawn-sign` to `lb-creative_the_end-sign`;</p>
+                        <p>rename table `lb-Endspawn-state` to `lb-creative_the_end-state`;</p>
+                        <p>Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names.</p>
+                        <p>UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp';</p>
+                        <p>UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether';</p>
+                        <p>UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end';</p>
+                        <p>Remember to do the same for plugins/CoreProtect/database.db</p>
+                        <p>Server was started up.</p>
+                        <h4 class="mt-4">Rename User by UUID</h4>
+                        <p>For users who change their accounts.</p> 
+                        <p>It's much better to rename a user before they log in with their new account so an Old → New can be done rather than a 3 way switch Old ←> New which requires an intermediate UUID.</p>
+                        <h5>Required</h5>
+                        <p>dnf install rename</p>
+                        <p>Strongly recommended to use the script ~/sync/scripts/rename_uuid.sh which does safety checks</p>
+                        <h5>Update the CoreProtect and LuckPerms database</h5>
+                        <p>For co user and luckperms players run these.</p>
+                        <p>update co_user/luckperms_players set uuid='069a79f4-44e9-4726-a5be-fca90e38aaf5' where uuid='09ec192c-4abe-48da-892d-d13639817bc5';</p>
+                        <p>update luckperms_user_permissions set uuid='a12b4ad1-d5b8-4dae-bb4e-4e6b03f3fba8' where uuid='00000000-0000-0000-0009-01fd6b3640fa';</p>
+                        <h5>Hub PlotsSquared storage.db</h5>
+                        <p>sqlite3 storage.db</p>
+                        <p>update plot set owner='864cff60-0b54-4757-a1f3-f7d4828b7d29' where owner='d85338cf-bbf5-4ae0-9a53-62194b765754';</p>
+                        <h5>Update the CoreProtect database</h5>
+                        <p>MySQL</p>
+                        <p>> show databases\g;</p>
+                        <p>use hub;</p>
+                        <p>update co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';</p>
+                        <p>update co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';</p>
+                        <h5>Save results in Python</h5>
+                        <p>a = '''acc</p>              
+                        <p>bedwars</p>          
+                        <p>bentobox</p>          
+                        <p>captive ...'''</p>
+                        <p>Generate SQL in Python to Insert into DB</p>
+                        <p>for i in a:</p>
+                        <p>print(f"update {i.strip()}.co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';")</p>
+                        <h5>Towny</h5>
+                        <p>Go to TSMP/plugins/Towny/data/residents</p>
+                        <p>Find the corresponding username file and rename it. Then edit the contained UUID.</p>
+                        <h5>Old Notes</h5>
+                        <p>Use dnf install rename</p>
+                        <p>Example command to rename all files with one UUID in name to another.</p>
+                        <p>find . -name d85338cf-bbf5-4ae0-9a53-62194b765754\* -exec rename -avn ‘d85338cf-bbf5-4ae0-9a53-62194b765754’ '864cff60-0b54-4757-a1f3-f7d4828b7d29' {} \;</p>
+                        <h4>Rename World</h4>
+                        <p>In this example we use farlands to rename world to legacy and world_nether to legacy_nether.</p>
+                        <h5>CoreProtect</h5>
+                        <p>1. mysql -u farlands -p farlands</p>
+                        <p>2. View: SELECT * FROM co_world;</p>
+                        <p>3. UPDATE co_world SET world='legacy' WHERE rowid=1;</p>
+                        <p>4. UPDATE co_world SET world='legacy_nether' WHERE rowid=3;</p>
+                        <h5>PerWorldInv</h5>
+                        <p>Use text replacement</p>
+                        <p>sed -i 's|"world":"world"|"world":"legacy|g' */last*</p>
+                        <p>Use this cool to rename remaining files and folders</p>
+                        <p>https://manpages.debian.org/testing/rename/file-rename.1p.en.html</p>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>MachineSetup
+                    </h3>
+                    <div x-show="open" x-collapse>
+                    <h4>BIOS Settings</h4>
+                    <p>VGA Detection: Auto</p>
+                    <p>Energy aka ErP Ready: Enabled</p>
+                    <p>Memory Fast Boot: Disabled</p>
+                    <p>Virtualization aka SVM Mode: Enabled</p>
+                    <p>RAM: XMP settings</p>
+                    <p>Restart on power: On</p>
+                    <p>Secure boot: Off if using Nvidia drivers</p>
+                    <p>It's strongly recommended to keep the BIOS up to date for security.</p>
+                    <h4>DB Replication</h4>
+                    <p><a href="https://mariadb.com/kb/en/setting-up-replication/">https://mariadb.com/kb/en/setting-up-replication/</a></p>
+                    <h5>Configuring the Master</h5>
+                    <p>Example Enabling Replication for MariaDB</p>
+                    <p>Configure /etc/my.cnf.d/arcator.cnf and /etc/my.cnf.d/[machine].cnf</p>
+                    <p>Should require little change.</p>
+                    <p>server_id and log-basename</p>
+                    <p>server_id is the machine s#</p>
+                    <p>Ensure a replication (maxscale) user exists. (It does but otherwise you would run this.)</p>
+                    <p>CREATE USER 'maxscale' IDENTIFIED BY 'REDACTED';</p>
+                    <p>GRANT REPLICATION SLAVE ON *.*  TO 'maxscale';</p>
+                    <h5>Run these steps: Getting the Master's Binary Log Co-ordinates</h5>
+                    <p><a href="https://mariadb.com/kb/en/setting-up-a-replication-slave-with-mariabackup/">https://mariadb.com/kb/en/setting-up-a-replication-slave-with-mariabackup/</a></p>
+                    <p>You don't need to turn off the server while running these steps.</p>
+                    <p>Backup database: mariabackup --backup --target-dir=mbackup/</p>
+                    <p>Finish backup: mariabackup --prepare --target-dir=mbackup/</p>
+                    <p>Tar and zstd it: tar --zstd -cf mbackup.tar.zst mbackup/</p>
+                    <p>Import: rsync --inplace mbackup.tar.zst host:/mnt/Main/no_sync</p>
+                    <h5>Import at Destination</h5>
+                    <p>mkdir mbackup/</p>
+                    <p>tar --zstd -xf mbackup.tar.zst</p>
+                    <p>mariabackup --copy-back --target-dir=mbackup/</p>
+                    <p>chown -R mysql:mysql /var/lib/mysql</p>
+                    <p>restorecon -rv /var/lib/mysql</p>
+                    <h5>With example slave pos. There should be one master and one slave. Do not set two nodes to be the slaves of each other.</h5>
+                    <p>SET GLOBAL gtid_slave_pos = "0-5-18100164";</p>
+                    <p>CHANGE MASTER TO</p>
+                    <p>MASTER_HOST="10.0.0.1",</p>
+                    <p>MASTER_USER="maxscale",</p>
+                    <p>MASTER_PASSWORD="REDACTED",</p>
+                    <p>MASTER_USE_GTID=slave_pos;</p>
+                    <p>START SLAVE;</p>
+                    <p>SHOW SLAVE STATUS\G;</p>
+                    <h5>Reset old slave data</h5>
+                    <p>STOP SLAVE;</p>
+                    <p>RESET SLAVE;</p>
+                    <h4> Drive Encryption</h4>
+                    <p>We generally only use this for VPS's or HDDs which are not bottlenecked by encryption.</p>
+                    <ol>
+                    <li>Generate the key on a non-syncing path. We do not want the key to be auto-synced like most of the machine!</li>
+                    <ol>
+                        <li>dd if=/dev/random of=~/no_sync/key.ppk bs=1K count=1 iflag=fullblock</li>
+                    </ol>
+                    <li>Format the drive or partition. Ask at least one SSH 3 or higher person to verify your command.</li>
+                    <ol>
+                        <li>cryptsetup /dev/sdX# --key-file ~/no_sync/key.ppk</li>
+                    </ol>
+                    <li>Mount the device in /dev/mapper/volumename</li>
+                    <ol>
+                        <li>cryptopen  /dev/sdX# --key-file volumename ~/no_sync/key.ppk</li>
+                    </ol>
+                    <li>Enable auto-mounting by editing /etc/crypttab.</li>
+                    <ol>
+                        <li>e.g. volumename /dev/sdX# /mnt/Main/no_sync/home/mcsa/key.ppk  luks</li>
+                    </ol>
+                    <li>Format the device and use it as you would /dev/sdX#</li>
+                        <ol>
+                        <li>mkfs.btrfs /dev/mapper/volumename</li>
+                    </ol>
                 </ol>
-                <h4 class="mt-4">Rename Hub World (Old)</h4>
-                <p>This guide is from 2016. It renames survival_pvp to msurvival.</p>
-                <p>First use grep to find all cases of "survival_pvp" in all files. Since MC1's folder contains about 70 GB of files, we'll skip all zips (backups), mca (world files), and log files.</p>
-                <p>grep -r survival_pvp --exclude=\*.{zip,log,mca} --exclude=report.txt MC1 > grep.txt</p>
-                <p>This creates a list of all the files that contain survival_pvp and their path.</p>
-                <p>Now a script was made that looks at all files only in a given folder and non-recursively prompts whether to make the text replacement.</p>
-                <p>The script was run on each directory reported by grep and also blocked zip, log, mca.</p>
-                <p>However, filenames were still not imported and needed to be done manually.</p>
-                <p>In plugins/LogBlock run, the following were renamed.</p>
-                <p>mv survival_pvp_nether.yml msurvival_nether.yml</p>
-                <p>mv survival_pvp.yml msurvival.yml</p>
-                <p>Next, start.sh was given a few edits as it had a simple mirroring system from 2015.</p>
-                <p>Now, check over folders to rename.</p>
-                <p>find MC1 -type d -name "survival_pvp*" -print</p>
-                <p>Rename worlds.</p>
-                <p>mv survival_pvp msurvival</p>
-                <p>mv survival_pvp_nether msurvival_nether</p>
-                <p>mv survival_pvp_the_end msurvival_the_end</p>
-                <p>Similar commands run in backups/worlds and plugins/WorldGuard/worlds.</p>
-                <p>Rename mysql tables and data</p>
-                <p>mysql -u mcsa -p hub</p>
-                <p>RENAME TABLE `lb-survival_pvp` TO `lb-msurvival`;</p>
-                <p>RENAME TABLE `lb-survival_pvp-chest` TO `lb-msurvival-chest`;</p>
-                <p>RENAME TABLE `lb-survival_pvp-sign` TO `lb-msurvival-sign`;</p>
-                <p>RENAME TABLE `lb-survival_pvp_nether` TO `lb-msurvival_nether`;</p>
-                <p>RENAME TABLE `lb-survival_pvp_nether-chest` TO `lb-msurvival_nether-chest`;</p>
-                <p>RENAME TABLE `lb-survival_pvp_nether-sign` TO `lb-msurvival_nether-sign`;</p>
-                <p>Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names.</p>
-                <p>UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp';</p>
-                <p>UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether';</p>
-                <p>UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end';</p>
-                <p>Now let's rename survivalPVPGroup to msurvivalGroup within MultInv's database.</p>
-                <p>UPDATE `multiinv_multiinv` SET inv_group='msurvivalGroup' WHERE inv_group='survivalPVPGroup';</p>
-                <p>Next, use grep on survivalPVPGroup to see if it stored as a flatfile anywhere in MC1.</p>
-                <p>grep -r survivalPVPGroup --exclude=\*.{zip,log,mca} --exclude=report.txt MC1</p>
-                <p>The output isn't piped into a file unlike the previous example which means it's displayed directly to console.</p>
-                <p>Results show occurences in MultiInv folder, config.yml, groups.yml, logoutworld.yml</p>
-                <p>Next, script was modified to replace survivalPVPGroup with msurvivalGroup in plugins/MultiInv.</p>
-                <p>Server was started up.</p>
-                <h4 class="mt-4">Rename Hub World 2023</h4>
-                <p>This guide is from 2023.</p>
-                <p>It renames Endspawn to creative the end</p>
-                <p>First use grep to find all cases of "Endspawn" in all files. Use ripgrep to exclude binaries.</p>
-                <p>rg -l Endspawn</p>
-                <p>This creates a list of all the files that contain Endspawn and their path.</p>
-                <p>Now we find replace text.</p>
-                <p>rg -l Endspawn | xargs sed -i ‘s|Endspawn|creativetheend|g’</p>
-                <p>However, filenames were still not imported and needed to be done manually.</p>
-                <p>First find them: fd Endspawn</p>
-                <p>Example in plugins/LogBlock run, the following were renamed.</p>
-                <p>mv Endspawn.yml creaitve the end.yml</p>
-                <p>Next, start.sh was given a few edits as it had a simple mirroring system from 2015.</p>
-                <p>Rename mysql tables and data</p>
-                <p>mysql -u mcsa -p hub</p>
-                <p>rename table `lb-Endspawn` to `lb-creative_the_end`;</p>
-                <p>rename table `lb-Endspawn-blocks` to `lb-creative_the_end-blocks`;</p>
-                <p>rename table `lb-Endspawn-chest` to `lb-creative_the_end-chest`;</p>
-                <p>rename table `lb-Endspawn-chestdata` to `lb-creative_the_end-chestdata`;</p>
-                <p>rename table `lb-Endspawn-entities` to `lb-creative_the_end-entities`;</p>
-                <p>rename table `lb-Endspawn-entityids` to `lb-creative_the_end-entityids`;</p>
-                <p>rename table `lb-Endspawn-sign` to `lb-creative_the_end-sign`;</p>
-                <p>rename table `lb-Endspawn-state` to `lb-creative_the_end-state`;</p>
-                <p>Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names.</p>
-                <p>UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp';</p>
-                <p>UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether';</p>
-                <p>UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end';</p>
-                <p>Remember to do the same for plugins/CoreProtect/database.db</p>
-                <p>Server was started up.</p>
-                <h4 class="mt-4">Rename User by UUID</h4>
-                <p>For users who change their accounts.</p> 
-                <p>It's much better to rename a user before they log in with their new account so an Old → New can be done rather than a 3 way switch Old ←> New which requires an intermediate UUID.</p>
-                <h5>Required</h5>
-                <p>dnf install rename</p>
-                <p>Strongly recommended to use the script ~/sync/scripts/rename_uuid.sh which does safety checks</p>
-                <h5>Update the CoreProtect and LuckPerms database</h5>
-                <p>For co user and luckperms players run these.</p>
-                <p>update co_user/luckperms_players set uuid='069a79f4-44e9-4726-a5be-fca90e38aaf5' where uuid='09ec192c-4abe-48da-892d-d13639817bc5';</p>
-                <p>update luckperms_user_permissions set uuid='a12b4ad1-d5b8-4dae-bb4e-4e6b03f3fba8' where uuid='00000000-0000-0000-0009-01fd6b3640fa';</p>
-                <h5>Hub PlotsSquared storage.db</h5>
-                <p>sqlite3 storage.db</p>
-                <p>update plot set owner='864cff60-0b54-4757-a1f3-f7d4828b7d29' where owner='d85338cf-bbf5-4ae0-9a53-62194b765754';</p>
-                <h5>Update the CoreProtect database</h5>
-                <p>MySQL</p>
-                <p>> show databases\g;</p>
-                <p>use hub;</p>
-                <p>update co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';</p>
-                <p>update co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';</p>
-                <h5>Save results in Python</h5>
-                <p>a = '''acc</p>              
-                <p>bedwars</p>          
-                <p>bentobox</p>          
-                <p>captive ...'''</p>
-                <p>Generate SQL in Python to Insert into DB</p>
-                <p>for i in a:</p>
-                <p>print(f"update {i.strip()}.co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';")</p>
-                <h5>Towny</h5>
-                <p>Go to TSMP/plugins/Towny/data/residents</p>
-                <p>Find the corresponding username file and rename it. Then edit the contained UUID.</p>
-                <h5>Old Notes</h5>
-                <p>Use dnf install rename</p>
-                <p>Example command to rename all files with one UUID in name to another.</p>
-                <p>find . -name d85338cf-bbf5-4ae0-9a53-62194b765754\* -exec rename -avn ‘d85338cf-bbf5-4ae0-9a53-62194b765754’ '864cff60-0b54-4757-a1f3-f7d4828b7d29' {} \;</p>
-                <h4>Rename World</h4>
-                <p>In this example we use farlands to rename world to legacy and world_nether to legacy_nether.</p>
-                <h5>CoreProtect</h5>
-                <p>1. mysql -u farlands -p farlands</p>
-                <p>2. View: SELECT * FROM co_world;</p>
-                <p>3. UPDATE co_world SET world='legacy' WHERE rowid=1;</p>
-                <p>4. UPDATE co_world SET world='legacy_nether' WHERE rowid=3;</p>
-                <h5>PerWorldInv</h5>
-                <p>Use text replacement</p>
-                <p>sed -i 's|"world":"world"|"world":"legacy|g' */last*</p>
-                <p>Use this cool to rename remaining files and folders</p>
-                <p>https://manpages.debian.org/testing/rename/file-rename.1p.en.html</p>
-                <h3 class="mt-4">MachineSetup</h3>
-                <h4>BIOS Settings</h4>
-                <p>VGA Detection: Auto</p>
-                <p>Energy aka ErP Ready: Enabled</p>
-                <p>Memory Fast Boot: Disabled</p>
-                <p>Virtualization aka SVM Mode: Enabled</p>
-                <p>RAM: XMP settings</p>
-                <p>Restart on power: On</p>
-                <p>Secure boot: Off if using Nvidia drivers</p>
-                <p>It's strongly recommended to keep the BIOS up to date for security.</p>
-                <h4>DB Replication</h4>
-                <p>https://mariadb.com/kb/en/setting-up-replication/</p>
-                <h5>Configuring the Master</h5>
-                <p>Example Enabling Replication for MariaDB</p>
-                <p>Configure /etc/my.cnf.d/arcator.cnf and /etc/my.cnf.d/[machine].cnf</p>
-                <p>Should require little change.</p>
-                <p>server_id and log-basename</p>
-                <p>server_id is the machine s#</p>
-                <p>Ensure a replication (maxscale) user exists. (It does but otherwise you would run this.)</p>
-                <p>CREATE USER 'maxscale' IDENTIFIED BY 'REDACTED';</p>
-                <p>GRANT REPLICATION SLAVE ON *.*  TO 'maxscale';</p>
-                <h5>Run these steps: Getting the Master's Binary Log Co-ordinates</h5>
-                <p>https://mariadb.com/kb/en/setting-up-a-replication-slave-with-mariabackup/</p>
-                <p>You don't need to turn off the server while running these steps.</p>
-                <p>Backup database: mariabackup --backup --target-dir=mbackup/</p>
-                <p>Finish backup: mariabackup --prepare --target-dir=mbackup/</p>
-                <p>Tar and zstd it: tar --zstd -cf mbackup.tar.zst mbackup/</p>
-                <p>Import: rsync --inplace mbackup.tar.zst host:/mnt/Main/no_sync</p>
-                <h5>Import at Destination</h5>
-                <p>mkdir mbackup/</p>
-                <p>tar --zstd -xf mbackup.tar.zst</p>
-                <p>mariabackup --copy-back --target-dir=mbackup/</p>
-                <p>chown -R mysql:mysql /var/lib/mysql</p>
-                <p>restorecon -rv /var/lib/mysql</p>
-                <h5>With example slave pos. There should be one master and one slave. Do not set two nodes to be the slaves of each other.</h5>
-                <p>SET GLOBAL gtid_slave_pos = "0-5-18100164";</p>
-                <p>CHANGE MASTER TO</p>
-                <p>MASTER_HOST="10.0.0.1",</p>
-                <p>MASTER_USER="maxscale",</p>
-                <p>MASTER_PASSWORD="REDACTED",</p>
-                <p>MASTER_USE_GTID=slave_pos;</p>
-                <p>START SLAVE;</p>
-                <p>SHOW SLAVE STATUS\G;</p>
-                <h5>Reset old slave data</h5>
-                <p>STOP SLAVE;</p>
-                <p>RESET SLAVE;</p>
-                <h4> Drive Encryption</h4>
-                <p>We generally only use this for VPS's or HDDs which are not bottlenecked by encryption.</p>
-                <ol>
-                <li>Generate the key on a non-syncing path. We do not want the key to be auto-synced like most of the machine!</li>
-                <ol>
-                    <li>dd if=/dev/random of=~/no_sync/key.ppk bs=1K count=1 iflag=fullblock</li>
-                </ol>
-                <li>Format the drive or partition. Ask at least one SSH 3 or higher person to verify your command.</li>
-                <ol>
-                    <li>cryptsetup /dev/sdX# --key-file ~/no_sync/key.ppk</li>
-                </ol>
-                <li>Mount the device in /dev/mapper/volumename</li>
-                <ol>
-                    <li>cryptopen  /dev/sdX# --key-file volumename ~/no_sync/key.ppk</li>
-                </ol>
-                <li>Enable auto-mounting by editing /etc/crypttab.</li>
-                <ol>
-                    <li>e.g. volumename /dev/sdX# /mnt/Main/no_sync/home/mcsa/key.ppk  luks</li>
-                </ol>
-                <li>Format the device and use it as you would /dev/sdX#</li>
-                </ol>
-                <p>mkfs.btrfs /dev/mapper/volumename</p>
+                </div>
             </div>
 
             <!-- Machines Tab -->
@@ -542,6 +595,7 @@
                                 </ul>
                             </li>
                         </ul>
+                    </li>
                 </ul>
             </div>
 
@@ -549,7 +603,11 @@
             <div x-show="tab === 'staff'" class="fade-in" x-cloak>
                 <h2 class="mb-4">Staff</h2>
                 
-                <h3 class="mt-4">Backups</h3>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Backups
+                    </h3>
+                    <div x-show="open" x-collapse>
                 <h4>Loading Backups</h4>
                 <ul>
                     <li><strong>Minecraft Usage</strong>
@@ -568,10 +626,16 @@
                         </ul>
                     </li>
                 </ul>
-                <figure class="image wiki-image_resized"><img src="https://lh5.googleusercontent.com/1Q1lNPGeA2ub5J9rXRS1ksh4-0mv6GSeSxAnqr-hoD-vgRKDNa7d8FGnqEyUjxR-P_32viIT7GZ4lO7gaYkFDQ-P7Q-SEeBA7Qw_INrzoSJEX4y2VAA8_7SXBv1q2Cl-KRcGCZnO"></figure>
+                <figure class="image"><img src="https://lh5.googleusercontent.com/1Q1lNPGeA2ub5J9rXRS1ksh4-0mv6GSeSxAnqr-hoD-vgRKDNa7d8FGnqEyUjxR-P_32viIT7GZ4lO7gaYkFDQ-P7Q-SEeBA7Qw_INrzoSJEX4y2VAA8_7SXBv1q2Cl-KRcGCZnO" class="wiki-image"></figure>
                 <hr class="my-5">
+                    </div>
+                </div>
                 
-                <h3 class="mt-4">Roles</h3>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Roles
+                    </h3>
+                    <div x-show="open" x-collapse>
                 
                 <h4>SA 2 (Everyday use)</h4>
                 <ul>
@@ -653,12 +717,22 @@
             <!-- McAdmin Tab -->
             <div x-show="tab === 'mcadmin'" class="fade-in" x-cloak>
                 <h2 class="mb-4">MCAdmin</h2>
-                <h3>Useful Resources</h3>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Useful Resources
+                    </h3>
+                    <div x-show="open" x-collapse>
                 <p>Updating <a href="https://papermc.io/downloads">Paper</a> and <a href="https://velocitypowered.com/">Velocity</a> (Bungee replacement)</p>
                 <p><a href="https://www.setup.md/">Minecraft Admin Wiki</a></p>
                 <p><a href="https://www.paper-chan.moe/paper-optimization/">Paper Optimization</a></p>
                 <p>Dust has premium plugins like <a href="https://github.com/IntellectualSites/PlotSquared/">PlotsSquared</a> and <a href="https://github.com/CitizensPlugin/CitizensPlugin">Citiziens</a> which are important for Hub.</p>
-                <h3 class="mt-4">Chunk Pruning</h3>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Chunk Pruning
+                    </h3>
+                    <div x-show="open" x-collapse>
                 <h4>Summary</h4>
                 <p>To prune chunks we first identify all chunks with player activity using CoreProtect. Then we can use mcaselector to delete all chunks which do not match. This is useful when updating servers to the latest version since Minecraft will regenerate the chunks.</p>
                 <p><a href="https://github.com/Querz/mcaselector">https://github.com/Querz/mcaselector</a></p>
@@ -730,32 +804,38 @@
                 <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world --mode delete</p>
                 <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world_nether/DIM-1 --mode delete</p>
                 <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world_the_end/DIM1 --mode delete</p>
-                <h3 class="mt-4">Compiled Plugins</h3>
-                <p>here are some plugins we compile manually. Partly because we have not paid for premium.</p>
-                <p>You can find the repositories in /mnt/Main/no_sync/home/mcsa/repos for Jylina and Apollo.</p>
-                <h4>CoreProtect</h4>
-                <p><a href="https://github.com/PlayPro/CoreProtect/">https://github.com/PlayPro/CoreProtect/</a></p>
-                <p>Edit the yml</p>
-                <p>Run: mvn package</p>
-                <p>Then copy the file from target/</p>
-                <h4>LibsDisguises</h4>
-                <p>(fun for Hub not necessary) <a href="https://github.com/libraryaddict/LibsDisguises">https://github.com/libraryaddict/LibsDisguises</a></p>
-                <p>There's currently a compilation error unrelated to our changes. "class file for com.mojang.brigadier.Message not found"</p>
-                <p>To crack it. We edit the isPremium methods to return true in these files.</p>
-                <p>plugin/src/main/java/me/libraryaddict/disguise/utilities/plugin/PluginInformation.java</p>
-                <p>plugin/src/main/java/me/libraryaddict/disguise/utilities/LibsPremium.java</p>
-                <p>Then we run "mvn package"</p>
-                <h4>Panilla</h4>
-                <p>Security anti-exploit for NBT items</p>
-                <p><a href="https://github.com/Lumine1909/Panilla_Continue">https://github.com/Lumine1909/Panilla_Continue</a></p>
-                <p>This fork offers compiled jar files.</p>
-                <p>For the original version no edits are required. Simply run.</p>
-                <p>./gradlew panilla-craftbukkit-v1_20_R3:build</p>
-                <h4>PlotsSquared</h4>
-                <p>Dust has premium access but sometimes compiling is faster. But we have to crack it.</p>
-                <p><a href="https://github.com/IntellectualSites/PlotSquared/">https://github.com/IntellectualSites/PlotSquared/</a></p>
-                <p>Compilation error. Requires -Xlint:unchecked</p>
-                <p>No edits are required. Simply run.</p>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Compiled Plugins
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <p>Here are some plugins we compile manually. Partly because we have not paid for premium.</p>
+                        <p>You can find the repositories in /mnt/Main/no_sync/home/mcsa/repos for Jylina and Apollo.</p>
+                        <h4>CoreProtect</h4>
+                        <p><a href="https://github.com/PlayPro/CoreProtect/">https://github.com/PlayPro/CoreProtect/</a></p>
+                        <p>Edit the yml</p>
+                        <p>Run: mvn package</p>
+                        <p>Then copy the file from target/</p>
+                        <h4>LibsDisguises</h4>
+                        <p>(fun for Hub not necessary) <a href="https://github.com/libraryaddict/LibsDisguises">https://github.com/libraryaddict/LibsDisguises</a></p>
+                        <p>There's currently a compilation error unrelated to our changes. "class file for com.mojang.brigadier.Message not found"</p>
+                        <p>To crack it. We edit the isPremium methods to return true in these files.</p>
+                        <p>plugin/src/main/java/me/libraryaddict/disguise/utilities/plugin/PluginInformation.java</p>
+                        <p>plugin/src/main/java/me/libraryaddict/disguise/utilities/LibsPremium.java</p>
+                        <p>Then we run "mvn package"</p>
+                        <h4>Panilla</h4>
+                        <p>Security anti-exploit for NBT items</p>
+                        <p><a href="https://github.com/Lumine1909/Panilla_Continue">https://github.com/Lumine1909/Panilla_Continue</a></p>
+                        <p>This fork offers compiled jar files.</p>
+                        <p>For the original version no edits are required. Simply run.</p>
+                        <p>./gradlew panilla-craftbukkit-v1_20_R3:build</p>
+                        <h4>PlotsSquared</h4>
+                        <p>Dust has premium access but sometimes compiling is faster. But we have to crack it.</p>
+                        <p><a href="https://github.com/IntellectualSites/PlotSquared/">https://github.com/IntellectualSites/PlotSquared/</a></p>
+                        <p>Compilation error. Requires -Xlint:unchecked</p>
+                        <p>No edits are required. Simply run.</p>
                 <p>./gradlew build</p>
                 <h3>Coreprotect Database Tasks</h3>
                 <h4>Pruning Data in Region</h4>
@@ -792,37 +872,49 @@
                 <p>Players can toggle if they receive one. Removes servers that are offline from the GUI. Label the server selector with an NBT tag (NBTTagEditor), so if the item’s name, material, etc. ever changes, the old ones can be wiped+replaced</p>
                 <p>Current bugs:</p>
                 <p>Duplicates in inventory sometime. Make GUI editing easier + version compatible with XSeries</p>
-                <h3>Datapacks</h3>
-                <h4>Essential Datapacks</h4>
-                <p>SSMP uses <a href="https://vanillatweaks.net/picker/datapacks/">https://vanillatweaks.net/picker/datapacks/</a></p>
-                <p>Hub and SSMP use a custom height datapack. We lost the original generator so for each server update we get find a new expanded height datapack. Then we set the min Y to -64 and the max height accordingly using the old one as reference. Then we confirm no other flags changed.</p>
-                <h3>MC Server Setup</h3>
-                <p>MC Server Setup</p>
-                <p>Critical server.properties Setup</p>
-                <p>We use rcon to cleanly shutdown servers during restarts. We use query to delay nightly restarts if players are online.</p>
-                <p>Set</p>
-                <p>enable-rcon=true</p>
-                <p>enable-query=true</p>
-                <p>region-file-compression=none</p>
-                <p>network-compression-threshold=-1</p>
-                <p>server-ip=10.0.0.1 (or 10.0.0.7 for apollo or 10.0.0.x for others. This is for security ONLY for servers behind Velocity. Otherwise if it must be publicly accessible then we don't configure it.)</p>
-                <p>rcon.port to 400xx (something not in use). Hub is on internal port 30001 so we use 40001. Modded servers on 2556x tend to use 4006x.</p>
-                <p>rcon.password (copy from Hub or SSMP)</p>
-                <p>Set</p>
-                <h4>1. DATABASE SETUP</h4>
-                <p>Enter the root mariadb console.</p>
-                <p>mariadb -u root -p</p>
-                <p>Enter the password.</p>
-                <p>To set up a new user and database for a server. (<a href="https://www.linode.com/docs/databases/mysql/install-mysql-on-ubuntu-14-04/">Guide based</a></p>
-                <p>create database hardcore;</p>
-                <p>grant all on hardcore.* to 'mcdba' identified by 'PASSWORD'; // find password in any server's coreprotect config</p>
-                <p>Optionally have res copy these tables: co_art_map co_blockdata_map co_entity_map co_material_map co_user co_username_log</p>
-                <p>mysqldump -u root hub co_art_map co_blockdata_map co_entity_map co_material_map co_user co_username_log > co_schema.sql</p>
-                <p>mariadb -u mcdba -p hardcore < co_schema.sql</p>
-                <h4>2. Initial set up</h4>
-                <p>Make a new folder in /mnt/Main/Sync/Servers</p>
-                <p>cp *sh and banned*json files from another server.</p>
-                <p>Update the server names where needed such as update.sh.</p>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Datapacks
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>Essential Datapacks</h4>
+                        <p>SSMP uses <a href="https://vanillatweaks.net/picker/datapacks/">https://vanillatweaks.net/picker/datapacks/</a></p>
+                        <p>Hub and SSMP use a custom height datapack. We lost the original generator so for each server update we get find a new expanded height datapack. Then we set the min Y to -64 and the max height accordingly using the old one as reference. Then we confirm no other flags changed.</p>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>MC Server Setup
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <p>MC Server Setup</p>
+                        <p>Critical server.properties Setup</p>
+                        <p>We use rcon to cleanly shutdown servers during restarts. We use query to delay nightly restarts if players are online.</p>
+                        <p>Set</p>
+                        <p>enable-rcon=true</p>
+                        <p>enable-query=true</p>
+                        <p>region-file-compression=none</p>
+                        <p>network-compression-threshold=-1</p>
+                        <p>server-ip=10.0.0.1 (or 10.0.0.7 for apollo or 10.0.0.x for others. This is for security ONLY for servers behind Velocity. Otherwise if it must be publicly accessible then we don't configure it.)</p>
+                        <p>rcon.port=400xx (something not in use). Hub is on internal port 30001 so we use 40001. Modded servers on 2556x tend to use 4006x.</p>
+                        <p>rcon.password (copy from Hub or SSMP)</p>
+                        <p>Set</p>
+                        <h4>1. DATABASE SETUP</h4>
+                        <p>Enter the root mariadb console.</p>
+                        <p>mariadb -u root -p</p>
+                        <p>Enter the password.</p>
+                        <p>To set up a new user and database for a server. (<a href="https://www.linode.com/docs/databases/mysql/install-mysql-on-ubuntu-14-04/">Guide based</a></p>
+                        <p>create database hardcore;</p>
+                        <p>grant all on hardcore.* to 'mcdba' identified by 'PASSWORD'; // find password in any server's coreprotect config</p>
+                        <p>Optionally have res copy these tables: co_art_map co_blockdata_map co_entity_map co_material_map co_user co_username_log</p>
+                        <p>mysqldump -u root hub co_art_map co_blockdata_map co_entity_map co_material_map co_user co_username_log > co_schema.sql</p>
+                        <p>mariadb -u mcdba -p hardcore < co_schema.sql</p>
+                        <h4>2. Initial set up</h4>
+                        <p>Make a new folder in /mnt/Main/Sync/Servers</p>
+                        <p>cp *sh and banned*json files from another server.</p>
+                        <p>Update th    e server names where needed such as update.sh.</p>
                 <p>Copy over these jars (standard plugin list)</p>
                 <p>AFKLog, Bluemap, CoreProtect, EssentialsX, InventoryRollbackPlus, LastLog, LuckPerms-Bukkit, GrimAC (for survival), OnfimPaper, PlaceholderAPI, Plan, ProtocolLib, Replay, SDI, Vault, ViaVersion, ViaBackwards</p>
                 <p><a href="https://github.com/Lumine1909/Panilla_Continue">Panilla Continue</a></p>
@@ -871,39 +963,47 @@
                 <h4>## Modded Setup</h4>
                 <p>Set B:enabled=false in config/ftbbackups.cfg after the server has run.</p>
                 <p>Or check auto: false for ./config/ftbbackups3-server.snbt to disable them.</p>
-                <h3>Useful Plugins</h3>
-                <ul>
-                    <li><a href="https://github.com/Tapiture/venturechat/wiki/Commands-and-Permissions">VentureChat</a></li>
-                    <li><a href="https://youtu.be/uAgS5cj5J9Q">CoreProtect tutorial</a></li>
-                    <li><a href="https://www.spigotmc.org/resources/dynamic-lights.78766/">Dynamic Lights</a></li>
-                    <li><a href="https://www.spigotmc.org/resources/1-8-1-15-ultimateautorestart-need-an-autorestart-plugin-grab-the-best-one-today.64414/">Ultimate AutoRestart</a></li>
-                    <li><a href="https://www.spigotmc.org/resources/tallnether.22561/">Tall Nether</a></li>
-                    <li><a href="https://www.spigotmc.org/resources/farlandsagain.8228/">Farlands Again</a></li>
-                    <li><a href="https://www.spigotmc.org/resources/worldalias-papi-expansion.90045/">WorldAlias PAPI Expansion</a></li>
-                    <li><a href="https://www.spigotmc.org/resources/staffwarn.90047/">StaffWarn</a></li>
-                    <li>Essential Plugins</li>
-                    <ul>
-                        <li><a href="https://www.spigotmc.org/resources/coreprotect.8631/">CoreProtect</a></li>
-                        <li><a href="https://ci.ender.zone/job/EssentialsX/">EssentialsX (we no longer use EssentialsXSpawn)</a></li>
-                        <li><a href="https://github.com/Restitutor/AFKLog">AFKLog</a>, <a href="https://github.com/Restitutor/OnfimVelocity">OnfimVelocity</a> (Res plugin)</li>
-                        <li><a href="https://www.spigotmc.org/resources/venturechat.75701/">VentureChat</a> (intra-server chat sync)</li>
-                        <li><a href="https://www.spigotmc.org/resources/viaversion.19254/">ViaVersion</a>, <a href="https://www.spigotmc.org/resources/viabackwards.27448/">ViaBackwards</a></li>
-                        <li><a href="https://dev.bukkit.org/projects/worldedit">WorldEdit</a></li>
-                        <li><a href="https://dev.bukkit.org/projects/worldguard">WorldGuard</a></li>
-                    </ul>
-                    <li>Quality of Life Plugins</li>
-                    <ul>
-                        <li><a href="https://www.spigotmc.org/resources/tab-1-7-x-1-21.57806/">TAB</a></li>
-                        <li><a href="https://www.spigotmc.org/resources/item2chat.25417/">Item2Chat</a></li>
-                        <li><a href="https://www.spigotmc.org/resources/lastlog.2372/">LastLog</a></li>
-                        <li><a href="https://www.spigotmc.org/resources/inventory-rollback-plus-1-8-1-21.85811/">InventoryRollbackPlus</a></li>
-                        <li><a href="https://www.spigotmc.org/resources/mcbans.551/">MCBans</a> (not used for bans anymore, warns when user was banned on other servers)</li>
-                        <li><a href="https://www.spigotmc.org/resources/perworldinventory.4482/">PerWorldInventory</a> (easier access to player inventories as yml and separate staffing in gmc from gms)</li>
-                        <li><a href="https://www.spigotmc.org/resources/plan-player-analytics.32536/">Plan</a> (player statistics)</li>
-                        <li><a href="https://www.spigotmc.org/resources/pvptoggle.7437/">PvPToggle</a></li>
-                        <li><a href="https://www.spigotmc.org/resources/gsit-modern-sit-seat-and-chair-lay-and-crawl-plugin-1-16-1-21.62325/">GSit</a></li>
-                    </ul>
-                </ul>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Useful Plugins
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <ul>
+                            <li><a href="https://github.com/Tapiture/venturechat/wiki/Commands-and-Permissions">VentureChat</a></li>
+                            <li><a href="https://youtu.be/uAgS5cj5J9Q">CoreProtect tutorial</a></li>
+                            <li><a href="https://www.spigotmc.org/resources/dynamic-lights.78766/">Dynamic Lights</a></li>
+                            <li><a href="https://www.spigotmc.org/resources/1-8-1-15-ultimateautorestart-need-an-autorestart-plugin-grab-the-best-one-today.64414/">Ultimate AutoRestart</a></li>
+                            <li><a href="https://www.spigotmc.org/resources/tallnether.22561/">Tall Nether</a></li>
+                            <li><a href="https://www.spigotmc.org/resources/farlandsagain.8228/">Farlands Again</a></li>
+                            <li><a href="https://www.spigotmc.org/resources/worldalias-papi-expansion.90045/">WorldAlias PAPI Expansion</a></li>
+                            <li><a href="https://www.spigotmc.org/resources/staffwarn.90047/">StaffWarn</a></li>
+                            <li>Essential Plugins</li>
+                            <ul>
+                                <li><a href="https://www.spigotmc.org/resources/coreprotect.8631/">CoreProtect</a></li>
+                                <li><a href="https://ci.ender.zone/job/EssentialsX/">EssentialsX (we no longer use EssentialsXSpawn)</a></li>
+                                <li><a href="https://github.com/Restitutor/AFKLog">AFKLog</a>, <a href="https://github.com/Restitutor/OnfimVelocity">OnfimVelocity</a> (Res plugin)</li>
+                                <li><a href="https://www.spigotmc.org/resources/venturechat.75701/">VentureChat</a> (intra-server chat sync)</li>
+                                <li><a href="https://www.spigotmc.org/resources/viaversion.19254/">ViaVersion</a>, <a href="https://www.spigotmc.org/resources/viabackwards.27448/">ViaBackwards</a></li>
+                                <li><a href="https://dev.bukkit.org/projects/worldedit">WorldEdit</a></li>
+                                <li><a href="https://dev.bukkit.org/projects/worldguard">WorldGuard</a></li>
+                            </ul>
+                            <li>Quality of Life Plugins</li>
+                            <ul>
+                                <li><a href="https://www.spigotmc.org/resources/tab-1-7-x-1-21.57806/">TAB</a></li>
+                                <li><a href="https://www.spigotmc.org/resources/item2chat.25417/">Item2Chat</a></li>
+                                <li><a href="https://www.spigotmc.org/resources/lastlog.2372/">LastLog</a></li>
+                                <li><a href="https://www.spigotmc.org/resources/inventory-rollback-plus-1-8-1-21.85811/">InventoryRollbackPlus</a></li>
+                                <li><a href="https://www.spigotmc.org/resources/mcbans.551/">MCBans</a> (not used for bans anymore, warns when user was banned on other servers)</li>
+                                <li><a href="https://www.spigotmc.org/resources/perworldinventory.4482/">PerWorldInventory</a> (easier access to player inventories as yml and separate staffing in gmc from gms)</li>
+                                <li><a href="https://www.spigotmc.org/resources/plan-player-analytics.32536/">Plan</a> (player statistics)</li>
+                                <li><a href="https://www.spigotmc.org/resources/pvptoggle.7437/">PvPToggle</a></li>
+                                <li><a href="https://www.spigotmc.org/resources/gsit-modern-sit-seat-and-chair-lay-and-crawl-plugin-1-16-1-21.62325/">GSit</a></li>
+                            </ul>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -912,6 +1012,7 @@
 <div id="footer-placeholder"></div>
 
 <script type="module" src="./app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
 </body>
 </html>
