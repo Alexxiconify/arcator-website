@@ -61,7 +61,7 @@
                     </form>
                     
                     <div class="text-center mb-3">
-                        <button class="btn btn-link" @click="isSignUp = !isSignUp" x-text="isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'"></button>
+                        <button class="btn btn-link" @click="isSignUp = !isSignUp" x-text="isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'" title="Toggle Sign Up"></button>
                     </div>
                     
                     <hr>
@@ -93,14 +93,19 @@
                             <div class="flex-grow-1">
                                 <h5 class="mb-3">Profile</h5>
                                 <div class="row g-3">
-                                    <div class="col-md-6"><label class="form-label">Display Name</label><input x-model="profile.displayName" class="form-control"></div>
-                                    <div class="col-md-6"><label class="form-label">Handle</label><input x-model="profile.handle" class="form-control"></div>
+                                    <div class="col-md-6"><label class="form-label" for="profile-displayName">Display Name</label><input id="profile-displayName" x-model="profile.displayName" class="form-control" title="Display Name"></div>
+                                    <div class="col-md-6"><label class="form-label" for="profile-handle">Handle</label><input id="profile-handle" x-model="profile.handle" class="form-control" title="Handle"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6"><label class="form-label">Email</label><input x-model="profile.email" class="form-control" readonly></div>
-                            <div class="col-md-6"><label class="form-label">Photo URL</label><input x-model="profile.photoURL" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-email">Email</label><input id="profile-email" x-model="profile.email" class="form-control" readonly title="Email Address"></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-photoURL">Photo URL</label><input id="profile-photoURL" x-model="profile.photoURL" class="form-control" title="Profile Picture URL"></div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label" for="profile-customCSS">Custom CSS</label>
+                            <textarea id="profile-customCSS" x-model="profile.customCSS" class="form-control" rows="3" placeholder="/* Custom CSS here */" title="Custom CSS"></textarea>
                         </div>
                         
                         <hr>
@@ -109,19 +114,101 @@
                         <h5 class="mb-3">Appearance</h5>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="form-label">Theme</label>
-                                <select x-model="profile.themePreference" class="form-select">
+                                <label class="form-label" for="profile-theme">Theme</label>
+                                <select id="profile-theme" x-model="profile.themePreference" class="form-select" aria-label="Theme Preference" title="Theme Preference">
                                     <option value="dark">Dark</option>
                                     <option value="light">Light</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Font Size</label>
-                                <select x-model="profile.fontScaling" class="form-select">
+                                <label class="form-label" for="profile-font">Font Size</label>
+                                <select id="profile-font" x-model="profile.fontScaling" class="form-select" aria-label="Font Scaling" title="Font Scaling">
                                     <option value="small">Small</option>
                                     <option value="normal">Normal</option>
                                     <option value="large">Large</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <h5 class="mb-3">Preferences</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="pref-emailNotifs" x-model="profile.emailNotifications">
+                                    <label class="form-check-label" for="pref-emailNotifs">Email Notifications</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="pref-pushNotifs" x-model="profile.pushNotifications">
+                                    <label class="form-check-label" for="pref-pushNotifs">Push Notifications</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="pref-discordNotifs" x-model="profile.discordNotifications">
+                                    <label class="form-check-label" for="pref-discordNotifs">Discord Notifications</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="pref-profileVisible" x-model="profile.profileVisible">
+                                    <label class="form-check-label" for="pref-profileVisible">Profile Visible</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="pref-thirdParty" x-model="profile.thirdPartySharing">
+                                    <label class="form-check-label" for="pref-thirdParty">Third Party Sharing</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="pref-debug" x-model="profile.debugMode">
+                                    <label class="form-check-label" for="pref-debug">Debug Mode</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="pref-activity" x-model="profile.activityTracking">
+                                    <label class="form-check-label" for="pref-activity">Activity Tracking</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label" for="pref-retention">Data Retention (days)</label>
+                                <input type="number" id="pref-retention" x-model="profile.dataRetention" class="form-control" title="Data Retention Period">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="pref-shortcuts">Keyboard Shortcuts</label>
+                                <select id="pref-shortcuts" x-model="profile.keyboardShortcuts" class="form-select" title="Keyboard Shortcuts">
+                                    <option value="enabled">Enabled</option>
+                                    <option value="disabled">Disabled</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="pref-notifFreq">Notification Frequency</label>
+                                <select id="pref-notifFreq" x-model="profile.notificationFrequency" class="form-select" title="Notification Frequency">
+                                    <option value="immediate">Immediate</option>
+                                    <option value="daily">Daily Digest</option>
+                                    <option value="weekly">Weekly Digest</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h5 class="mb-3">Accessibility</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="acc-highContrast" x-model="profile.highContrast">
+                                    <label class="form-check-label" for="acc-highContrast">High Contrast</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="acc-reducedMotion" x-model="profile.reducedMotion">
+                                    <label class="form-check-label" for="acc-reducedMotion">Reduced Motion</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="acc-screenReader" x-model="profile.screenReader">
+                                    <label class="form-check-label" for="acc-screenReader">Screen Reader Optimized</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="acc-focus" x-model="profile.focusIndicators">
+                                    <label class="form-check-label" for="acc-focus">Focus Indicators</label>
+                                </div>
                             </div>
                         </div>
                         
@@ -136,7 +223,7 @@
                                     <button type="button" class="btn btn-sm" 
                                         :class="$store.auth.isProviderLinked('google.com') ? 'btn-outline-danger' : 'btn-outline-primary'"
                                         @click="$store.auth.isProviderLinked('google.com') ? $store.auth.unlinkProvider('google.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('google').catch(e => Swal.fire('Error', e.message, 'error'))"
-                                        x-text="$store.auth.isProviderLinked('google.com') ? 'Unlink' : 'Link'"></button>
+                                        x-text="$store.auth.isProviderLinked('google.com') ? 'Unlink' : 'Link'" title="Link or Unlink Google"></button>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -145,7 +232,7 @@
                                     <button type="button" class="btn btn-sm" 
                                         :class="$store.auth.isProviderLinked('github.com') ? 'btn-outline-danger' : 'btn-outline-primary'"
                                         @click="$store.auth.isProviderLinked('github.com') ? $store.auth.unlinkProvider('github.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('github').catch(e => Swal.fire('Error', e.message, 'error'))"
-                                        x-text="$store.auth.isProviderLinked('github.com') ? 'Unlink' : 'Link'"></button>
+                                        x-text="$store.auth.isProviderLinked('github.com') ? 'Unlink' : 'Link'" title="Link or Unlink GitHub"></button>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -166,7 +253,7 @@
                                     <button type="button" class="btn btn-sm" 
                                         :class="$store.auth.isProviderLinked('twitter.com') ? 'btn-outline-danger' : 'btn-outline-primary'"
                                         @click="$store.auth.isProviderLinked('twitter.com') ? $store.auth.unlinkProvider('twitter.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('twitter').catch(e => Swal.fire('Error', e.message, 'error'))"
-                                        x-text="$store.auth.isProviderLinked('twitter.com') ? 'Unlink' : 'Link'"></button>
+                                        x-text="$store.auth.isProviderLinked('twitter.com') ? 'Unlink' : 'Link'" title="Link or Unlink Twitter"></button>
                                 </div>
                             </div>
                         </div>

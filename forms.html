@@ -88,10 +88,28 @@
                                     <span x-text="thread.expanded ? '▼' : '▶'"></span>
                                 </button>
                                 <span class="fw-bold" x-text="thread.title"></span>
+                                <span x-show="thread.censored" class="badge bg-danger">Censored</span>
                             </div>
-                            <small class="text-secondary" x-html="getThreadMeta(thread)"></small>
+                            <div class="d-flex align-items-center gap-2">
+                                <small class="text-secondary" x-html="getThreadMeta(thread)"></small>
+                                <template x-if="$store.auth.isAdmin">
+                                    <div class="dropdown">
+                                        <button class="btn btn-link btn-sm p-0 text-secondary" data-bs-toggle="dropdown">⋮</button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#" @click.prevent="editThread(thread)">Edit</a></li>
+                                            <li><a class="dropdown-item" href="#" @click.prevent="softDeleteThread(thread)" x-text="thread.censored ? 'Un-censor' : 'Censor'"></a></li>
+                                            <li><a class="dropdown-item text-danger" href="#" @click.prevent="deleteThread(thread.id)">Delete</a></li>
+                                        </ul>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
-                        <p class="mb-0 small mt-1" x-html="DOMPurify.sanitize(thread.description)"></p>
+                        <div x-show="!thread.censored || $store.auth.isAdmin">
+                            <p class="mb-0 small mt-1" x-html="DOMPurify.sanitize(thread.description)"></p>
+                        </div>
+                        <div x-show="thread.censored && !$store.auth.isAdmin" class="alert alert-warning py-1 mt-1 mb-0 small">
+                            This content has been censored.
+                        </div>
                     </div>
                     <div class="card-footer py-2" x-show="thread.expanded" x-transition>
                         <div x-show="thread.loadingComments" class="text-center py-1"><div class="spinner-border spinner-border-sm"></div></div>
@@ -102,33 +120,9 @@
                                         <div class="d-flex flex-column align-items-center me-2">
                                             <button class="btn btn-link btn-sm p-0" :class="hasVoted(comment, '👍') ? 'text-success' : 'text-secondary'" @click="vote(thread.id, comment, '👍')">▲</button>
                                             <span x-text="getVoteCount(comment)" :class="getVoteCount(comment) > 0 ? 'text-success' : getVoteCount(comment) < 0 ? 'text-danger' : ''"></span>
-                                            <button class="btn btn-link btn-sm p-0" :class="hasVoted(comment, '👎') ? 'text-danger' : 'text-secondary'" @click="vote(thread.id, comment, '👎')">▼</button>
+                                            <button class="btn btn-link btn-sm p-0" :class="hasVoted(comment, '�') ? 'text-danger' : 'text-secondary'" @click="vote(thread.id, comment, '�')">▼</button>
                                         </div>
                                         <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center gap-2 mb-1">
-                                                <img :src="getAuthor(comment.authorId).photoURL || './defaultuser.png'" class="profile-img-sm">
-                                                <strong x-text="getAuthor(comment.authorId).displayName || 'Unknown'"></strong>
-                                                <small class="text-secondary" x-text="formatDate(comment.createdAt)"></small>
-                                                <span x-show="comment.editedByAdmin" class="text-warning small">[Edited by Admin]</span>
-                                            </div>
-                                            <div class="mb-1" x-html="DOMPurify.sanitize(comment.content)"></div>
-                                            <div class="comment-actions mb-2">
-                                                <template x-if="$store.auth.user">
-                                                    <button class="btn btn-link btn-sm p-0" @click="reply(thread.id, comment.id)">Reply</button>
-                                                </template>
-                                                <template x-if="$store.auth.user && $store.auth.user.uid === comment.authorId">
-                                                    <span>
-                                                        <button class="btn btn-link btn-sm p-0 ms-2" @click="editComment(thread.id, comment)">Edit</button>
-                                                        <button class="btn btn-link btn-sm p-0 text-danger" @click="deleteComment(thread.id, comment.id)">Delete</button>
-                                                    </span>
-                                                </template>
-                                            </div>
-                                            <div class="ps-3 border-start">
-                                                <template x-for="reply in getReplies(thread, comment.id)" :key="reply.id">
-                                                    <div class="comment mb-2">
-                                                        <div class="d-flex">
-                                                            <div class="d-flex flex-column align-items-center me-2">
-                                                                <button class="btn btn-link btn-sm p-0" :class="hasVoted(reply, '👍') ? 'text-success' : 'text-secondary'" @click="vote(thread.id, reply, '👍')">▲</button>
                                                                 <span x-text="getVoteCount(reply)"></span>
                                                                 <button class="btn btn-link btn-sm p-0" :class="hasVoted(reply, '👎') ? 'text-danger' : 'text-secondary'" @click="vote(thread.id, reply, '👎')">▼</button>
                                                             </div>
@@ -194,10 +188,16 @@
                                 </div>
                                 <div class="flex-grow-1 overflow-auto mb-3" id="msg-list">
                                     <template x-for="msg in messages" :key="msg.id">
-                                        <div class="mb-2 d-flex" :class="msg.senderId === $store.auth.user.uid ? 'justify-content-end' : 'justify-content-start'">
-                                            <div class="message-bubble p-2 rounded" :class="msg.senderId === $store.auth.user.uid ? 'bg-primary text-white' : 'bg-secondary'">
-                                                <div x-text="msg.content"></div>
-                                                <small class="d-block text-end" style="font-size: 0.7em; opacity: 0.7;" x-text="formatDate(msg.createdAt)"></small>
+                                        <div class="mb-2 d-flex" :class="msg.senderId === $store.auth.user.uid ? 'justify-content-end' : 'justify-content-start'" x-init="fetchAuthor(msg.senderId)">
+                                            <div class="d-flex flex-column" :class="msg.senderId === $store.auth.user.uid ? 'align-items-end' : 'align-items-start'">
+                                                <small class="text-secondary mb-1" style="font-size: 0.75em;" x-text="getAuthor(msg.senderId).displayName"></small>
+                                                <div class="d-flex gap-2" :class="msg.senderId === $store.auth.user.uid ? 'flex-row-reverse' : 'flex-row'">
+                                                    <img :src="getAuthor(msg.senderId).photoURL" class="rounded-circle" style="width: 24px; height: 24px; object-fit: cover;">
+                                                    <div class="message-bubble p-2 rounded" :class="msg.senderId === $store.auth.user.uid ? 'bg-primary text-white' : 'bg-secondary'">
+                                                        <div x-text="msg.content"></div>
+                                                        <small class="d-block text-end" style="font-size: 0.7em; opacity: 0.7;" x-text="formatDate(msg.createdAt)"></small>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </template>
@@ -277,6 +277,7 @@
                     ...this.newThread,
                     description,
                     authorId: user.uid,
+                    createdBy: Alpine.store('auth').profile?.displayName || 'Anonymous',
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
                     commentCount: 0,
@@ -319,10 +320,71 @@
             formatDate(ts) { return formatDate(ts); },
 
             getThreadMeta(thread) {
-                const author = this.getAuthor(thread.authorId);
-                const cat = thread.category || 'General';
+                let authorName = 'System';
+                let authorPic = '';
+                
+                if (thread.createdBy !== 'admin' && thread.authorId) {
+                    const author = this.getAuthor(thread.authorId);
+                    authorName = author.displayName;
+                    authorPic = `<img src="${author.photoURL || './defaultuser.png'}" class="profile-img-sm me-1" alt="">`;
+                }
+
+                const cat = thread.category ? thread.category.charAt(0).toUpperCase() + thread.category.slice(1) : 'General';
                 const date = formatDate(thread.createdAt);
-                return `<img src="${author.photoURL || './defaultuser.png'}" class="profile-img-sm me-1" alt=""> ${author.displayName} • ${cat} • ${date}`;
+                const comments = `${thread.commentCount || 0} comments`;
+                const tags = thread.tags ? `<span class="badge bg-secondary me-1">${thread.tags}</span>` : '';
+                
+                return `${tags} ${authorPic} ${authorName} • ${cat} • ${date} • ${comments}`;
+            },
+
+            async softDeleteThread(thread) {
+                if (!confirm(thread.censored ? 'Un-censor this thread?' : 'Censor this thread (soft delete)?')) return;
+                await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), { censored: !thread.censored });
+                thread.censored = !thread.censored;
+            },
+            
+            async softDeleteComment(forumId, comment) {
+                 if (!confirm(comment.censored ? 'Un-censor this comment?' : 'Censor this comment (soft delete)?')) return;
+                await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { censored: !comment.censored });
+                comment.censored = !comment.censored;
+            },
+
+            async deleteThread(threadId) {
+                if (!confirm('Permanently delete this thread?')) return;
+                await deleteDoc(doc(db, COLLECTIONS.FORMS, threadId));
+                this.threads = this.threads.filter(t => t.id !== threadId);
+                Swal.fire('Deleted', 'Thread deleted', 'success');
+            },
+
+            async editThread(thread) {
+                const { value: formValues } = await Swal.fire({
+                    title: 'Edit Thread',
+                    html:
+                        `<input id="swal-input1" class="swal2-input" placeholder="Title" value="${thread.title}">` +
+                        `<input id="swal-input2" class="swal2-input" placeholder="Tags" value="${thread.tags || ''}">` +
+                        `<select id="swal-input3" class="swal2-input"><option value="announcements" ${thread.category === 'announcements' ? 'selected' : ''}>Announcements</option><option value="gaming" ${thread.category === 'gaming' ? 'selected' : ''}>Gaming</option><option value="discussion" ${thread.category === 'discussion' ? 'selected' : ''}>Discussion</option><option value="support" ${thread.category === 'support' ? 'selected' : ''}>Support</option></select>`,
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        return [
+                            document.getElementById('swal-input1').value,
+                            document.getElementById('swal-input2').value,
+                            document.getElementById('swal-input3').value
+                        ]
+                    }
+                });
+
+                if (formValues) {
+                    await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), {
+                        title: formValues[0],
+                        tags: formValues[1],
+                        category: formValues[2],
+                        updatedAt: serverTimestamp()
+                    });
+                    thread.title = formValues[0];
+                    thread.tags = formValues[1];
+                    thread.category = formValues[2];
+                    Swal.fire('Success', 'Thread updated', 'success');
+                }
             },
 
             async postComment(forumId) {
@@ -438,6 +500,8 @@
             newMessage: '',
             unsubscribe: null,
 
+            userCache: {},
+
             init() {
                 this.$watch('$store.auth.user', user => {
                     if (user) this.loadConversations();
@@ -446,19 +510,41 @@
                 if (Alpine.store('auth').user) this.loadConversations();
             },
 
+            async fetchAuthor(uid) {
+                if (!uid || this.userCache[uid]) return;
+                try {
+                    const snap = await getDoc(doc(db, 'user_profiles', uid));
+                    if (snap.exists()) {
+                        this.userCache[uid] = snap.data();
+                    }
+                } catch (e) { console.error('Failed to fetch author:', e); }
+            },
+            
+            getAuthor(uid) {
+                return this.userCache[uid] || { displayName: 'Unknown', handle: '', photoURL: './defaultuser.png' };
+            },
+
             async loadConversations() {
                 const user = Alpine.store('auth').user;
                 if (!user) return;
                 const q = query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', user.uid));
                 const snap = await getDocs(q);
                 this.conversations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                const participantIds = [...new Set(this.conversations.flatMap(c => c.participants))];
+                await Promise.all(participantIds.map(id => this.fetchAuthor(id)));
             },
 
             getConvName(conv) {
                 const user = Alpine.store('auth').user;
                 if (conv.name && conv.name !== 'Notes') return conv.name;
                 if (conv.participants.length === 1) return 'Notes';
-                return 'Chat'; 
+                
+                const otherIds = conv.participants.filter(id => id !== user.uid);
+                if (otherIds.length === 0) return 'Notes';
+                
+                const names = otherIds.map(id => this.getAuthor(id).displayName).join(', ');
+                return names || 'Chat'; 
             },
 
             async selectConv(conv) {

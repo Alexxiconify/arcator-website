@@ -15,9 +15,17 @@ function cacheUser(user, profile) {
     }));
 }
 
-function updateTheme(theme = 'dark', fontSize = 'normal') {
+function updateTheme(theme = 'dark', fontSize = 'normal', customCSS = '') {
     document.documentElement.setAttribute('data-bs-theme', theme);
     document.documentElement.setAttribute('data-font-size', fontSize);
+    
+    let style = document.getElementById('custom-css-style');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'custom-css-style';
+        document.head.appendChild(style);
+    }
+    style.textContent = customCSS || '';
 }
 
 async function checkAdmin(uid) {
@@ -43,7 +51,7 @@ function registerStore() {
                     const data = JSON.parse(cached);
                     this.user = { uid: data.uid, ...data };
                     this.profile = data;
-                    updateTheme(data.themePreference, data.fontScaling);
+                    updateTheme(data.themePreference, data.fontScaling, data.customCSS);
                     updateUserSection(this.user, this.profile);
                 } catch (e) {}
             }
@@ -57,7 +65,7 @@ function registerStore() {
                         if (snap.exists()) {
                             this.profile = snap.data();
                             cacheUser(u, this.profile);
-                            updateTheme(this.profile.themePreference, this.profile.fontScaling);
+                            updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
                             this.isAdmin = await checkAdmin(u.uid);
                         }
                     } catch (e) {
@@ -132,7 +140,7 @@ function registerStore() {
             await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, uid), profileData);
             this.profile = { ...this.profile, ...profileData };
             cacheUser(this.user, this.profile);
-            updateTheme(this.profile.themePreference, this.profile.fontScaling);
+            updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
             updateUserSection(this.user, this.profile);
         },
 
