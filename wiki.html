@@ -34,6 +34,7 @@
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'sysadmin' }" @click="tab = 'sysadmin'">Sysadmin</button>
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'machines' }" @click="tab = 'machines'">Machines</button>
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'staff' }" @click="tab = 'staff'">Staff</button>
+                <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'mcadmin' }" @click="tab = 'mcadmin'">MCAdmin</button>
             </div>
         </div>
         <div class="col-md-9">
@@ -263,27 +264,231 @@
                     <li>Go to Terminal. Disable "Import shell history" and "Detect OS".</li>
                 </ol>
                 <h4>STEP 2 - Adding a Key</h4>
+                <img src="https://wiki.arcator.co.uk/keychain.png" alt="Keychain">
                 <ol>
                     <li>Close Settings. Click Keychain.</li>
-                    <li>Click "Generate new key". Label: Arcator, Key type: ED25519.</li>
+                    <li>Click "Generate new key".</li>
+                    <ol>
+                        <li>Label: Arcator</li>
+                        <li>Key type: ED25519.</li>
+                    </ol>
                     <li>Pick a passphrase. Generate & Save.</li>
-                    <li>Copy your Public key (ssh-ed25519...) to Res.</li>
+                    <li>Keep your private key safe. This grants access to the servers.</li>
+                    <li>But copy your Public key beginning with "ssh-ed25519" to Res.</li>
+                    <li>Now exit settings.</li>
                 </ol>
+                <img src="https://wiki.arcator.co.uk/sshkey.png" alt="SSH Key">
                 <h4>STEP 3 - Adding Hosts</h4>
-                <p>Click New Host. Add info:</p>
-                <pre class="bg-dark p-3 rounded">Address: jylina.arcator.co.uk. Label: Jylina. Port: 220. Username: mcsa Key: (Select generated key). Select Mosh.</pre>
-                <p>Vann provided a useful guide with commands here: <a href="https://docs.google.com/document/d/1jKN_u7avWxKKHo89VrR9TCtFX5Zv1A7DCgnsJtVSID4/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Google Doc</a></p>
+                <ol>
+                    <li>Click New Host. 
+                        Add info:</li>
+                </ol>
+                <pre class="bg-dark p-3 rounded"><p>Address: jylina.arcator.co.uk. </p>
+                    <p>Label: Jylina. </p>
+                    <p>Skip Groups and Tags</p>
+                    <p>Check "Mosh" (for high-speed)</p>
+                    <p>Port: 220</p>
+                    <p>Username: mcsa (WARNING a common mistake is to type msca instead of mcsa this is also case sensitive)</p>
+                    <p>Click "Key" and pick the one generated earlier.</p>
+                    <p>Skip Password and SSH Agent Forwarding.</p>
+                    <p>Select Mosh.</p>
+                    <p>Click top right to finish and save.</p>
+                </pre>
+                <p>Now you can connect to the server by double clicking the host.</p>
+                <img src="https://wiki.arcator.co.uk/donessh.png" alt="Donessh">
+                <p>Other Notes - Mosh vs SSH Mosh is faster but can't refresh the screen. Mosh also doesn't allow for scrolling up through console. (Would require tmux to do so).</p>
+                <p>Vann provided a useful guide with commands <a href="https://docs.google.com/document/d/1jKN_u7avWxKKHo89VrR9TCtFX5Zv1A7DCgnsJtVSID4/edit?usp=sharing" target="_blank" rel="noopener noreferrer">here</a>.</p>
                 <h3 class="mt-4">Infrequent</h3>
                 <h4 class="mt-4">Old Ubuntu</h4>
-                <p>Install VNC Server to Ubuntu Machine 1. Install required packages sudo apt install tigervnc-standalone-server tigervnc-common tigervnc-xorg-extension tigervnc-viewer 2. Configure VNC server startup (Probably differs for other Desktop Environments) cp /usr/bin/budgie-desktop ~/.vnc/xstartup 3. Set VNC password vncpasswd 4. Turn on the VNC server vncserver</p>
+                <p>Install VNC Server to Ubuntu Machine</p>
+                <ol>
+                    <li>Install required packages <pre>sudo apt install tigervnc-standalone-server tigervnc-common tigervnc-xorg-extension tigervnc-viewer</pre></li>
+                    <li>Configure VNC server startup (Probably differs for other Desktop Environments) <pre>cp /usr/bin/budgie-desktop ~/.vnc/xstartup</pre></li>
+                    <li>Set VNC <pre>password vncpasswd</pre></li>
+                    <li>Turn on the VNC <pre>server vncserver</pre></li>
+                </ol>
                 <h4 class="mt-4">Rename Hub World (Old)</h4>
-                <p>This guide is from 2016. It renames survival_pvp to msurvival. First use grep to find all cases of "survival_pvp" in all files. Since MC1's folder contains about 70 GB of files, we'll skip all zips (backups), mca (world files), and log files. grep -r survival_pvp --exclude=\*.{zip,log,mca} --exclude=report.txt MC1 > grep.txt This creates a list of all the files that contain survival_pvp and their path. Now a script was made that looks at all files only in a given folder and non-recursively prompts whether to make the text replacement. The script was run on each directory reported by grep and also blocked zip, log, mca. However, filenames were still not imported and needed to be done manually. In plugins/LogBlock run, the following were renamed. mv survival_pvp_nether.yml msurvival_nether.yml mv survival_pvp.yml msurvival.yml Next, start.sh was given a few edits as it had a simple mirroring system from 2015. Now, check over folders to rename. find MC1 -type d -name "survival_pvp*" -print Rename worlds. mv survival_pvp msurvival mv survival_pvp_nether msurvival_nether mv survival_pvp_the_end msurvival_the_end Similar commands run in backups/worlds and plugins/WorldGuard/worlds. Rename mysql tables and data mysql -u mcsa -p hub RENAME TABLE `lb-survival_pvp` TO `lb-msurvival`; RENAME TABLE `lb-survival_pvp-chest` TO `lb-msurvival-chest`; RENAME TABLE `lb-survival_pvp-sign` TO `lb-msurvival-sign`; RENAME TABLE `lb-survival_pvp_nether` TO `lb-msurvival_nether`; RENAME TABLE `lb-survival_pvp_nether-chest` TO `lb-msurvival_nether-chest`; RENAME TABLE `lb-survival_pvp_nether-sign` TO `lb-msurvival_nether-sign`; Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names. UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp'; UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether'; UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end'; Now let's rename survivalPVPGroup to msurvivalGroup within MultInv's database. UPDATE `multiinv_multiinv` SET inv_group='msurvivalGroup' WHERE inv_group='survivalPVPGroup'; Next, use grep on survivalPVPGroup to see if it stored as a flatfile anywhere in MC1. grep -r survivalPVPGroup --exclude=\*.{zip,log,mca} --exclude=report.txt MC1 The output isn't piped into a file unlike the previous example which means it's displayed directly to console. Results show occurences in MultiInv folder, config.yml, groups.yml, logoutworld.yml Next, script was modified to replace survivalPVPGroup with msurvivalGroup in plugins/MultiInv. Server was started up.</p>
+                <p>This guide is from 2016. It renames survival_pvp to msurvival.</p>
+                <p>First use grep to find all cases of "survival_pvp" in all files. Since MC1's folder contains about 70 GB of files, we'll skip all zips (backups), mca (world files), and log files.</p>
+                <p>grep -r survival_pvp --exclude=\*.{zip,log,mca} --exclude=report.txt MC1 > grep.txt</p>
+                <p>This creates a list of all the files that contain survival_pvp and their path.</p>
+                <p>Now a script was made that looks at all files only in a given folder and non-recursively prompts whether to make the text replacement.</p>
+                <p>The script was run on each directory reported by grep and also blocked zip, log, mca.</p>
+                <p>However, filenames were still not imported and needed to be done manually.</p>
+                <p>In plugins/LogBlock run, the following were renamed.</p>
+                <p>mv survival_pvp_nether.yml msurvival_nether.yml</p>
+                <p>mv survival_pvp.yml msurvival.yml</p>
+                <p>Next, start.sh was given a few edits as it had a simple mirroring system from 2015.</p>
+                <p>Now, check over folders to rename.</p>
+                <p>find MC1 -type d -name "survival_pvp*" -print</p>
+                <p>Rename worlds.</p>
+                <p>mv survival_pvp msurvival</p>
+                <p>mv survival_pvp_nether msurvival_nether</p>
+                <p>mv survival_pvp_the_end msurvival_the_end</p>
+                <p>Similar commands run in backups/worlds and plugins/WorldGuard/worlds.</p>
+                <p>Rename mysql tables and data</p>
+                <p>mysql -u mcsa -p hub</p>
+                <p>RENAME TABLE `lb-survival_pvp` TO `lb-msurvival`;</p>
+                <p>RENAME TABLE `lb-survival_pvp-chest` TO `lb-msurvival-chest`;</p>
+                <p>RENAME TABLE `lb-survival_pvp-sign` TO `lb-msurvival-sign`;</p>
+                <p>RENAME TABLE `lb-survival_pvp_nether` TO `lb-msurvival_nether`;</p>
+                <p>RENAME TABLE `lb-survival_pvp_nether-chest` TO `lb-msurvival_nether-chest`;</p>
+                <p>RENAME TABLE `lb-survival_pvp_nether-sign` TO `lb-msurvival_nether-sign`;</p>
+                <p>Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names.</p>
+                <p>UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp';</p>
+                <p>UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether';</p>
+                <p>UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end';</p>
+                <p>Now let's rename survivalPVPGroup to msurvivalGroup within MultInv's database.</p>
+                <p>UPDATE `multiinv_multiinv` SET inv_group='msurvivalGroup' WHERE inv_group='survivalPVPGroup';</p>
+                <p>Next, use grep on survivalPVPGroup to see if it stored as a flatfile anywhere in MC1.</p>
+                <p>grep -r survivalPVPGroup --exclude=\*.{zip,log,mca} --exclude=report.txt MC1</p>
+                <p>The output isn't piped into a file unlike the previous example which means it's displayed directly to console.</p>
+                <p>Results show occurences in MultiInv folder, config.yml, groups.yml, logoutworld.yml</p>
+                <p>Next, script was modified to replace survivalPVPGroup with msurvivalGroup in plugins/MultiInv.</p>
+                <p>Server was started up.</p>
                 <h4 class="mt-4">Rename Hub World 2023</h4>
-                <p>This guide is from 2023. It renames Endspawn to creative the end First use grep to find all cases of "Endspawn" in all files. Use ripgrep to exclude binaries. rg -l Endspawn This creates a list of all the files that contain Endspawn and their path. Now we find replace text. rg -l Endspawn | xargs sed -i ‘s|Endspawn|creativetheend|g’ However, filenames were still not imported and needed to be done manually. First find them: fd Endspawn Example in plugins/LogBlock run, the following were renamed. mv Endspawn.yml creaitve the end.yml Next, start.sh was given a few edits as it had a simple mirroring system from 2015. Rename mysql tables and data mysql -u mcsa -p hub rename table `lb-Endspawn` to `lb-creative_the_end`; rename table `lb-Endspawn-blocks` to `lb-creative_the_end-blocks`; rename table `lb-Endspawn-chest` to `lb-creative_the_end-chest`; rename table `lb-Endspawn-chestdata` to `lb-creative_the_end-chestdata`; rename table `lb-Endspawn-entities` to `lb-creative_the_end-entities`; rename table `lb-Endspawn-entityids` to `lb-creative_the_end-entityids`; rename table `lb-Endspawn-sign` to `lb-creative_the_end-sign`; rename table `lb-Endspawn-state` to `lb-creative_the_end-state`; Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names. UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp'; UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether'; UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end'; Remember to do the same for plugins/CoreProtect/database.db Server was started up.</p>
+                <p>This guide is from 2023.</p>
+                <p>It renames Endspawn to creative the end</p>
+                <p>First use grep to find all cases of "Endspawn" in all files. Use ripgrep to exclude binaries.</p>
+                <p>rg -l Endspawn</p>
+                <p>This creates a list of all the files that contain Endspawn and their path.</p>
+                <p>Now we find replace text.</p>
+                <p>rg -l Endspawn | xargs sed -i ‘s|Endspawn|creativetheend|g’</p>
+                <p>However, filenames were still not imported and needed to be done manually.</p>
+                <p>First find them: fd Endspawn</p>
+                <p>Example in plugins/LogBlock run, the following were renamed.</p>
+                <p>mv Endspawn.yml creaitve the end.yml</p>
+                <p>Next, start.sh was given a few edits as it had a simple mirroring system from 2015.</p>
+                <p>Rename mysql tables and data</p>
+                <p>mysql -u mcsa -p hub</p>
+                <p>rename table `lb-Endspawn` to `lb-creative_the_end`;</p>
+                <p>rename table `lb-Endspawn-blocks` to `lb-creative_the_end-blocks`;</p>
+                <p>rename table `lb-Endspawn-chest` to `lb-creative_the_end-chest`;</p>
+                <p>rename table `lb-Endspawn-chestdata` to `lb-creative_the_end-chestdata`;</p>
+                <p>rename table `lb-Endspawn-entities` to `lb-creative_the_end-entities`;</p>
+                <p>rename table `lb-Endspawn-entityids` to `lb-creative_the_end-entityids`;</p>
+                <p>rename table `lb-Endspawn-sign` to `lb-creative_the_end-sign`;</p>
+                <p>rename table `lb-Endspawn-state` to `lb-creative_the_end-state`;</p>
+                <p>Luckily CoreProtect uses only a world id with a single table to link ID to world name, so we replace these world names.</p>
+                <p>UPDATE `co_world` SET world='msurvival' WHERE world='survival_pvp';</p>
+                <p>UPDATE `co_world` SET world='msurvival_nether' WHERE world='survival_pvp_nether';</p>
+                <p>UPDATE `co_world` SET world='msurvival_the_end' WHERE world='survival_pvp_the_end';</p>
+                <p>Remember to do the same for plugins/CoreProtect/database.db</p>
+                <p>Server was started up.</p>
                 <h4 class="mt-4">Rename User by UUID</h4>
-                <p>It's much better to rename a user before they log in with their new account so an Old → New can be done rather than a 3 way switch Old ←> New which requires an intermediate UUID. Required dnf install rename Strongly recommended to use the script ~/sync/scripts/rename_uuid.sh which does safety checks Update the CoreProtect and LuckPerms database For co user and luckperms players run these. update co_user/luckperms_players set uuid='069a79f4-44e9-4726-a5be-fca90e38aaf5' where uuid='09ec192c-4abe-48da-892d-d13639817bc5'; update luckperms_user_permissions set uuid='a12b4ad1-d5b8-4dae-bb4e-4e6b03f3fba8' where uuid='00000000-0000-0000-0009-01fd6b3640fa'; Hub PlotsSquared storage.db sqlite3 storage.db update plot set owner='864cff60-0b54-4757-a1f3-f7d4828b7d29' where owner='d85338cf-bbf5-4ae0-9a53-62194b765754'; Update the CoreProtect database MySQL > show databases\g; Save results in Python a = '''acc               bedwars           bentobox           captive   ...''' Generate SQL in Python to Insert into DB for i in a:     print(f"update {i.strip()}.co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';") Towny Go to TSMP/plugins/Towny/data/residents Find the corresponding username file and rename it. Then edit the contained UUID. Old Notes Use dnf install rename Example command to rename all files with one UUID in name to another. find . -name d85338cf-bbf5-4ae0-9a53-62194b765754\* -exec rename -avn ‘d85338cf-bbf5-4ae0-9a53-62194b765754’ '864cff60-0b54-4757-a1f3-f7d4828b7d29' {} \;</p>
-                <h4 class="mt-4">Rename World</h4>
-                <p>In this example we use farlands to rename world to legacy and world_nether to legacy_nether.CoreProtect. 1. mysql -u farlands -p farlands 2. View: SELECT * FROM co_world; 3. UPDATE co_world SET world='legacy' WHERE rowid=1; 4. UPDATE co_world SET world='legacy_nether' WHERE rowid=3; PerWorldInv: use text replacement, sed -i 's|"world":"world|"world":"legacy|g' */last*. Use this cool to rename remaining files and folders: https://manpages.debian.org/testing/rename/file-rename.1p.en.html </p>
+                <p>For users who change their accounts.</p> 
+                <p>It's much better to rename a user before they log in with their new account so an Old → New can be done rather than a 3 way switch Old ←> New which requires an intermediate UUID.</p>
+                <h5>Required</h5>
+                <p>dnf install rename</p>
+                <p>Strongly recommended to use the script ~/sync/scripts/rename_uuid.sh which does safety checks</p>
+                <h5>Update the CoreProtect and LuckPerms database</h5>
+                <p>For co user and luckperms players run these.</p>
+                <p>update co_user/luckperms_players set uuid='069a79f4-44e9-4726-a5be-fca90e38aaf5' where uuid='09ec192c-4abe-48da-892d-d13639817bc5';</p>
+                <p>update luckperms_user_permissions set uuid='a12b4ad1-d5b8-4dae-bb4e-4e6b03f3fba8' where uuid='00000000-0000-0000-0009-01fd6b3640fa';</p>
+                <h5>Hub PlotsSquared storage.db</h5>
+                <p>sqlite3 storage.db</p>
+                <p>update plot set owner='864cff60-0b54-4757-a1f3-f7d4828b7d29' where owner='d85338cf-bbf5-4ae0-9a53-62194b765754';</p>
+                <h5>Update the CoreProtect database</h5>
+                <p>MySQL</p>
+                <p>> show databases\g;</p>
+                <p>use hub;</p>
+                <p>update co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';</p>
+                <p>update co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';</p>
+                <h5>Save results in Python</h5>
+                <p>a = '''acc</p>              
+                <p>bedwars</p>          
+                <p>bentobox</p>          
+                <p>captive ...'''</p>
+                <p>Generate SQL in Python to Insert into DB</p>
+                <p>for i in a:</p>
+                <p>print(f"update {i.strip()}.co_user set uuid='864cff60-0b54-4757-a1f3-f7d4828b7d29' where uuid='d85338cf-bbf5-4ae0-9a53-62194b765754';")</p>
+                <h5>Towny</h5>
+                <p>Go to TSMP/plugins/Towny/data/residents</p>
+                <p>Find the corresponding username file and rename it. Then edit the contained UUID.</p>
+                <h5>Old Notes</h5>
+                <p>Use dnf install rename</p>
+                <p>Example command to rename all files with one UUID in name to another.</p>
+                <p>find . -name d85338cf-bbf5-4ae0-9a53-62194b765754\* -exec rename -avn ‘d85338cf-bbf5-4ae0-9a53-62194b765754’ '864cff60-0b54-4757-a1f3-f7d4828b7d29' {} \;</p>
+                <h4>Rename World</h4>
+                <p>In this example we use farlands to rename world to legacy and world_nether to legacy_nether.</p>
+                <h5>CoreProtect</h5>
+                <p>1. mysql -u farlands -p farlands</p>
+                <p>2. View: SELECT * FROM co_world;</p>
+                <p>3. UPDATE co_world SET world='legacy' WHERE rowid=1;</p>
+                <p>4. UPDATE co_world SET world='legacy_nether' WHERE rowid=3;</p>
+                <h5>PerWorldInv</h5>
+                <p>Use text replacement</p>
+                <p>sed -i 's|"world":"world"|"world":"legacy|g' */last*</p>
+                <p>Use this cool to rename remaining files and folders</p>
+                <p>https://manpages.debian.org/testing/rename/file-rename.1p.en.html</p>
+                <h3 class="mt-4">MachineSetup</h3>
+                <h4>BIOS Settings</h4>
+                <p>VGA Detection: Auto</p>
+                <p>Energy aka ErP Ready: Enabled</p>
+                <p>Memory Fast Boot: Disabled</p>
+                <p>Virtualization aka SVM Mode: Enabled</p>
+                <p>RAM: XMP settings</p>
+                <p>Restart on power: On</p>
+                <p>Secure boot: Off if using Nvidia drivers</p>
+                <p>It's strongly recommended to keep the BIOS up to date for security.</p>
+                <h4>DB Replication</h4>
+                <p>https://mariadb.com/kb/en/setting-up-replication/</p>
+                <h5>Configuring the Master</h5>
+                <p>Example Enabling Replication for MariaDB</p>
+                <p>Configure /etc/my.cnf.d/arcator.cnf and /etc/my.cnf.d/[machine].cnf</p>
+                <p>Should require little change.</p>
+                <p>server_id and log-basename</p>
+                <p>server_id is the machine s#</p>
+                <p>Ensure a replication (maxscale) user exists. (It does but otherwise you would run this.)</p>
+                <p>CREATE USER 'maxscale' IDENTIFIED BY 'REDACTED';</p>
+                <p>GRANT REPLICATION SLAVE ON *.*  TO 'maxscale';</p>
+                <h5>Run these steps: Getting the Master's Binary Log Co-ordinates</h5>
+                <p>https://mariadb.com/kb/en/setting-up-a-replication-slave-with-mariabackup/</p>
+                <p>You don't need to turn off the server while running these steps.</p>
+                <p>Backup database: mariabackup --backup --target-dir=mbackup/</p>
+                <p>Finish backup: mariabackup --prepare --target-dir=mbackup/</p>
+                <p>Tar and zstd it: tar --zstd -cf mbackup.tar.zst mbackup/</p>
+                <p>Import: rsync --inplace mbackup.tar.zst host:/mnt/Main/no_sync</p>
+                <h5>Import at Destination</h5>
+                <p>mkdir mbackup/</p>
+                <p>tar --zstd -xf mbackup.tar.zst</p>
+                <p>mariabackup --copy-back --target-dir=mbackup/</p>
+                <p>chown -R mysql:mysql /var/lib/mysql</p>
+                <p>restorecon -rv /var/lib/mysql</p>
+                <h5>With example slave pos. There should be one master and one slave. Do not set two nodes to be the slaves of each other.</h5>
+                <p>SET GLOBAL gtid_slave_pos = "0-5-18100164";</p>
+                <p>CHANGE MASTER TO</p>
+                <p>MASTER_HOST="10.0.0.1",</p>
+                <p>MASTER_USER="maxscale",</p>
+                <p>MASTER_PASSWORD="REDACTED",</p>
+                <p>MASTER_USE_GTID=slave_pos;</p>
+                <p>START SLAVE;</p>
+                <p>SHOW SLAVE STATUS\G;</p>
+                <h5>Reset old slave data</h5>
+                <p>STOP SLAVE;</p>
+                <p>RESET SLAVE;</p>
+                <h4> Drive Encryption</h4>
+                <p>We generally only use this for VPS's or HDDs which are not bottlenecked by encryption.</p>
+                <ol>
+                <li>Generate the key on a non-syncing path. We do not want the key to be auto-synced like most of the machine!</li>
+                <ol>
+                    <li>dd if=/dev/random of=~/no_sync/key.ppk bs=1K count=1 iflag=fullblock</li>
+                </ol>
+                <li>Format the drive or partition. Ask at least one SSH 3 or higher person to verify your command.</li>
+                <ol>
+                    <li>cryptsetup /dev/sdX# --key-file ~/no_sync/key.ppk</li>
+                </ol>
+                <li>Mount the device in /dev/mapper/volumename</li>
+                <ol>
+                    <li>cryptopen  /dev/sdX# --key-file volumename ~/no_sync/key.ppk</li>
+                </ol>
+                <li>Enable auto-mounting by editing /etc/crypttab.</li>
+                <ol>
+                    <li>e.g. volumename /dev/sdX# /mnt/Main/no_sync/home/mcsa/key.ppk  luks</li>
+                </ol>
+                <li>Format the device and use it as you would /dev/sdX#</li>
+                </ol>
+                <p>mkfs.btrfs /dev/mapper/volumename</p>
             </div>
 
             <!-- Machines Tab -->
@@ -459,13 +664,267 @@
                 <h4>DB</h4>
                 <ul>
                     <li>SQL (SELECT, UPDATE, DELETE)</li>
-                    <li>Install Mariadb</li>
+                    <li>Install <a href="https://mariadb.org/download/">Mariadb</a></li>
                     <li>Indexes</li>
                     <li>Replication</li>
                     <li>Maxscale</li>
                     <li>Promoting slave to master manually</li>
                     <li>Partitions</li>
                     <li>Backups (Mariabackup)</li>
+                </ul>
+            </div>
+            <div x-show="tab === 'mcadmin'" class="fade-in" x-cloak>
+                <h2 class="mb-4">MCAdmin</h2>
+                <h3>Useful Resources</h3>
+                <p>Updating <a href="https://papermc.io/downloads">Paper</a> and <a href="https://velocitypowered.com/">Velocity</a> (Bungee replacement)</p>
+                <p><a href="https://www.setup.md/">Minecraft Admin Wiki</a></p>
+                <p><a href="https://www.paper-chan.moe/paper-optimization/">Paper Optimization</a></p>
+                <p>Dust has premium plugins like <a href="https://github.com/IntellectualSites/PlotSquared/">PlotsSquared</a> and <a href="https://github.com/CitizensPlugin/CitizensPlugin">Citiziens</a> which are important for Hub.</p>
+                <h3 class="mt-4">Chunk Pruning</h3>
+                <h4>Summary</h4>
+                <p>To prune chunks we first identify all chunks with player activity using CoreProtect. Then we can use mcaselector to delete all chunks which do not match. This is useful when updating servers to the latest version since Minecraft will regenerate the chunks.</p>
+                <p><a href="https://github.com/Querz/mcaselector">https://github.com/Querz/mcaselector</a></p>
+                <h4>Steps</h4>
+                <p>We also find chunks by using a prior copy of the chunk list from last prune. (This lets us avoid rereading LogBlock, CoreProtect sqlite3, and other legacy sources for 2010s data.)</p>
+                <p>Instead you will only need to pull data from CoreProtect and run scripts. OLD CHUNK LIST (step 0) + CoreProtect (step 1); merged (step 2) with added radius (step 3) => New Chunk List.</p>
+                <p>We also add a radius of +1 (step 2) to leave safe room away from builds. Since chunk smoothing might modify adjacent chunks. (0 was used before without issue but 1 is a safer estimate so future chunk smoothing doesn't modify any builds.)</p>
+                <p>The final file we write is a list of chunks. We edit the header with a flag to indicate mcaselector should delete everything else.</p>
+                <p>Below is an example with SSMP.</p>
+                <h4>0. Loading the last chunk list</h4>
+                <p>From mcsa@jylina run the following. Adjust commands accordingly.</p>
+                <p>cd ~/sync/scripts/listchunks/ssmp</p>
+                <p>Note there are 3 folders.</p>
+                <p>distinctsources/ (distinct data sources)</p>
+                <p>merged/ (the data from chunks/ merged together)</p>
+                <p>final/ (the total list of chunks from last time)</p>
+                <p>Now we will move the previous final/ and use it as a data source.</p>
+                <p>If final/ already exists and distinctsources/lastprune exists then it's probably an old copy. Run rm -r distinctsources/lastprune</p>
+                <p>Then continue with the move</p>
+                <p>mv final/ distinctsources/lastprune</p>
+                <h4>1. Pulling CoreProtect DB data</h4>
+                <p>To read the mariadb ssmp database and CoreProtect sqlite3 fallback file and output to distinctsources/. Adjust the server name and run the following.</p>
+                <p>python3 ../readco/codb.py ssmp ~/Servers/SSMP/plugins/CoreProtect/database.db distinctsources/</p>
+                <h4>2. Merge the data sources</h4>
+                <p>Now merge all the sources into a single csv file per world (grouping based on filenames.)</p>
+                <p>python3 ../merge.py distinctsources/ merged/</p>
+                <p>Note the new files made in merged/ with ls</p>
+                <h4>3. Creating the delete chunk list.</h4>
+                <p>1 is the radius of chunks to keep. Repeat this command for each world csv in merged/.</p>
+                <p>python3 ../addRadius.py merged/survival.csv 1 final/survival.csv</p>
+                <p>Now manually replace the first line of each csv file in final/ with "inverted"</p>
+                <p>Example</p>
+                <p>inverted</p>
+                <p>-26;12;-826;395</p>
+                <p>...</p>
+                <p>This will reverse the behaviour of mcaselector so that only the chunks that are not in this list will be deleted!</p>
+                <h4>4. The visualizer</h4>
+                <p>This step is optional but can be used to be certain the right chunks are deleted.</p>
+                <p>Inside listchunks/visualize is an example file auditHub.sh which uses mcaselector to create a list of all chunks. There are comments in the file explaining how to use it to make a before and after (step 5) chunk list. Afterwards you can use visualize.py to compare the two (and download the pngs).</p>
+                <h4>5. Using mcaselector</h4>
+                <p>Verify there is a backup of the world. ~/Backups/Snapshot can work but automatically prunes within an hour.</p>
+                <p>Usually the latest version of java is needed.</p>
+                <p>For each file in final/ and corresponding world folder. Run:</p>
+                <p>java -jar mcaselector-2.5.2.jar --mode delete --world ~/Servers/SSMP/survival --selection final/survival.csv</p>
+                <p>Note nether and end use a slightly different --world survival_nether/DIM-1 and --world survival_the_end/DIM1</p>
+                <p>Now check the map size and test it in game. If there is a mistake then revert the map to a backup. For example: rsync -av --checksum --inplace --delete ~/Backups/Snapshot/20250827_1400/SSMP/ ~/Servers/SSMP/</p>
+                <p>You can use the visualizer as well after purging.</p>
+                <h4>6. Optional MariaDB Notes</h4>
+                <p>Each server has a corresponding database. Scripts handle this on their own but these are useful commands if you wish to run custom commands. You should understand SQL databses, tables, and joins to follow this section.</p>
+                <p>To connect to the mariadb console using hub database.</p>
+                <p>mariadb -u root hub</p>
+                <p>To list all databases (within the mariadb console)</p>
+                <p>show databases;</p>
+                <p>To change databases (within the mariadb console)</p>
+                <p>use hub;</p>
+                <p>At this point SELECT statements are used. SELECT statements are safe because they do not modify tables.</p>
+                <p>Logical Breakdown of codb.py query</p>
+                <p>The select statement can be found in readco/const.py.</p>
+                <p>It converts the xz coordinates into chunk coordinates. The count parameter is not used but stores the number of block changes in a block.</p>
+                <p>The co_block table stores all block changes.</p>
+                <p>The where clause checks for all block edits besides a black list of natural blocks. This list would be improved.</p>
+                <p>The check co_user.uuid is not null filters out all non-users such as lava and entity changes.</p>
+                <p>co_block.wid is HARD CODED for the proper id.</p>
+                <p>Finding the wid</p>
+                <p>select * from co_world;</p>
+                <p>Simplified Pruning</p>
+                <p>A good heuristic is to use the InhabitedTime (measured in ticks, a twentieth of a second).</p>
+                <p>Here's an example of commmands</p>
+                <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world --mode delete</p>
+                <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world_nether/DIM-1 --mode delete</p>
+                <p>java -jar ~/mcaselector-2.6.1.jar --query "InhabitedTime < 5000" --world world_the_end/DIM1 --mode delete</p>
+                <h3 class="mt-4">Compiled Plugins</h3>
+                <p>here are some plugins we compile manually. Partly because we have not paid for premium.</p>
+                <p>You can find the repositories in /mnt/Main/no_sync/home/mcsa/repos for Jylina and Apollo.</p>
+                <h4>CoreProtect</h4>
+                <p><a href="https://github.com/PlayPro/CoreProtect/">https://github.com/PlayPro/CoreProtect/</a></p>
+                <p>Edit the yml</p>
+                <p>Run: mvn package</p>
+                <p>Then copy the file from target/</p>
+                <h4>LibsDisguises</h4>
+                <p>(fun for Hub not necessary) <a href="https://github.com/libraryaddict/LibsDisguises">https://github.com/libraryaddict/LibsDisguises</a></p>
+                <p>There's currently a compilation error unrelated to our changes. "class file for com.mojang.brigadier.Message not found"</p>
+                <p>To crack it. We edit the isPremium methods to return true in these files.</p>
+                <p>plugin/src/main/java/me/libraryaddict/disguise/utilities/plugin/PluginInformation.java</p>
+                <p>plugin/src/main/java/me/libraryaddict/disguise/utilities/LibsPremium.java</p>
+                <p>Then we run "mvn package"</p>
+                <h4>Panilla</h4>
+                <p>Security anti-exploit for NBT items</p>
+                <p><a href="https://github.com/Lumine1909/Panilla_Continue">https://github.com/Lumine1909/Panilla_Continue</a></p>
+                <p>This fork offers compiled jar files.</p>
+                <p>For the original version no edits are required. Simply run.</p>
+                <p>./gradlew panilla-craftbukkit-v1_20_R3:build</p>
+                <h4>PlotsSquared</h4>
+                <p>Dust has premium access but sometimes compiling is faster. But we have to crack it.</p>
+                <p><a href="https://github.com/IntellectualSites/PlotSquared/">https://github.com/IntellectualSites/PlotSquared/</a></p>
+                <p>Compilation error. Requires -Xlint:unchecked</p>
+                <p>No edits are required. Simply run.</p>
+                <p>./gradlew build</p>
+                <h3>Coreprotect Database Tasks</h3>
+                <h4>Pruning Data in Region</h4>
+                <p>1. Login MySQL</p>
+                <p>2. Explore schema</p>
+                <p>1.select * from co_world;</p>
+                <p>2.select * from co_world where world='creative';</p>
+                <p>3.select * from co_user limit 5;</p>
+                <p>4.select * from co_user where user='#water';</p>
+                <p>5.select * from co_block limit 5;</p>
+                <p>3. Example</p>
+                <p>1. select count(*) from co_block where wid=1 and user=97 and x < -250 and x > -267 and z > 635 and z < 663;</p>
+                <p>Deleting world eater edits within an X Z range.</p>
+                <p>delete cob FROM co_block cob LEFT JOIN co_material_map com ON com.id = cob.type LEFT JOIN co_user cou ON cob.user = cou.rowid WHERE cob.wid = 1   AND cou.user LIKE '#%'   AND cob.x < -1988   AND cob.x > -2285   AND cob.z < 11630   AND cob.z > 11330   AND com.material not LIKE '%ore%';</p>
+                <h3>Custom Plugins</h3>
+                <h4>GitHub links</h4>
+                <p><a href="https://github.com/Restitutor/AFKLog">AFKLog</a></p>
+                <p><a href="https://github.com/Darrionat/StaffWarn">StaffWarn</a></p>
+                <p><a href="https://github.com/Restitutor/StaffToggleBG">StaffToggleBG</a></p>
+                <p><a href="https://github.com/sylviameows/StaffToggle">StaffToggle</a></p>
+                <p><a href="https://github.com/Restitutor/SDI">SDI</a></p>
+                <h4>PAPI Extension</h4>
+                <p>Darrion wrote an extension to PAPI which allows us to have aliases for worlds. We use this to color code VentureChat prefixes.</p>
+                <p>Plugin location: ~/Servers/NAME/plugins/PlaceholderAPI/expansions/WorldAliasExpansion-1.0.0.jar</p>
+                <p>Config location: ~/Servers/NAME/plugins/PlaceholderAPI/expansions/worldAliases.yml</p>
+                <p>survival: "&aSSMP&f"</p>
+                <p>survival_nether: "&cSSMP&f"</p>
+                <p>survival_the_end: "&dSSMP&f"</p>
+                <p>Unique yml file for each server. Mapping worlds to custom strings. If there is no alias defined, the fallback is simply the name of the world.</p>
+                <p>Placeholder: %worldAlias%</p>
+                <h4>Server Selector</h4>
+                <p>Completely recreate the server selector plugin on Hub</p>
+                <p>New features:</p>
+                <p>Players can toggle if they receive one. Removes servers that are offline from the GUI. Label the server selector with an NBT tag (NBTTagEditor), so if the item’s name, material, etc. ever changes, the old ones can be wiped+replaced</p>
+                <p>Current bugs:</p>
+                <p>Duplicates in inventory sometime. Make GUI editing easier + version compatible with XSeries</p>
+                <h3>Datapacks</h3>
+                <h4>Essential Datapacks</h4>
+                <p>SSMP uses <a href="https://vanillatweaks.net/picker/datapacks/">https://vanillatweaks.net/picker/datapacks/</a></p>
+                <p>Hub and SSMP use a custom height datapack. We lost the original generator so for each server update we get find a new expanded height datapack. Then we set the min Y to -64 and the max height accordingly using the old one as reference. Then we confirm no other flags changed.</p>
+                <h3>MC Server Setup</h3>
+                <p>MC Server Setup</p>
+                <p>Critical server.properties Setup</p>
+                <p>We use rcon to cleanly shutdown servers during restarts. We use query to delay nightly restarts if players are online.</p>
+                <p>Set</p>
+                <p>enable-rcon=true</p>
+                <p>enable-query=true</p>
+                <p>region-file-compression=none</p>
+                <p>network-compression-threshold=-1</p>
+                <p>server-ip=10.0.0.1 (or 10.0.0.7 for apollo or 10.0.0.x for others. This is for security ONLY for servers behind Velocity. Otherwise if it must be publicly accessible then we don't configure it.)</p>
+                <p>rcon.port to 400xx (something not in use). Hub is on internal port 30001 so we use 40001. Modded servers on 2556x tend to use 4006x.</p>
+                <p>rcon.password (copy from Hub or SSMP)</p>
+                <p>Set</p>
+                <h4>1. DATABASE SETUP</h4>
+                <p>Enter the root mariadb console.</p>
+                <p>mariadb -u root -p</p>
+                <p>Enter the password.</p>
+                <p>To set up a new user and database for a server. (<a href="https://www.linode.com/docs/databases/mysql/install-mysql-on-ubuntu-14-04/">Guide based</a></p>
+                <p>create database hardcore;</p>
+                <p>grant all on hardcore.* to 'mcdba' identified by 'PASSWORD'; // find password in any server's coreprotect config</p>
+                <p>Optionally have res copy these tables: co_art_map co_blockdata_map co_entity_map co_material_map co_user co_username_log</p>
+                <p>mysqldump -u root hub co_art_map co_blockdata_map co_entity_map co_material_map co_user co_username_log > co_schema.sql</p>
+                <p>mariadb -u mcdba -p hardcore < co_schema.sql</p>
+                <h4>2. Initial set up</h4>
+                <p>Make a new folder in /mnt/Main/Sync/Servers</p>
+                <p>cp *sh and banned*json files from another server.</p>
+                <p>Update the server names where needed such as update.sh.</p>
+                <p>Copy over these jars (standard plugin list)</p>
+                <p>AFKLog, Bluemap, CoreProtect, EssentialsX, InventoryRollbackPlus, LastLog, LuckPerms-Bukkit, GrimAC (for survival), OnfimPaper, PlaceholderAPI, Plan, ProtocolLib, Replay, SDI, Vault, ViaVersion, ViaBackwards</p>
+                <p><a href="https://github.com/Lumine1909/Panilla_Continue">Panilla Continue</a></p>
+                <p>Always use gamerule spawnChunkRadius 0 to save resources for other servers</p>
+                <h4>3. To update configs.</h4>
+                <p>Edit server.properties motd and port.</p>
+                <p>If you copied another server (not recommended): rg -i Hardcore (server folder)  // to find any server-specific strings in configs</p>
+                <p>Update configs as needed.</p>
+                <p>Clear any Essentials userdata.</p>
+                <p>Delete Multiverse-Core/worlds.yml</p>
+                <p>Enable nether (server.properties) and end (bukkit.yml) as needed.</p>
+                <p>Configure Plan config and VentureChat/config.yml</p>
+                <p>Reconfigure CoreProtect config.yml</p>
+                <p>Copy PlaceholderAPI/expansions/WorldAliasExpansion-1.0.0.jar from another server</p>
+                <p>Update PlaceholderAPI/expansions/worldAliases.yml</p>
+                <p>papi ecloud download Luckperms</p>
+                <h4>4. LUCKPERMS SETUP</h4>
+                <h5>4.1 Create the groups</h5>
+                <p>lp creategroup hatrusted</p>
+                <p>lp creategroup hadefault</p>
+                <h5>4.2 Fix the inheritance.</h5>
+                <p>lp group trusted parent add hatrusted server=hardcore</p>
+                <p>lp group default parent add hadefault server=hardcore</p>
+                <p>You may use paperadmin, papermod, papertrusted, paperdefault if you don't need special perms</p>
+                <p>Example</p>
+                <p>lp group default parent add paperdefault server=hardcore</p>
+                <p>lp group default parent add survivaldefault server=hardcore</p>
+                <h4>5. VELOCITY SETUP</h4>
+                <p>Add server to Velocity's velocity.toml and plugins/SlashServer/config.yml</p>
+                <p>Modify config/paper-global.yml</p>
+                <p>Copy the forwarding secret into proxies.velocity.secret and set enabled: true</p>
+                <h4>6. Enable anti-seed cracking by setting seeds in spigot.yml</h4>
+                <p>Don't remember exactly how to use this toggle. But here's the safest way to do it.</p>
+                <p>Run the server</p>
+                <p>Set config/paper-world-defaults.yml generate-random-seeds-for-all: true</p>
+                <p>Delete all the “seed-” lines in spigot.yml so they regen</p>
+                <p>Delete the world</p>
+                <h4>7. Modify config/paper-world-defaults.yml</h4>
+                <p>keep-spawn-loaded: false</p>
+                <p>Follow <a href="https://docs.papermc.io/paper/anti-xray#engine-mode-3">https://docs.papermc.io/paper/anti-xray#engine-mode-3</a></p>
+                <h4>8. Paper chat setup</h4>
+                <p>Copy plugins/VentureChat/config.yml and plugins/PlaceholderAPI/expansions/WorldAliasExpansion-1.0.0.jar</p>
+                <p>Copy and modify plugins/PlaceholderAPI/expansions/worldAliases.yml</p>
+                <h4>9. Survival setup</h4>
+                <p>Copy the survival*/paper-world.yml files from SSMP as a good template for blocking xray and randomizing nether and end feature seeds.</p>
+                <h4>## Modded Setup</h4>
+                <p>Set B:enabled=false in config/ftbbackups.cfg after the server has run.</p>
+                <p>Or check auto: false for ./config/ftbbackups3-server.snbt to disable them.</p>
+                <h3>Useful Plugins</h3>
+                <ul>
+                    <li><a href="https://github.com/Tapiture/venturechat/wiki/Commands-and-Permissions">VentureChat</a></li>
+                    <li><a href="https://youtu.be/uAgS5cj5J9Q">CoreProtect tutorial</a></li>
+                    <li><a href="https://www.spigotmc.org/resources/dynamic-lights.78766/">Dynamic Lights</a></li>
+                    <li><a href="https://www.spigotmc.org/resources/1-8-1-15-ultimateautorestart-need-an-autorestart-plugin-grab-the-best-one-today.64414/">Ultimate AutoRestart</a></li>
+                    <li><a href="https://www.spigotmc.org/resources/tallnether.22561/">Tall Nether</a></li>
+                    <li><a href="https://www.spigotmc.org/resources/farlandsagain.8228/">Farlands Again</a></li>
+                    <li><a href="https://www.spigotmc.org/resources/worldalias-papi-expansion.90045/">WorldAlias PAPI Expansion</a></li>
+                    <li><a href="https://www.spigotmc.org/resources/staffwarn.90047/">StaffWarn</a></li>
+                    <li>Essential Plugins</li>
+                    <ul>
+                        <li><a href="https://www.spigotmc.org/resources/coreprotect.24456/">CoreProtect</a></li>
+                        <li><a href="https://ci.ender.zone/job/EssentialsX/">EssentialsX (we no longer use EssentialsXSpawn)</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/afklog.22474/">AFKLog</a>, <a href="https://www.spigotmc.org/resources/onfimpaper.22475/">OnfimPaper</a> (Res plugin)</li>
+                        <li><a href="https://www.spigotmc.org/resources/venturechat.22476/">VentureChat</a> (intra-server chat sync)</li>
+                        <li><a href="https://www.spigotmc.org/resources/viaversion.12602/">ViaVersion</a>, <a href="https://www.spigotmc.org/resources/viabackwards.12603/">ViaBackwards</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/worldedit.22472/">WorldEdit</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/worldguard.22473/">WorldGuard</a></li>
+                    </ul>
+                    <li>Quality of Life Plugins</li>
+                    <ul>
+                        <li><a href="https://www.spigotmc.org/resources/tab.22477/">TAB</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/item2chat.22478/">Item2Chat</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/lastlog.22479/">LastLog</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/inventoryrollbackplus.22480/">InventoryRollbackPlus</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/mcbans.22481/">MCBans (not used for bans anymore, warns when user was banned on other servers)</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/perworldinventory.22482/">PerWorldInventory (easier access to player inventories as yml and separate staffing in gmc from gms)</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/plan.22483/">Plan (player statistics)</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/pvp-toggle.22484/">PvPToggle</a></li>
+                        <li><a href="https://www.spigotmc.org/resources/gsit.22485/">GSit</a></li>
+                    </ul>
                 </ul>
             </div>
         </div>
