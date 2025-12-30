@@ -22,28 +22,61 @@
     </div>
 </section>
 
-<main class="container py-5" x-data="{ email: '', password: '', profile: {}, get user() { return this.$store.auth?.user }, get storeProfile() { return this.$store.auth?.profile } }" x-init="$watch('storeProfile', v => { if(v) profile = {...v} }); if($store.auth?.profile) profile = {...$store.auth.profile}">
+<main class="container py-5" x-data="{ 
+    email: '', password: '', displayName: '', handle: '', 
+    isSignUp: false,
+    profile: {}, 
+    get user() { return this.$store.auth?.user }, 
+    get storeProfile() { return this.$store.auth?.profile },
+    linkDiscord() {
+        const clientId = '1141136277146304520';
+        const redirectUri = encodeURIComponent(window.location.origin + '/discord-callback.html');
+        const state = Math.random().toString(36).substring(7);
+        sessionStorage.setItem('discord_oauth_state', state);
+        window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=identify&state=${state}`;
+    }
+}" x-init="$watch('storeProfile', v => { if(v) profile = {...v} }); if($store.auth?.profile) profile = {...$store.auth.profile}">
+
+    <!-- Sign In / Sign Up -->
     <div x-show="!user" class="row justify-content-center">
         <div class="col-md-6 col-lg-4">
             <div class="card">
                 <div class="card-body">
-                    <h4 class="card-title mb-4">Sign In</h4>
-                    <form @submit.prevent="$store.auth.login(email, password).catch(e => Swal.fire('Error', e.message, 'error'))">
+                    <h4 class="card-title mb-4" x-text="isSignUp ? 'Create Account' : 'Sign In'"></h4>
+                    
+                    <!-- Sign In Form -->
+                    <form x-show="!isSignUp" @submit.prevent="$store.auth.login(email, password).catch(e => Swal.fire('Error', e.message, 'error'))">
                         <div class="mb-3"><input type="email" x-model="email" class="form-control" placeholder="Email" autocomplete="email" required></div>
                         <div class="mb-3"><input type="password" x-model="password" class="form-control" placeholder="Password" autocomplete="current-password" required></div>
                         <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
                     </form>
+                    
+                    <!-- Sign Up Form -->
+                    <form x-show="isSignUp" @submit.prevent="$store.auth.signup(email, password, displayName, handle).then(() => Swal.fire('Success', 'Account created!', 'success')).catch(e => Swal.fire('Error', e.message, 'error'))">
+                        <div class="mb-3"><input type="text" x-model="displayName" class="form-control" placeholder="Display Name" required></div>
+                        <div class="mb-3"><input type="text" x-model="handle" class="form-control" placeholder="Handle (username)"></div>
+                        <div class="mb-3"><input type="email" x-model="email" class="form-control" placeholder="Email" autocomplete="email" required></div>
+                        <div class="mb-3"><input type="password" x-model="password" class="form-control" placeholder="Password (min 6 chars)" autocomplete="new-password" required minlength="6"></div>
+                        <button type="submit" class="btn btn-primary w-100 mb-3">Create Account</button>
+                    </form>
+                    
+                    <div class="text-center mb-3">
+                        <button class="btn btn-link" @click="isSignUp = !isSignUp" x-text="isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'"></button>
+                    </div>
+                    
+                    <hr>
+                    <p class="text-center text-secondary small mb-2">Or continue with</p>
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('google').catch(e => Swal.fire('Error', e.message, 'error'))">Sign in with Google</button>
-                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('github').catch(e => Swal.fire('Error', e.message, 'error'))">Sign in with GitHub</button>
-                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('twitter').catch(e => Swal.fire('Error', e.message, 'error'))">Sign in with Twitter</button>
-                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('discord').catch(e => Swal.fire('Error', e.message, 'error'))">Sign in with Discord</button>
+                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('google').catch(e => Swal.fire('Error', e.message, 'error'))">Google</button>
+                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('github').catch(e => Swal.fire('Error', e.message, 'error'))">GitHub</button>
+                        <button class="btn btn-outline-secondary" @click="$store.auth.loginWithProvider('twitter').catch(e => Swal.fire('Error', e.message, 'error'))">Twitter</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Logged In - Profile Settings -->
     <div x-show="user" class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card">
@@ -52,39 +85,89 @@
                     <button class="btn btn-outline-danger btn-sm" @click="$store.auth.logout()">Sign Out</button>
                 </div>
                 <div class="card-body">
-                    <form @submit.prevent="(async () => { const u = $store.auth.user; if(!u) return; await $store.auth.saveProfile(u.uid, profile); Swal.fire('Success', 'Profile updated', 'success'); })().catch(e => Swal.fire('Error', e.message, 'error'))">
+                    <form @submit.prevent="(async () => { await $store.auth.saveProfile($store.auth.user.uid, profile); Swal.fire('Success', 'Profile updated', 'success'); })().catch(e => Swal.fire('Error', e.message, 'error'))">
+                        
+                        <!-- Profile Info -->
                         <div class="d-flex align-items-center gap-4 mb-4">
-                            <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary profile-pic-preview profile-preview-lg" alt="Profile Preview">
+                            <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary profile-preview-lg" alt="Profile">
                             <div class="flex-grow-1">
                                 <h5 class="mb-3">Profile</h5>
                                 <div class="row g-3">
-                                    <div class="col-md-6"><label class="form-label" for="profile-displayName">Display Name</label><input id="profile-displayName" x-model="profile.displayName" class="form-control"></div>
-                                    <div class="col-md-6"><label class="form-label" for="profile-handle">Handle</label><input id="profile-handle" x-model="profile.handle" class="form-control"></div>
+                                    <div class="col-md-6"><label class="form-label">Display Name</label><input x-model="profile.displayName" class="form-control"></div>
+                                    <div class="col-md-6"><label class="form-label">Handle</label><input x-model="profile.handle" class="form-control"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6"><label class="form-label" for="profile-email">Email</label><input id="profile-email" x-model="profile.email" class="form-control" readonly></div>
-                            <div class="col-md-6"><label class="form-label" for="profile-photoURL">Photo URL</label><input id="profile-photoURL" x-model="profile.photoURL" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">Email</label><input x-model="profile.email" class="form-control" readonly></div>
+                            <div class="col-md-6"><label class="form-label">Photo URL</label><input x-model="profile.photoURL" class="form-control"></div>
                         </div>
                         
                         <hr>
+                        
+                        <!-- Appearance -->
                         <h5 class="mb-3">Appearance</h5>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="form-label" for="profile-theme">Theme</label>
-                                <select id="profile-theme" x-model="profile.themePreference" class="form-select" aria-label="Theme Preference">
+                                <label class="form-label">Theme</label>
+                                <select x-model="profile.themePreference" class="form-select">
                                     <option value="dark">Dark</option>
                                     <option value="light">Light</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="profile-font">Font Size</label>
-                                <select id="profile-font" x-model="profile.fontScaling" class="form-select" aria-label="Font Scaling">
+                                <label class="form-label">Font Size</label>
+                                <select x-model="profile.fontScaling" class="form-select">
                                     <option value="small">Small</option>
                                     <option value="normal">Normal</option>
                                     <option value="large">Large</option>
                                 </select>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Linked Accounts -->
+                        <h5 class="mb-3">Linked Accounts</h5>
+                        <div class="row g-2 mb-4">
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                                    <span>Google</span>
+                                    <button type="button" class="btn btn-sm" 
+                                        :class="$store.auth.isProviderLinked('google.com') ? 'btn-outline-danger' : 'btn-outline-primary'"
+                                        @click="$store.auth.isProviderLinked('google.com') ? $store.auth.unlinkProvider('google.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('google').catch(e => Swal.fire('Error', e.message, 'error'))"
+                                        x-text="$store.auth.isProviderLinked('google.com') ? 'Unlink' : 'Link'"></button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                                    <span>GitHub</span>
+                                    <button type="button" class="btn btn-sm" 
+                                        :class="$store.auth.isProviderLinked('github.com') ? 'btn-outline-danger' : 'btn-outline-primary'"
+                                        @click="$store.auth.isProviderLinked('github.com') ? $store.auth.unlinkProvider('github.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('github').catch(e => Swal.fire('Error', e.message, 'error'))"
+                                        x-text="$store.auth.isProviderLinked('github.com') ? 'Unlink' : 'Link'"></button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                                    <div>
+                                        <span>Discord</span>
+                                        <small x-show="storeProfile?.discordLinked" class="text-success ms-2" x-text="storeProfile?.discordTag"></small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm" 
+                                        :class="storeProfile?.discordLinked ? 'btn-outline-danger' : 'btn-outline-primary'"
+                                        @click="storeProfile?.discordLinked ? $store.auth.saveProfile($store.auth.user.uid, {discordLinked: false, discordId: null, discordTag: null, discordPic: null}).then(() => Swal.fire('Unlinked', 'Discord disconnected', 'success')) : linkDiscord()"
+                                        x-text="storeProfile?.discordLinked ? 'Unlink' : 'Link'" title="Link or Unlink Discord"></button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                                    <span>Twitter</span>
+                                    <button type="button" class="btn btn-sm" 
+                                        :class="$store.auth.isProviderLinked('twitter.com') ? 'btn-outline-danger' : 'btn-outline-primary'"
+                                        @click="$store.auth.isProviderLinked('twitter.com') ? $store.auth.unlinkProvider('twitter.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('twitter').catch(e => Swal.fire('Error', e.message, 'error'))"
+                                        x-text="$store.auth.isProviderLinked('twitter.com') ? 'Unlink' : 'Link'"></button>
+                                </div>
                             </div>
                         </div>
                         

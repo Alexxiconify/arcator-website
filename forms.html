@@ -106,8 +106,8 @@
                                         </div>
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center gap-2 mb-1">
-                                                <img :src="comment.authorPhoto || './defaultuser.png'" class="profile-img-sm">
-                                                <strong x-text="comment.authorName"></strong>
+                                                <img :src="getAuthor(comment.authorId).photoURL || './defaultuser.png'" class="profile-img-sm">
+                                                <strong x-text="getAuthor(comment.authorId).displayName || 'Unknown'"></strong>
                                                 <small class="text-secondary" x-text="formatDate(comment.createdAt)"></small>
                                                 <span x-show="comment.editedByAdmin" class="text-warning small">[Edited by Admin]</span>
                                             </div>
@@ -134,8 +134,8 @@
                                                             </div>
                                                             <div class="flex-grow-1">
                                                                 <div class="d-flex align-items-center gap-2 mb-1">
-                                                                    <img :src="reply.authorPhoto || './defaultuser.png'" class="profile-img-sm">
-                                                                    <strong x-text="reply.authorName"></strong>
+                                                                    <img :src="getAuthor(reply.authorId).photoURL || './defaultuser.png'" class="profile-img-sm">
+                                                                    <strong x-text="getAuthor(reply.authorId).displayName || 'Unknown'"></strong>
                                                                     <small class="text-secondary" x-text="formatDate(reply.createdAt)"></small>
                                                                 </div>
                                                                 <div class="mb-1" x-html="DOMPurify.sanitize(reply.content)"></div>
@@ -295,6 +295,10 @@
                     const q = query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc'));
                     const snap = await getDocs(q);
                     thread.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    
+                    const commentAuthorIds = [...new Set(thread.comments.map(c => c.authorId).filter(Boolean))];
+                    await Promise.all(commentAuthorIds.map(id => this.fetchAuthor(id)));
+                    
                     thread.loadingComments = false;
                     
                     this.$nextTick(() => {

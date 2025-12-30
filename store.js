@@ -1,4 +1,4 @@
-import { auth, db, COLLECTIONS, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, doc, getDoc, setDoc, updateDoc, serverTimestamp, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, GithubAuthProvider, TwitterAuthProvider, OAuthProvider } from './firebase-init.js';
+import { auth, db, COLLECTIONS, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, doc, getDoc, setDoc, updateDoc, serverTimestamp, onAuthStateChanged, signInWithPopup, linkWithPopup, unlink, GoogleAuthProvider, GithubAuthProvider, TwitterAuthProvider, OAuthProvider } from './firebase-init.js';
 import { generateProfilePic, randomIdentity } from './helpers.js';
 import { updateUserSection } from './layout.js';
 
@@ -74,9 +74,16 @@ function registerStore() {
         },
 
         async login(email, password) {
-            const { user } = await signInWithEmailAndPassword(auth, email, password);
-            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
-            return user;
+            try {
+                console.log('Attempting login with:', email);
+                const result = await signInWithEmailAndPassword(auth, email, password);
+                console.log('Login successful:', result.user.uid);
+                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
+                return result.user;
+            } catch (e) {
+                console.error('Login error:', e.code, e.message);
+                throw e;
+            }
         },
 
         async signup(email, password, displayName, handle) {
@@ -127,6 +134,31 @@ function registerStore() {
             cacheUser(this.user, this.profile);
             updateTheme(this.profile.themePreference, this.profile.fontScaling);
             updateUserSection(this.user, this.profile);
+        },
+
+        getProvider(name) {
+            switch (name) {
+                case 'google': const g = new GoogleAuthProvider(); g.setCustomParameters({ prompt: 'select_account' }); return g;
+                case 'github': return new GithubAuthProvider();
+                case 'twitter': return new TwitterAuthProvider();
+                case 'apple': return new OAuthProvider('apple.com');
+                case 'discord': return new OAuthProvider('discord.com');
+            }
+        },
+
+        async linkProvider(providerName) {
+            const provider = this.getProvider(providerName);
+            await linkWithPopup(auth.currentUser, provider);
+            this.user = auth.currentUser;
+        },
+
+        async unlinkProvider(providerId) {
+            await unlink(auth.currentUser, providerId);
+            this.user = auth.currentUser;
+        },
+
+        isProviderLinked(providerId) {
+            return this.user?.providerData?.some(p => p.providerId === providerId) || false;
         },
 
         checkAdmin,

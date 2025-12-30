@@ -14,7 +14,27 @@ service cloud.firestore {
          exists(/databases/$(database)/documents/artifacts/arcator-web/public/data/whitelisted_admins/$(request.auth.uid)));
     }
     
-    // Artifact-based paths
+    // User profiles at root level
+    match /user_profiles/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
+    }
+    
+    // Conversations at root level
+    match /conversations/{convId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+      
+      match /messages/{msgId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+      }
+    }
+    
+    // Artifact-based paths (forums, pages, themes)
     match /artifacts/arcator-web/public/data/{collection}/{docId} {
       allow read: if true;
       allow create: if isSignedIn();
@@ -28,11 +48,6 @@ service cloud.firestore {
         allow update: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin() ||
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
         allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
-      }
-      
-      match /messages/{msgId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
       }
     }
     
