@@ -8,6 +8,7 @@ const NAV_HTML = `
             <ul class="navbar-nav me-auto">
                 <li class="nav-item"><a class="nav-link" href="./index.html">Home</a></li>
                 <li class="nav-item"><a class="nav-link" href="./games.html">Games</a></li>
+                <li class="nav-item"><a class="nav-link" href="./wiki.html">Wiki</a></li>
                 <li class="nav-item"><a class="nav-link" href="./forms.html">Forums</a></li>
                 <li class="nav-item"><a class="nav-link" href="./pages.html">Pages</a></li>
                 <li class="nav-item"><a class="nav-link" href="./about.html">About</a></li>
