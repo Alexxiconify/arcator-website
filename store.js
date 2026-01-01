@@ -4,9 +4,7 @@ import { updateUserSection } from './layout.js';
 
 const DEFAULT_THEME = 'dark';
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
+
 
 function cacheUser(user, profile) {
     localStorage.setItem('arcator_user_cache', JSON.stringify({
@@ -26,9 +24,27 @@ function updateTheme(theme = 'dark', fontSize = 'normal', customCSS = '') {
     style.textContent = customCSS || '';
 }
 
-// ============================================================================
-// AUTH STORE - Core authentication state
-// ============================================================================
+const userCache = {};
+
+async function fetchAuthor(uid) {
+    if (!uid || userCache[uid]) return;
+    try {
+        const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
+        if (snap.exists()) {
+            userCache[uid] = snap.data();
+        } else {
+            console.warn(`Author not found: ${uid}`);
+            userCache[uid] = { displayName: 'Unknown User', photoURL: './defaultuser.png', uid };
+        }
+    } catch (e) { console.error(`Fetch error ${uid}:`, e); }
+}
+
+function getAuthor(uid) {
+    if (userCache[uid]) return userCache[uid];
+    const store = Alpine.store('auth');
+    if (store.user?.uid === uid && store.profile) return store.profile;
+    return { displayName: 'Unknown', photoURL: './defaultuser.png' };
+}
 
 function registerAuthStore() {
     Alpine.store('auth', {
@@ -171,27 +187,10 @@ function registerAuthStore() {
     });
 }
 
-// ============================================================================
-// FORUM DATA - Forum threads and comments (for forms.html)
-// ============================================================================
+
 
 function registerForumData() {
-    const userCache = {};
 
-    async function fetchAuthor(uid) {
-        if (!uid || userCache[uid]) return;
-        try {
-            const snap = await getDoc(doc(db, 'user_profiles', uid));
-            if (snap.exists()) userCache[uid] = snap.data();
-        } catch (e) { console.error('Failed to fetch author:', e); }
-    }
-
-    function getAuthor(uid) {
-        if (userCache[uid]) return userCache[uid];
-        const store = Alpine.store('auth');
-        if (store.user?.uid === uid && store.profile) return store.profile;
-        return { displayName: 'Unknown', photoURL: './defaultuser.png' };
-    }
 
     Alpine.data('forumData', () => ({
         threads: [], loading: true, showCreateModal: false,
@@ -318,9 +317,7 @@ function registerForumData() {
     }));
 }
 
-// ============================================================================
-// MESSAGE DATA - Direct messages (for forms.html)
-// ============================================================================
+
 
 function registerMessageData() {
     const userCache = {};
