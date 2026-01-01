@@ -1859,90 +1859,114 @@
                         <p>Friendship 🫂</p>
                         <p>To have a true deep meaningful relationship. You need both people who are willing to overcome trials when they occur.</p>
                         <p>Things happen from time to time. Rather than holding onto the idea of it always being perfect; the willingness to work together to overcome a trial, disagreement, or anything is what forges a true friendship.</p>
-                        <h4>Administration 📝</h4>
-                        <h5>Griefing Protocol</h5>
-                        <p>Guide:/grief. Find the grief:/co l u:username t:999d r:#global. Click the coords to tp.</p>
-                        <p>Spectate: /gmsp. Fly around & track for any suspicious people.</p>
-                        <p>Banning: /ban or if fails /eban.</p>
-                        <p>Rollback: use /co rollback u:username t:999d r:#global</p>
-                        <h5>Protocols for Bugs 🐛</h5>
-                        <p>Server is down 😭</p>
-                        <p>Ask other staff / local owner if there is any reason for server to be off</p>
-                        <p>Warning: Server may belong to a different machine with an old copy in ~/Servers</p>
-                        <p>Otherwise go to ~/Servers/NAME and run “./tmux.sh start”</p>
-                        <p>Chat relay is broken from In Game -> Discord 💔</p>
-                        <p>Fix the IRCRelay on Jylina</p>
-                        <p>Go to ~/matterbridge and run “./tmux.sh start”</p>
-                        <p>LuckPerms DB error 💀</p>
-                        <p>The database is probably down on JYLINA.</p>
-                        <p>You can try to restart it. These commands can be run independently.</p>
-                        <p>sudo service mariadb restart (Vulcan or Jylina)</p>
-                        <p>sudo service maxscale restart (Apollo)</p>
-                        <p>Cannot connect to Velocity</p>
-                        <p>Use <a href="https://apollo.arcator.co.uk/">apollo.arcator.co.uk</a> or <a href="https://jylina.arcator.co.uk/">jylina.arcator.co.uk</a> as fallback instead</p>
-                        <h4>Division of Responsibilities 🏢</h4>
-                        <p>Server Management</p>
-                        <p>By local owners</p>
-                        <p>Updating the server, plugins, datapacks</p>
-                        <p>Optimizations as recommended</p>
-                        <p>Gameplay Rules and Mechanics</p>
-                        <p>Discussion amongst all players in a dev channel</p>
-                        <p>Ban Appeals + Rule Violations</p>
-                        <p>Discussion amongst all staff in a forum.</p>
-                        <h4>Machine Management 🤖</h4>
-                        <p>Machine owner for hardware issues</p>
-                        <p>Software managed by SSH 3 or up</p>
-                        <h4>Useful Resources 🧪</h4>
-                        <h5>Tools 🛠️</h5>
-                        <p>Grab latest vanilla server snapshot jar from Kieraan: <a href="https://github.com/krnbrz/mc_scripts/blob/master/getLatestServer.py">get Latest Server</a></p>
-                        <p>Coords &lt;-> MCA: <a href="https://bsky.app/profile/dinnerbone.com">Tools coordinates</a></p>
-                        <p>Termius for SSH & SFTP: <a href="https://termius.com/">termius.com</a> OR <a href="https://tabby.sh/">Tabby tabby.sh (Desktop)</a> OR <a href="https://connectbot.org/">ConnectBot (Android)</a></p>
-                        <p>Jordan’s Modded Reactor and Computercraft Script: <a href="https://discord.com/channels/148831815984087041/148831815984087041/635928051099631618">#Aractor 635928051099631618 purged message</a></p>
-                        <p>Bonus tools</p>
-                        <p>SSH GUI Replacement, not in use: <a href="https://github.com/directvt/vtm/releases/tag/v0.9.8o">VTM v0.9.8o</a></p>
-                        <p>Byobu: a tmux replacement that may have shortcuts that conflict with Termius</p>
-                        <h5>Miscellaneous ⚙️</h5>
-                        <p>Potential survival server map</p>
-                        <p><a href="https://gist.github.com/MohamedAlaa/2961058">TMUX</a> Guide (<a href="https://docs.google.com/spreadsheets/d/1iQrTHjhQ_nZV3b2J_aybbzhLzKdfcSUMdG5hcldUoSg/edit?gid=0#gid=0">List of TMUX Plugins</a>)</p>
-                        <h5>Mods</h5>
-                        <p><a href="https://www.curseforge.com/minecraft/mc-mods/watson">Watson</a> - Mods - Minecraft</p>
-                        <p><a href="https://paper-chan.moe/paper-optimization/">Paper Optimization</a></p>
-                        <p>Optimization mods for Local Owners: <a href="https://github.com/TheUsefulLists/UsefulMods">UsefulMods</a></p>
-                        <p>Client mods for everyone to consider: <a href="https://www.curseforge.com/minecraft/mc-mods/reauth">Reauth</a>, <a href="https://www.curseforge.com/minecraft/mc-mods/sodium">Sodium</a>, <a href="https://www.curseforge.com/minecraft/mc-mods/starlight">Starlight</a>, <a href="https://www.curseforge.com/minecraft/mc-mods/modernfix">ModernFix</a></p>
-                        <p>Optimizations</p>
-                        <p>JVM flags: <a href="https://github.com/TheUsefulLists/UsefulMods/blob/main/JavaArgumentsOptimization.md">Java Args Opti</a></p>
-                        <p>Use Oracle Java or Adoptium: Check via java -version</p>
-                        <p>Counter Strike Source server <a href="https://linuxgsm.com/servers/cssserver">setup</a></p>
-                        <p>Some <a href="https://mcl.ist/server/mc.arcator.co.uk">site</a> annoyingly storing our data</p>
-                        <h6>Mc Backup Steps: <a href="https://wiki.arcator.co.uk/en/software/Tools/mcbkp">Mcbkp</a></h6>
-                        <h5>Darrion API 🧑‍💻</h5>
-                        <p>REST API</p>
-                        <p>GET mc.arcator.co.uk/players</p>
-                        <p>Gets a list of all servers and the players online</p>
-                        <p>GET mc.arcator.co.uk/players/:serverName</p>
-                        <p>Gets a list of players on a specific gamemode</p>
-                        <p>GET mc.arcator.co.uk/services</p>
-                        <p>The online services on the machines</p>
-                        <p>GET plugin updates</p>
-                        <h5>GriefDetection 🚯</h5>
-                        <p>Regular check for griefs</p>
-                        <p>On startup, create a LIst of lastlog + firstlog</p>
-                        <p>Create a Queue for players to analyze</p>
-                        <p>Prioritize players with the smallest difference between lastlog+firstlog based on the idea that players with higher playtime have less of a chance to grief so check the lower playtimes first</p>
-                        <p>Perform an analysis of the player with CoreProtectAPI</p>
-                        <p>Compare block placements vs removals</p>
-                        <p>Separate stat analysis API</p>
-                        <p>Log/store data of the player’s placed & materials along with a counter for statistical analysis. This part won’t actually be used for flags until a large sample of data is collected. Just for collection purposes.</p>
-                        <p>Log/store data of banned player’s first join + playtime + block removals/placements. Just for collection purposes</p>
-                        <p>This API can be utilized with a separate .jar</p>
-                        <p><a href="https://github.com/Alexxiconify/AlexxAutoWarn">AutoWarn</a>: Log when players place blocks & optionally deny the block placement</p>
-                        <h5>Onfim Notifications 📓</h5>
-                        <p>Warn staff on Discord</p>
-                        <p>When the disk is nearly full</p>
-                        <p>Drive corruption detected</p>
-                        <p>Vulcan or Jylina not responding</p>
-                        <p>Alert when Jylina Ngrok IP changes</p>
-                        <p>Handles #machine-status each minute</p>
+                    </div>  
+                    <div x-data="{ open: true }" class="mb-3">
+                        <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                            <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Administration 📝
+                        </h3>
+                        <div x-show="open" x-collapse>
+                            <h4>Griefing Protocol</h4>
+                            <p>Guide:/grief. Find the grief:/co l u:username t:999d r:#global. Click the coords to tp.</p>
+                            <p>Spectate: /gmsp. Fly around & track for any suspicious people.</p>
+                            <p>Banning: /ban or if fails /eban.</p>
+                            <p>Rollback: use /co rollback u:username t:999d r:#global</p>
+                            <h5>Protocols for Bugs 🐛</h5>
+                            <p>Server is down 😭</p>
+                            <p>Ask other staff / local owner if there is any reason for server to be off</p>
+                            <p>Warning: Server may belong to a different machine with an old copy in ~/Servers</p>
+                            <p>Otherwise go to ~/Servers/NAME and run “./tmux.sh start”</p>
+                            <p>Chat relay is broken from In Game -> Discord 💔</p>
+                            <p>Fix the IRCRelay on Jylina</p>
+                            <p>Go to ~/matterbridge and run “./tmux.sh start”</p>
+                            <p>LuckPerms DB error 💀</p>
+                            <p>The database is probably down on JYLINA.</p>
+                            <p>You can try to restart it. These commands can be run independently.</p>
+                            <p>sudo service mariadb restart (Vulcan or Jylina)</p>
+                            <p>sudo service maxscale restart (Apollo)</p>
+                            <p>Cannot connect to Velocity</p>
+                            <p>Use <a href="https://apollo.arcator.co.uk/">apollo.arcator.co.uk</a> or <a href="https://jylina.arcator.co.uk/">jylina.arcator.co.uk</a> as fallback instead</p>
+                            <p>sudo service maxscale restart (Apollo)</p>
+                            <h5>Division of Responsibilities 🏢</h5>
+                            <ul>
+                                <li>Server Management</li>
+                                <ul>
+                                    <li>By local owners</li>
+                                    <li>Updating the server, plugins, datapacks</li>
+                                    <li>Optimizations as recommended</li>
+                                </ul>
+                                <li>Gameplay Rules and Mechanics</li>
+                                <ul>
+                                    <li>Discussion amongst all players in a dev channel</li>
+                                </ul>
+                                <li>Ban Appeals + Rule Violations</li>
+                                <ul>
+                                    <li>Discussion amongst all staff in a forum.</li>
+                                </ul>
+                                <li>Machine Management 🤖</li>
+                                <ul>
+                                    <li>Machine owner for hardware issues</li>
+                                    <li>Software managed by SSH 3 or up</li>
+                                </ul>
+                            </ul>
+                        </div>
+                    </div> 
+                    <div x-data="{ open: true }" class="mb-3">
+                        <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                            <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Useful Resources 🧪
+                        </h3>
+                        <div x-show="open" x-collapse>
+                            <h5>Tools 🛠️</h5>
+                            <p>Grab latest vanilla server snapshot jar from Kieraan: <a href="https://github.com/krnbrz/mc_scripts/blob/master/getLatestServer.py">get Latest Server</a></p>
+                            <p>Coords &lt;-> MCA: <a href="https://bsky.app/profile/dinnerbone.com">Tools coordinates</a></p>
+                            <p>Termius for SSH & SFTP: <a href="https://termius.com/">termius.com</a> OR <a href="https://tabby.sh/">Tabby tabby.sh (Desktop)</a> OR <a href="https://connectbot.org/">ConnectBot (Android)</a></p>
+                            <p>Jordan’s Modded Reactor and Computercraft Script: <a href="https://discord.com/channels/148831815984087041/148831815984087041/635928051099631618">#Aractor 635928051099631618 purged message</a></p>
+                            <p>Bonus tools</p>
+                            <p>SSH GUI Replacement, not in use: <a href="https://github.com/directvt/vtm/releases/tag/v0.9.8o">VTM v0.9.8o</a></p>
+                            <p>Byobu: a tmux replacement that may have shortcuts that conflict with Termius</p>
+                            <h5>Miscellaneous ⚙️</h5>
+                            <p>Potential survival server map</p>
+                            <p><a href="https://gist.github.com/MohamedAlaa/2961058">TMUX</a> Guide (<a href="https://docs.google.com/spreadsheets/d/1iQrTHjhQ_nZV3b2J_aybbzhLzKdfcSUMdG5hcldUoSg/edit?gid=0#gid=0">List of TMUX Plugins</a>)</p>
+                            <h5>Mods</h5>
+                            <p><a href="https://www.curseforge.com/minecraft/mc-mods/watson">Watson</a> - Mods - Minecraft</p>
+                            <p><a href="https://paper-chan.moe/paper-optimization/">Paper Optimization</a></p>
+                            <p>Optimization mods for Local Owners: <a href="https://github.com/TheUsefulLists/UsefulMods">UsefulMods</a></p>
+                            <p>Client mods for everyone to consider: <a href="https://www.curseforge.com/minecraft/mc-mods/reauth">Reauth</a>, <a href="https://www.curseforge.com/minecraft/mc-mods/sodium">Sodium</a>, <a href="https://www.curseforge.com/minecraft/mc-mods/starlight">Starlight</a>, <a href="https://www.curseforge.com/minecraft/mc-mods/modernfix">ModernFix</a></p>
+                            <p>Optimizations</p>
+                            <p>JVM flags: <a href="https://github.com/TheUsefulLists/UsefulMods/blob/main/JavaArgumentsOptimization.md">Java Args Opti</a></p>
+                            <p>Use Oracle Java or Adoptium: Check via java -version</p>
+                            <p>Counter Strike Source server <a href="https://linuxgsm.com/servers/cssserver">setup</a></p>
+                            <p>Some <a href="https://mcl.ist/server/mc.arcator.co.uk">site</a> annoyingly storing our data</p>
+                            <h6>Mc Backup Steps: <a href="https://wiki.arcator.co.uk/en/software/Tools/mcbkp">Mcbkp</a></h6>
+                            <h5>Darrion API 🧑‍💻</h5>
+                            <p>REST API</p>
+                            <p>GET mc.arcator.co.uk/players</p>
+                            <p>Gets a list of all servers and the players online</p>
+                            <p>GET mc.arcator.co.uk/players/:serverName</p>
+                            <p>Gets a list of players on a specific gamemode</p>
+                            <p>GET mc.arcator.co.uk/services</p>
+                            <p>The online services on the machines</p>
+                            <p>GET plugin updates</p>
+                            <h5>GriefDetection 🚯</h5>
+                            <p>Regular check for griefs</p>
+                            <p>On startup, create a LIst of lastlog + firstlog</p>
+                            <p>Create a Queue for players to analyze</p>
+                            <p>Prioritize players with the smallest difference between lastlog+firstlog based on the idea that players with higher playtime have less of a chance to grief so check the lower playtimes first</p>
+                            <p>Perform an analysis of the player with CoreProtectAPI</p>
+                            <p>Compare block placements vs removals</p>
+                            <p>Separate stat analysis API</p>
+                            <p>Log/store data of the player’s placed & materials along with a counter for statistical analysis. This part won’t actually be used for flags until a large sample of data is collected. Just for collection purposes.</p>
+                            <p>Log/store data of banned player’s first join + playtime + block removals/placements. Just for collection purposes</p>
+                            <p>This API can be utilized with a separate .jar</p>
+                            <p><a href="https://github.com/Alexxiconify/AlexxAutoWarn">AutoWarn</a>: Log when players place blocks & optionally deny the block placement</p>
+                            <h5>Onfim Notifications 📓</h5>
+                            <p>Warn staff on Discord</p>
+                            <p>When the disk is nearly full</p>
+                            <p>Drive corruption detected</p>
+                            <p>Vulcan or Jylina not responding</p>
+                            <p>Alert when Jylina Ngrok IP changes</p>
+                            <p>Handles #machine-status each minute</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
