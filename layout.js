@@ -11,6 +11,7 @@ const NAV_HTML = `
                 <li class="nav-item"><a class="nav-link" href="./wiki.html">Wiki</a></li>
                 <li class="nav-item"><a class="nav-link" href="./forms.html">Forums</a></li>
                 <li class="nav-item"><a class="nav-link" href="./pages.html">Pages</a></li>
+                <li class="nav-item"><a class="nav-link" href="./resources.html">Resources</a></li>
                 <li class="nav-item"><a class="nav-link" href="./about.html">About</a></li>
                 <li class="nav-item"><a class="nav-link" href="./privacy.html">Legal</a></li>
                 <li class="nav-item"><a class="nav-link" href="./mod.html">Admin</a></li>
