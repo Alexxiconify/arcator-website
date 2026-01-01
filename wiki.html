@@ -14,7 +14,6 @@
 </head>
 <body>
 <div id="navbar-placeholder"></div>
-
 <section class="hero-section">
     <img src="./creativespawn.png" alt="Hero" loading="lazy">
     <div class="hero-overlay"></div>
@@ -23,7 +22,6 @@
         <p class="lead">Information about our servers and history</p>
     </div>
 </section>
-
 <main class="container py-5" x-data="{ tab: 'home' }">
     <div class="row">
         <div class="col-md-3 mb-4">
@@ -39,7 +37,6 @@
             </div>
         </div>
         <div class="col-md-9">
-            <!-- Home Tab -->
             <div x-show="tab === 'home'" class="fade-in">
                 <h2 class="mb-4">Welcome to Arcator! (the wiki)</h2>
                 <p>Here at Arcator, we want to give the best possible experience people can have. If you are new we have a server that may be for you.</p>
@@ -1937,7 +1934,13 @@
                             <p>Counter Strike Source server <a href="https://linuxgsm.com/servers/cssserver">setup</a></p>
                             <p>Some <a href="https://mcl.ist/server/mc.arcator.co.uk">site</a> annoyingly storing our data</p>
                             <h6>Mc Backup Steps: <a href="https://wiki.arcator.co.uk/en/software/Tools/mcbkp">Mcbkp</a></h6>
-                            <h5>Darrion API 🧑‍💻</h5>
+                        </div>
+                    </div>
+                    <div x-data="{ open: false }" class="mb-3">
+                        <h4 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                            <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Darrion API 🧑‍💻
+                        </h4>
+                        <div x-show="open" x-collapse>
                             <p>REST API</p>
                             <p>GET mc.arcator.co.uk/players</p>
                             <p>Gets a list of all servers and the players online</p>
@@ -1946,7 +1949,13 @@
                             <p>GET mc.arcator.co.uk/services</p>
                             <p>The online services on the machines</p>
                             <p>GET plugin updates</p>
-                            <h5>GriefDetection 🚯</h5>
+                        </div>
+                    </div>
+                    <div x-data="{ open: false }" class="mb-3">
+                        <h4 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                            <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>GriefDetection 🚯
+                        </h4>
+                        <div x-show="open" x-collapse>
                             <p>Regular check for griefs</p>
                             <p>On startup, create a LIst of lastlog + firstlog</p>
                             <p>Create a Queue for players to analyze</p>
@@ -1958,7 +1967,13 @@
                             <p>Log/store data of banned player’s first join + playtime + block removals/placements. Just for collection purposes</p>
                             <p>This API can be utilized with a separate .jar</p>
                             <p><a href="https://github.com/Alexxiconify/AlexxAutoWarn">AutoWarn</a>: Log when players place blocks & optionally deny the block placement</p>
-                            <h5>Onfim Notifications 📓</h5>
+                        </div>
+                    </div>
+                    <div x-data="{ open: false }" class="mb-3">
+                        <h4 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                            <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Onfim Notifications 📓
+                        </h4>
+                        <div x-show="open" x-collapse>
                             <p>Warn staff on Discord</p>
                             <p>When the disk is nearly full</p>
                             <p>Drive corruption detected</p>
@@ -1972,9 +1987,7 @@
         </div>
     </div>
 </main>
-
 <div id="footer-placeholder"></div>
-
 <script type="module" src="./app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
