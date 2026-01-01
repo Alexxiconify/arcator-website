@@ -17,8 +17,7 @@ export const COLLECTIONS = {
     CONVERSATIONS: 'conversations',
     CONV_MESSAGES: (convId) => `conversations/${convId}/messages`,
     THEMES: `${art}/public/data/custom_themes`,
-    PAGES: `${art}/public/data/temp_pages`,
-    ADMINS: `${art}/public/data/whitelisted_admins`
+    PAGES: `${art}/public/data/temp_pages`
 };
 
 export const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });

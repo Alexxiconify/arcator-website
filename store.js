@@ -31,8 +31,8 @@ function updateTheme(theme = 'dark', fontSize = 'normal', customCSS = '') {
 async function checkAdmin(uid) {
     if (uid === ADMIN_UID) return true;
     try {
-        const snap = await getDoc(doc(db, 'artifacts', 'arcator-web', 'public', 'data', 'whitelisted_admins', uid));
-        return snap.exists();
+        const tokenResult = await auth.currentUser?.getIdTokenResult();
+        return tokenResult?.claims?.admin === true;
     } catch { return false; }
 }
 
@@ -123,6 +123,27 @@ function registerStore() {
             }
             
             const result = await signInWithPopup(auth, provider);
+            if (providerName === 'discord') {
+
+                const accessToken = result._tokenResponse?.accessToken;
+                if (accessToken) {
+                    try {
+                        const resp = await fetch('https://discord.com/api/v10/users/@me', {
+                            headers: { Authorization: `Bearer ${accessToken}` }
+                        });
+                        if (resp.ok) {
+                            const discData = await resp.json();
+                            await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), {
+                                discordId: discData.id,
+                                discordTag: `${discData.username}#${discData.discriminator}`,
+                                discordPic: discData.avatar ? `https://cdn.discordapp.com/avatars/${discData.id}/${discData.avatar}.png` : null
+                            }, { merge: true });
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch Discord user data', e);
+                    }
+                }
+            }
             if (result._tokenResponse?.isNewUser) {
                 const { displayName: rn, handle } = randomIdentity();
                 const displayName = result.user.displayName || rn;

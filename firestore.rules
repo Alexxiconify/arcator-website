@@ -11,7 +11,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && 
         (request.auth.uid == 'CEch8cXWemSDQnM3dHVKPt0RGpn2' ||
-         exists(/databases/$(database)/documents/artifacts/arcator-web/public/data/whitelisted_admins/$(request.auth.uid)));
+         request.auth.token.admin == true);
     }
     
     // User profiles at root level
@@ -58,6 +58,11 @@ service cloud.firestore {
     match /artifacts/arcator-web/public/data/whitelisted_admins/{uid} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
+    }
+    
+    // Secrets - server only (Admin SDK bypasses rules)
+    match /secrets/{docId} {
+      allow read, write: if false;
     }
   }
 }
