@@ -520,6 +520,118 @@
                 </ol>
                 </div>
             </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Optimization
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>Sysadmin</h4>
+                        <h5>Security Sandboxing</h5>
+                        <h5>Systemd</h5>
+                        <ol>
+                            <li># Sandboxing</li>
+                            <li>PrivateTmp=yes</li>
+                            <li>NoNewPrivileges=true</li>
+                            <li>SecureBits=</li>
+                            <li>ProtectSystem=strict</li>
+                            <li>ProtectKernelTunables=yes</li>
+                            <li>ProtectControlGroups=yes</li>
+                            <li>RestrictSUIDSGID=true</li>
+                            <li>IPAddressAllow=10.0.0.0/24</li>
+                            <li>RestrictNamespaces=net</li>
+                        </ol>
+                        <p>We use these settings in most of our service files.</p>
+                        <p>Note that if the first tmux is launched under restricted permissions. All future sessions will be restricted as well!</p>
+                        <h5>Firejail</h5>
+                        <p>For more control we use firejail to restrict processes.</p>
+                        <p>The configuration file is constantly under work and can be found at /home/mcsa/.config/firejail/minecraft.profile.</p>
+                        <p>Generally speaking we restrict nearly all permissions so that a server can only see ~/Servers.</p>
+                        <h4>hugepage Optimization</h4>
+                        <h5>For Fedora</h5>
+                        <p>grubby --update-kernel=ALL --args=hugepagesz=1G</p>
+                        <p>grubby --update-kernel=ALL --args=default_hugepagesz=1G</p>
+                        <p>grubby --update-kernel=ALL --args=hugepages=14</p>
+                        <p>Then use -XX:+UseLargePages for java processes.</p>
+                        <h5>For Debian Based OS</h5>
+                        <p>1. Create a group using GID 1100 (standard for Arcator)</p>
+                        <p>groupadd my-hugetlbfs --gid 1100</p>
+                        <p>2. Add users to group.</p>
+                        <p>adduser mcsa my-hugetlbfs</p>
+                        <p>adduser mysql my-hugetlbfs</p>
+                        <p>3. Follow remaining steps 2 - 4 in link <a href="https://wiki.debian.org/Hugepages">https://wiki.debian.org/Hugepages</a></p>
+                        <h4>LVM Cache</h4>
+                        <p>Use SSD to cache HDD</p>
+                        <p>Optional way to use SSD to cache HDD partition in LVM volume. Since most PCs are pure SSD we no longer use this even for external HDDs.</p>
+                        <p>Create the Cache and HDD volumes (requires modification).</p>
+                        <ol>
+                            <li>vgcreate sshd /dev/sdX# (Add the data partition to sshd volume group)</li>
+                            <li>lvcreate --name data -l 100%FREE sshd (Create a logical volume named data on sshd)</li>
+                            <li>vgextend sshd /dev/sdY# (Add the cache partition to sshd volume group)</li>
+                            <li>lvcreate --type cache --cachemode writethrough -l 100%FREE -n lv_cache sshd/data /dev/sdY# (Denote the cache partition as the cache of the logical volume named data)</li>
+                            <li>Use /dev/sshd/data as you would /dev/sdX#.</li>
+                        </ol>
+                        <p>Common Error. To fix <a href="https://serverfault.com/questions/718349/freshly-created-lvs-do-not-survive-reboot-check-of-thinpool-failed">https://serverfault.com/questions/718349/freshly-created-lvs-do-not-survive-reboot-check-of-thinpool-failed</a></p>
+                        <p>Install thin-provisioning-tools</p>
+                        <p>https://unix.stackexchange.com/questions/179621/how-to-stop-caching-a-lvm-partition#179628</p>
+                        <p>lvconvert --uncache sshd/data  # Remove lv</p>
+                        <p>vgreduce sshd /dev/sda2  # Remove pv</p>
+                        <p>vgreduce sshd /dev/sda2  # Remove pv</p>
+                        <p>Notes</p>
+                        <p>You can treat /dev/sshd/* like /dev/sd* and image as needed.</p>
+                        <h4>Niceness Priorities</h4>
+                        <p>Set Default Priority - https://www.tecmint.com/set-linux-process-priority-using-nice-and-renice-commands/</p>
+                        <p>Search "How To Set Default Nice Value Of a Specific User’s Processes"</p>
+                        <p>Populate /etc/security/limits.d/</p>
+                        <p>e.g.</p>
+                        <ol>
+                            <li>maxscale  hard  priority  -10</li>
+                            <li>mysql  hard  priority  5</li>
+                        </ol>
+                    </div>
+                </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Argo & DNS
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>Purpose</h4>
+                        <p>Do not worry about this section unless you're either an admin, or someone who is learning how to use Termius/SSH!</p>
+                        <p>DDNS: To keep name.arcator.co.uk → IP up to date.</p>
+                        <p>Argo: To forward ports for http/https applications.</p>
+                        <h4>Setup Argo</h4>
+                        <p>Follow this <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide/local/#set-up-a-tunnel-locally-cli-setup">guide</a>.</p>
+                        <p>Example: cloudflared tunnel route dns jylina jcon.arcator.co.uk</p>
+                        <h5>Argo Automation</h5>
+                        <p>In ~/sync/scripts/startup.sh we call ~/Services/Argo/tmux.sh sstart</p>
+                        <p>This launches a daemon to start the tunnel.</p>
+                        <h4>Setup DDNS</h4>
+                        <p>Using mcsa copy ~/Services/DDNS from another machine. Change the subdomain in config.json as needed.</p>
+                        <h5>DDNS Automation</h5>
+                        <p>In ~/sync/scripts/regular.sh we call /home/mcsa/Services/DDNS/start-sync.sh</p>
+                        <p>This runs a script when the IP changes. ~/curium/microbrain/notify_ip.py</p>
+                        <p>This launches an event for the Onfim network that announces IP change and restarts WireGuard tunnels if necessary.</p>
+                        <h4>Records Explained</h4>
+                        <p>A Records: Subdomain -> IP</p>
+                        <p>CNAME: Subdomain -> Subdomain / domain</p>
+                        <p>SRV Record: Protocol -> Subdomain / domain</p>
+                    </div>
+                </div>
+            </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Chat Relay
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <p><b>Do not worry about this section unless you're either an admin, or someone who is learning how to use Termius/SSH!</b></p>
+                        <p>All our bots communicate using an internal relay server and custom scripts. However the relay path between In-Game chat and Discord / Matrix is different for each direction.</p>
+                        <p>In-Game to Discord / Matrix</p>
+                        <p>A custom relay service run by curium/mb_poll/main.py listens on Port 2450. Custom code from Velocity and other servers pings the relay which mirrors it to Discord and Matrix.</p>
+                        <p>Discord / Matrix to In-Game</p>
+                        <p>Onfim JS listens to chat platforms and relays chat to Onfim's Microbrain and OnfimVelocity processes. These then display the chat.</p>
+                        <p><a href="https://github.com/Restitutor/OnfimVelocity">OnfimVelocity</a></p>
+                    </div>
+                </div>
+            </div>
         </div>
 
             <!-- Machines Tab -->
