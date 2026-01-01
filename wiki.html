@@ -35,6 +35,7 @@
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'machines' }" @click="tab = 'machines'">Machines</button>
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'staff' }" @click="tab = 'staff'">Staff</button>
                 <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'mcadmin' }" @click="tab = 'mcadmin'">MCAdmin</button>
+                <button class="list-group-item list-group-item-action" :class="{ 'active': tab === 'growth' }" @click="tab = 'growth'">Growth Plans</button>
             </div>
         </div>
         <div class="col-md-9">
@@ -68,8 +69,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- servers Tab -->
             <div x-show="tab === 'servers'" class="fade-in" x-cloak>
                 <h2 class="mb-4">Servers</h2>
                 <div x-data="{ open: false }" class="mb-3">
@@ -139,8 +138,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Software Tab -->
             <div x-show="tab === 'software'" class="fade-in" x-cloak>
                 <h2 class="mb-4">Software</h2>
                 <div x-data="{ open: false }" class="mb-3">
@@ -266,8 +263,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Sysadmin Tab -->
             <div x-show="tab === 'sysadmin'" class="fade-in" x-cloak>
                 <h2 class="mb-4">Sysadmin</h2>
                 <p>Subpages are materials for SSH 3 and above. (How to manage the machines and services.)</p>
@@ -1247,8 +1242,6 @@
                 </div>
 
             </div>
-
-            <!-- Machines Tab -->
             <div x-show="tab === 'machines'" class="fade-in" x-cloak>
                 <h2 class="mb-4"><a href="https://docs.google.com/spreadsheets/d/1T25WAAJekQAjrU-dhVtDFgiIqJHHlaGIOySToTWrrp8/edit?gid=1977273024#gid=1977273024">Machines</a></h2>
                 <h4 class="mt-4">Jylina</h4>
@@ -1325,8 +1318,6 @@
                     </li>
                 </ul>
             </div>
-
-            <!-- Staff Tab -->
             <div x-show="tab === 'staff'" class="fade-in" x-cloak>
                 <h2 class="mb-4">Staff</h2>
 
@@ -1443,7 +1434,6 @@
                     </div>
                 </div>
             </div>
-            <!-- McAdmin Tab -->
             <div x-show="tab === 'mcadmin'" class="fade-in" x-cloak>
                 <h2 class="mb-4">MCAdmin</h2>
                 <div x-data="{ open: false }" class="mb-3">
@@ -1744,6 +1734,216 @@
                             </ul>
                         </ul>
                     </div>
+                </div>
+            </div>
+            <div x-show="tab === 'growth'" class="fade-in" x-cloak>
+                <h2 class="mb-4">Growth Plans</h2>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Hub (MC1)
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <h4>Growth Plans 🌱</h4>
+                        <p>Areas for ‘Immediate’ Growth/Dev</p>
+                        <ul>
+                            <li>Seek out unique ideas to grow</li>
+                            <li>Dicuss new concepts for modded minecraft</li>
+                            <li>Community items, i.e. games, should be equal to  MC</li>
+                            <li>Unique channel/forum/thread. Allowing small social groups.</li>
+                            <li>Ice breakers (Watch2gether) will help form, strengthen, & rebuild groups.</li>
+                        </ul>
+                        <p>Goal: More subgroups to help friendships & activity. Brings the community closer.</p>
+                        <p>Game Nights to introduce & reinforce friendships, major icebreaker</p>
+                        <p>Make longer list of  VC/Group game ideas: bonk.io, Jackbox, Among Us, Gartic Phone, (add more)</p>
+                        <p>Increase frequency & consistency by better coordination of games via events.</p>
+                        <p>Opportunity to encourage people to do the Census</p>
+                        <h4>SSMP ⛏️</h4>
+                        <ul>
+                            <li>Find Community Activities (i.e. Goals/Minigames/Events) Why? Help keep it fresh for long-time players. How to better inform us about SSMP. Why? As unaware people may start a vanilla SMP.</li>
+                        </ul>
+                        <h4>Anime 👺:</h4>
+                        <ul>
+                            <li>Weekly movie nights.</li>
+                            <li>Is a Small, yet good example of a successful clique.</li>
+                        </ul>
+                        <p>Forums and Fun Chats like Dreams </p>
+                        <ul>
+                            <li>Encourage people to make forums to better share interests.</li>
+                        </ul>
+                        <h4>Peak, Rocket League 🚀</h4>
+                        <ul>
+                            <li>Great potential- channel aside & Worked before.</li>
+                        </ul>
+                        <h4>Valorant (Small)</h4>
+                        <ul>
+                            <li>Roughly one event a week, Region locks are challenging</li>
+                            <li>Would be easier with 6 - 10 people (for events)</li>
+                            <li>They do play but don’t know each other</li>
+                        </ul>
+                        <p>Siege, Brawlhalla, Overwatch, Phasmophobia etc</p>
+                        <ul>
+                            <li>A few people with similar interests but no collaboration right now</li>
+                        </ul>
+                        <p>Space Engineers Find out if people still are looking for a server?</p>
+                        <ul>
+                            <li>Needs Jylina (for ping & performance)</li>
+                        </ul>
+                        <p>Terraria</p>
+                        <ul>
+                            <li>Worked well in the past</li>
+                            <li>Figured out modded</li>
+                        </ul>
+                        <p>Phasmophobia</p>
+                        <ul>
+                            <li>No discussion as of now but has potential</li>
+                        </ul>
+                        <p>Areas for ‘Continued’ Growth</p>
+                        <p><a href="https://docs.google.com/spreadsheets/d/1T25WAAJekQAjrU-dhVtDFgiIqJHHlaGIOySToTWrrp8/edit#gid=0">Census 📝</a></p>
+                        <ul>
+                            <li>The more up to date, the better</li>
+                            <li>Encourage people to do this, so they can find common interests here</li>
+                        </ul>
+                        <p>Areas for ‘Backburner’ Growth</p>
+                        <p>Advertising (Currently deprioritized serverwide, Individual ads welcomed)</p>
+                        <ul>
+                            <li>Someone posts on forums regularly and word of mouth methods.</li>
+                        </ul>
+                        <p>Server merges (Currently deprioritized, although always open)</p>
+                        <ul>
+                            <li>ID common interests & introducing members is a good way to share new ideas.</li>
+                        </ul>
+                        <p>YT 🎥</p>
+                        <ul>
+                            <li>Should we revive Arcator YT? If so, let people practice their cinematography?</li>
+                            <li>Vann hosts this</li>
+                        </ul>
+                        <p>Other MC:</p>
+                        <ul>
+                            <li>Mod Packs like Beta in 1.19 or Beta Mod that continues “Beta Dev”</li>
+                            <li>Adventure maps</li>
+                        </ul>
+                        <p>Nostalgia:  🖤</p>
+                        <ul>
+                            <li>We provide maps to ease the viewing experience.</li>
+                        </ul>
+                        <p>Vulcan stores 1.25 TB:  450 GB: OS & Servers 240 GB: Backups 500 GB: anything else (maps)</p>
+                        <p>Providing screenshots of the most major/important/historical/cool builds</p>
+                        <ul>
+                            <li>Encourage Everyone to share screenshots if anyone wishes to.</li>
+                        </ul>
+                        <p>Philosophical Insights🤔</p>
+                        <p>Why people leave the Discord 🚶</p>
+                        <ul>
+                            <li>May seem as "They left because they didn't care about the server" 😟</li>
+                            <li>Far more actionable:"They left because they felt the server didn't care about them".</li>
+                            <li>People only leave when they feel disconnected from what is occurring, despite knowing people.</li>
+                            <li>This understanding is empowering. As it allows us to be aware and solve the issue.</li>
+                        </ul>
+                        <p>Ongoing Conversations 🔥</p>
+                        <p>Starting a community is like starting a fire. Hardest is getting things going. Once it starts, everyone helps it be self-fulfilling.</p>
+                        <p><a href="https://docs.google.com/document/d/1E1s4AJqcuyj7QCi6OXwVW3tbVyid6V_-o9G1iDmViJU/edit?tab=t.0#">Local owner / entrepreneurial guidelines 📰</a></p>
+                        <ul>
+                            <li>More for the self-employed than us but the productivity tips are useful</li>
+                        </ul>
+                        <p>Productivity 🔨</p>
+                        <ul>
+                            <li>Small habits build momentum.  ⏩</li>
+                        </ul>
+                        <p>Commonality between daily bed makers & self-help books on an arbitrary morning routine.</p>
+                        <p>Procrastination leads to fear of failure to get things done. Fear leads to procrastination. Only by breaking the cycle can we lift the weight.</p>
+                        <p>Perspective 👁️</p>
+                        <p>"The joy has little to do with the circumstances of our lives and everything to do with the focus of our lives."</p>
+                        <p>What we believe often comes true. For our actions so often shape the world and those around us.</p>
+                        <p>So believe in others and believe in yourself.</p>
+                        <p>Believe in the world you want to be.</p>
+                        <p>Philosophy is a personal journey. No one else can make you learn what it has to give. It is an understanding which shapes your mind only if you desire it.</p>
+                        <p>Friendship 🫂</p>
+                        <p>To have a true deep meaningful relationship. You need both people who are willing to overcome trials when they occur.</p>
+                        <p>Things happen from time to time. Rather than holding onto the idea of it always being perfect; the willingness to work together to overcome a trial, disagreement, or anything is what forges a true friendship.</p>
+                        <h4>Administration 📝</h4>
+                        <h5>Griefing Protocol</h5>
+                        <p>Guide:/grief. Find the grief:/co l u:username t:999d r:#global. Click the coords to tp.</p>
+                        <p>Spectate: /gmsp. Fly around & track for any suspicious people.</p>
+                        <p>Banning: /ban or if fails /eban.</p>
+                        <p>Rollback: use /co rollback u:username t:999d r:#global</p>
+                        <h5>Protocols for Bugs 🐛</h5>
+                        <p>Server is down 😭</p>
+                        <p>Ask other staff / local owner if there is any reason for server to be off</p>
+                        <p>Warning: Server may belong to a different machine with an old copy in ~/Servers</p>
+                        <p>Otherwise go to ~/Servers/NAME and run “./tmux.sh start”</p>
+                        <p>Chat relay is broken from In Game -> Discord 💔</p>
+                        <p>Fix the IRCRelay on Jylina</p>
+                        <p>Go to ~/matterbridge and run “./tmux.sh start”</p>
+                        <p>LuckPerms DB error 💀</p>
+                        <p>The database is probably down on JYLINA.</p>
+                        <p>You can try to restart it. These commands can be run independently.</p>
+                        <p>sudo service mariadb restart (Vulcan or Jylina)</p>
+                        <p>sudo service maxscale restart (Apollo)</p>
+                        <p>Cannot connect to Velocity</p>
+                        <p>Use <a href="https://apollo.arcator.co.uk/">apollo.arcator.co.uk</a> or <a href="https://jylina.arcator.co.uk/">jylina.arcator.co.uk</a> as fallback instead</p>
+                        <h4>Division of Responsibilities 🏢</h4>
+                        <p>Server Management</p>
+                        <p>By local owners</p>
+                        <p>Updating the server, plugins, datapacks</p>
+                        <p>Optimizations as recommended</p>
+                        <p>Gameplay Rules and Mechanics</p>
+                        <p>Discussion amongst all players in a dev channel</p>
+                        <p>Ban Appeals + Rule Violations</p>
+                        <p>Discussion amongst all staff in a forum.</p>
+                        <h4>Machine Management 🤖</h4>
+                        <p>Machine owner for hardware issues</p>
+                        <p>Software managed by SSH 3 or up</p>
+                        <h4>Useful Resources 🧪</h4>
+                        <h5>Tools 🛠️</h5>
+                        <p>Grab latest vanilla server snapshot jar from Kieraan: <a href="https://github.com/krnbrz/mc_scripts/blob/master/getLatestServer.py">get Latest Server</a></p>
+                        <p>Coords &lt;-> MCA: <a href="https://bsky.app/profile/dinnerbone.com">Tools coordinates</a></p>
+                        <p>Termius for SSH & SFTP: <a href="https://termius.com/">termius.com</a> OR <a href="https://tabby.sh/">Tabby tabby.sh (Desktop)</a> OR <a href="https://connectbot.org/">ConnectBot (Android)</a></p>
+                        <p>Jordan’s Modded Reactor and Computercraft Script: <a href="https://discord.com/channels/148831815984087041/148831815984087041/635928051099631618">#Aractor 635928051099631618 purged message</a></p>
+                        <p>Bonus tools</p>
+                        <p>SSH GUI Replacement, not in use: <a href="https://github.com/directvt/vtm/releases/tag/v0.9.8o">VTM v0.9.8o</a></p>
+                        <p>Byobu: a tmux replacement that may have shortcuts that conflict with Termius</p>
+                        <h5>Miscellaneous ⚙️</h5>
+                        <p>Potential survival server map</p>
+                        <p><a href="https://gist.github.com/MohamedAlaa/2961058">TMUX</a> Guide (<a href="https://docs.google.com/spreadsheets/d/1iQrTHjhQ_nZV3b2J_aybbzhLzKdfcSUMdG5hcldUoSg/edit?gid=0#gid=0">List of TMUX Plugins</a>)</p>
+                        <h5>Mods</h5>
+                        <p><a href="https://www.curseforge.com/minecraft/mc-mods/watson">Watson</a> - Mods - Minecraft</p>
+                        <p><a href="https://paper-chan.moe/paper-optimization/">Paper Optimization</a></p>
+                        <p>Optimization mods for Local Owners: <a href="https://github.com/TheUsefulLists/UsefulMods">UsefulMods</a></p>
+                        <p>Client mods for everyone to consider: <a href="https://www.curseforge.com/minecraft/mc-mods/reauth">Reauth</a>, <a href="https://www.curseforge.com/minecraft/mc-mods/sodium">Sodium</a>, <a href="https://www.curseforge.com/minecraft/mc-mods/starlight">Starlight</a>, <a href="https://www.curseforge.com/minecraft/mc-mods/modernfix">ModernFix</a></p>
+                        <p>Optimizations</p>
+                        <p>JVM flags: <a href="https://github.com/TheUsefulLists/UsefulMods/blob/main/JavaArgumentsOptimization.md">Java Args Opti</a></p>
+                        <p>Use Oracle Java or Adoptium: Check via java -version</p>
+                        <p>Counter Strike Source server <a href="https://linuxgsm.com/servers/cssserver">setup</a></p>
+                        <p>Some <a href="https://mcl.ist/server/mc.arcator.co.uk">site</a> annoyingly storing our data</p>
+                        <h6>Mc Backup Steps: <a href="https://wiki.arcator.co.uk/en/software/Tools/mcbkp">Mcbkp</a></h6>
+                        <h5>Darrion API 🧑‍💻</h5>
+                        <p>REST API</p>
+                        <p>GET mc.arcator.co.uk/players</p>
+                        <p>Gets a list of all servers and the players online</p>
+                        <p>GET mc.arcator.co.uk/players/:serverName</p>
+                        <p>Gets a list of players on a specific gamemode</p>
+                        <p>GET mc.arcator.co.uk/services</p>
+                        <p>The online services on the machines</p>
+                        <p>GET plugin updates</p>
+                        <h5>GriefDetection 🚯</h5>
+                        <p>Regular check for griefs</p>
+                        <p>On startup, create a LIst of lastlog + firstlog</p>
+                        <p>Create a Queue for players to analyze</p>
+                        <p>Prioritize players with the smallest difference between lastlog+firstlog based on the idea that players with higher playtime have less of a chance to grief so check the lower playtimes first</p>
+                        <p>Perform an analysis of the player with CoreProtectAPI</p>
+                        <p>Compare block placements vs removals</p>
+                        <p>Separate stat analysis API</p>
+                        <p>Log/store data of the player’s placed & materials along with a counter for statistical analysis. This part won’t actually be used for flags until a large sample of data is collected. Just for collection purposes.</p>
+                        <p>Log/store data of banned player’s first join + playtime + block removals/placements. Just for collection purposes</p>
+                        <p>This API can be utilized with a separate .jar</p>
+                        <p><a href="https://github.com/Alexxiconify/AlexxAutoWarn">AutoWarn</a>: Log when players place blocks & optionally deny the block placement</p>
+                        <h5>Onfim Notifications 📓</h5>
+                        <p>Warn staff on Discord</p>
+                        <p>When the disk is nearly full</p>
+                        <p>Drive corruption detected</p>
+                        <p>Vulcan or Jylina not responding</p>
+                        <p>Alert when Jylina Ngrok IP changes</p>
+                        <p>Handles #machine-status each minute</p>
                 </div>
             </div>
         </div>
