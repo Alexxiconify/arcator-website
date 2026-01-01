@@ -1,4 +1,4 @@
-import { auth, db, COLLECTIONS, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, onAuthStateChanged, signInWithPopup, linkWithPopup, unlink, GoogleAuthProvider, GithubAuthProvider, TwitterAuthProvider, OAuthProvider, collection, query, orderBy, getDocs, where, onSnapshot, increment } from './firebase-init.js';
+import { auth, db, COLLECTIONS, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp, onAuthStateChanged, signInWithPopup, linkWithPopup, unlink, GoogleAuthProvider, GithubAuthProvider, TwitterAuthProvider, OAuthProvider, collection, query, orderBy, getDocs, where, onSnapshot, increment } from './firebase-init.js';
 import { generateProfilePic, randomIdentity, formatDate } from './helpers.js';
 import { updateUserSection } from './layout.js';
 
@@ -59,6 +59,7 @@ function registerAuthStore() {
                             cacheUser(u, this.profile);
                             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
                             this.isAdmin = this.profile.admin === true;
+                            if (!this.isAdmin) console.log("Not admin? Run this in console: Alpine.store('auth').makeMeAdmin()");
                         }
                     } catch (e) { console.error('Profile load error:', e); }
                 } else {
@@ -69,6 +70,17 @@ function registerAuthStore() {
                 this.loading = false;
                 updateUserSection(this.user, this.profile, this.isAdmin);
             });
+        },
+
+        async checkAdmin(uid) { return this.isAdmin; },
+
+        async makeMeAdmin() {
+            if (!this.user) return console.error("Sign in first");
+            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, this.user.uid), { admin: true });
+            this.isAdmin = true;
+            this.profile.admin = true;
+            console.log("You are now an admin!");
+            location.reload();
         },
 
         async login(email, password) {
@@ -336,8 +348,12 @@ function registerMessageData() {
             const user = Alpine.store('auth').user; if (!user) return;
             const q = query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', user.uid));
             const snap = await getDocs(q);
-            this.conversations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            await Promise.all([...new Set(this.conversations.flatMap(c => c.participants))].map(fetchAuthor));
+            const convs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Fetch all participant profiles first
+            const allParticipants = [...new Set(convs.flatMap(c => c.participants))];
+            await Promise.all(allParticipants.map(fetchAuthor));
+            // Now set conversations (names will resolve correctly)
+            this.conversations = convs;
         },
 
         getAuthor, fetchAuthor, formatDate(ts) { return formatDate(ts); },

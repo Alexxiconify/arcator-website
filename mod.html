@@ -166,7 +166,7 @@
                     const store = Alpine.store('auth');
                     if (!store.loading) {
                         if (store.user) {
-                            this.isAdmin = await store.checkAdmin(store.user.uid);
+                            this.isAdmin = store.isAdmin;
                             if (this.isAdmin) await this.refreshAll();
                         } else {
                             this.isAdmin = false;
@@ -420,6 +420,8 @@
             },
 
             async editUser(user) {
+                const currentUser = Alpine.store('auth').user;
+                const isSelf = currentUser && currentUser.uid === user.id;
                 const { value } = await Swal.fire({
                     title: 'Edit User',
                     html: `
@@ -432,6 +434,10 @@
                             <input class="form-check-input" type="checkbox" id="ed-activity" ${user.activityTracking ? 'checked' : ''}>
                             <label class="form-check-label" for="ed-activity">Activity Tracking</label>
                         </div>
+                        <div class="form-check text-start">
+                            <input class="form-check-input" type="checkbox" id="ed-admin" ${user.admin ? 'checked' : ''} ${isSelf ? 'disabled' : ''}>
+                            <label class="form-check-label" for="ed-admin">Administrator Access ${isSelf ? '(Cannot change own status)' : ''}</label>
+                        </div>
                     `,
                     width: 600,
                     showCancelButton: true,
@@ -441,10 +447,12 @@
                         email: document.getElementById('ed-email').value,
                         photoURL: document.getElementById('ed-photoURL').value,
                         customCSS: document.getElementById('ed-customCSS').value,
-                        activityTracking: document.getElementById('ed-activity').checked
+                        activityTracking: document.getElementById('ed-activity').checked,
+                        admin: document.getElementById('ed-admin').checked
                     })
                 });
                 if (value) {
+                    if (isSelf) delete value.admin;
                     await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.id), value);
                     await this.refreshAll();
                     Swal.fire('Updated', '', 'success');

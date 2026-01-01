@@ -181,6 +181,10 @@
                        target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
                         <span class="emoji-icon">✏️</span>Edit Census
                     </a>
+                    <select id="census-sort" class="form-select form-select-sm w-auto" aria-label="Sort by" onchange="sortCensus(this.value)">
+                        <option value="name">Sort by Name</option>
+                        <option value="total">Sort by Total</option>
+                    </select>
                 </div>
                 <div class="scroll-container">
                     <div id="census-loading" class="text-center py-5 loading-pulse">
@@ -227,54 +231,84 @@
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
 
 <script>
-// Fetch and parse Census spreadsheet
+// Parse CSV properly (handles quoted fields with commas)
+function parseCSV(text) {
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i], next = text[i+1];
+        if (c === '"' && !inQuotes) { inQuotes = true; continue; }
+        if (c === '"' && inQuotes) { if (next === '"') { field += '"'; i++; } else { inQuotes = false; } continue; }
+        if (c === ',' && !inQuotes) { row.push(field.trim()); field = ''; continue; }
+        if ((c === '\n' || c === '\r') && !inQuotes) { if (field || row.length) { row.push(field.trim()); rows.push(row); } row = []; field = ''; if (c === '\r' && next === '\n') i++; continue; }
+        field += c;
+    }
+    if (field || row.length) { row.push(field.trim()); rows.push(row); }
+    return rows;
+}
+
+let censusHeader = [], censusData = [];
+
 async function loadCensus() {
     try {
-        const url = 'https://docs.google.com/spreadsheets/d/1T25WAAJekQAjrU-dhVtDFgiIqJHHlaGIOySToTWrrp8/export?format=csv';
+        const url = 'https://docs.google.com/spreadsheets/d/1T25WAAJekQAjrU-dhVtDFgiIqJHHlaGIOySToTWrrp8/export?format=csv&gid=1977273024';
         const res = await fetch(url);
         const csv = await res.text();
-        const rows = csv.split('\n').map(r => r.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+        const rows = parseCSV(csv);
         
         if (rows.length < 2) throw new Error('No data');
         
-        const header = rows[0];
-        const data = rows.slice(1).filter(r => r[0] && r[0].length > 0);
+        censusHeader = rows[0];
+        censusData = rows.slice(1).filter(r => r[0] && r[0].length > 0);
         
-        // Build header
-        const thead = document.getElementById('census-header');
-        let headerHtml = '<tr><th>Interest</th><th>Total</th>';
-        for (let i = 2; i < header.length; i++) {
-            if (header[i]) headerHtml += `<th title="${header[i]}">${header[i].substring(0,6)}</th>`;
-        }
-        headerHtml += '</tr>';
-        thead.innerHTML = headerHtml;
-        
-        // Build body
-        const tbody = document.getElementById('census-body');
-        let bodyHtml = '';
-        data.forEach(row => {
-            const interest = row[0];
-            const total = parseInt(row[1]) || 0;
-            if (!interest) return;
-            
-            bodyHtml += `<tr class="interest-row">
-                <td class="fw-medium">${interest}</td>
-                <td><span class="player-count-badge">${total}</span></td>`;
-            for (let i = 2; i < row.length && i < header.length; i++) {
-                const val = row[i];
-                const hasPlayer = val && val !== '0' && val !== '';
-                bodyHtml += `<td><span class="player-dot ${hasPlayer ? 'active' : 'inactive'}">${hasPlayer ? '✓' : ''}</span></td>`;
-            }
-            bodyHtml += '</tr>';
-        });
-        tbody.innerHTML = bodyHtml;
+        renderCensus('name');
         
         document.getElementById('census-loading').classList.add('d-none');
         document.getElementById('census-table').classList.remove('d-none');
     } catch (e) {
+        console.error('Census error:', e);
         document.getElementById('census-loading').innerHTML = 
             '<p class="text-danger">Failed to load census. <a href="https://docs.google.com/spreadsheets/d/1T25WAAJekQAjrU-dhVtDFgiIqJHHlaGIOySToTWrrp8/edit" target="_blank" class="text-primary">View directly</a></p>';
     }
+}
+
+function sortCensus(sortBy) {
+    renderCensus(sortBy);
+}
+
+function renderCensus(sortBy) {
+    let data = [...censusData];
+    if (sortBy === 'name') data.sort((a,b) => a[0].localeCompare(b[0]));
+    else if (sortBy === 'total') data.sort((a,b) => (parseInt(b[1])||0) - (parseInt(a[1])||0));
+    
+    // Build header
+    const thead = document.getElementById('census-header');
+    let headerHtml = '<tr><th>Interest</th><th>Total</th>';
+    for (let i = 2; i < censusHeader.length; i++) {
+        if (censusHeader[i]) headerHtml += `<th title="${censusHeader[i]}">${censusHeader[i].substring(0,8)}</th>`;
+    }
+    headerHtml += '</tr>';
+    thead.innerHTML = headerHtml;
+    
+    // Build body
+    const tbody = document.getElementById('census-body');
+    let bodyHtml = '';
+    data.forEach(row => {
+        const interest = row[0];
+        const total = parseInt(row[1]) || 0;
+        if (!interest) return;
+        
+        bodyHtml += `<tr class="interest-row">
+            <td class="fw-medium">${interest}</td>
+            <td><span class="player-count-badge">${total}</span></td>`;
+        for (let i = 2; i < censusHeader.length; i++) {
+            const val = row[i] || '';
+            const hasPlayer = val && val !== '0' && val !== '';
+            bodyHtml += `<td><span class="player-dot ${hasPlayer ? 'active' : 'inactive'}">${hasPlayer ? '✓' : ''}</span></td>`;
+        }
+        bodyHtml += '</tr>';
+    });
+    tbody.innerHTML = bodyHtml;
 }
 
 // Fetch and display Admin Doc
