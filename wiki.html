@@ -1015,20 +1015,237 @@
                 </div>
                 <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
-                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>X
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Server IDs (s#'s)
                     </h3>
                     <div x-show="open" x-collapse>
-                       
+                       <p>Purpose</p>
+                       <p>We use these IDs to prevent conflicts between machines.</p>
+                       <p>Examples</p>
+                       <figure class="table">
+                            <table>
+                                <tbody>
+                                    <tr><td>IP</td> <td>10.0.0.x</td></tr> <tr><td>Database</td><td>Log IDs</td></tr> <tr><td>Ports</td> <td>123x is Backup SSH to Server X. Similar patterns for other services.</td></tr>
+                                </tbody>
+                            </table>
+                    </figure>
+                    <p>IDs</p>
+                    <p>s1 - Jylina (Jordan's High Speed Server)</p>
+                    <p>s2 - Thoth (Jordan's Raspberry Pi)</p>
+                    <p>s3 - Dust's Network</p>
+                    <p>s4, s5 - Reserved</p>
+                    <p>s6, s7, s8 - Kieraan (Venus, Apollo, Icarus?)</p>
+                    <p>s9, s10 - Sputnik, Vulcan (Angry)</p>
                     </div>
                 </div>
                 <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
-                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>X
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Snapshot Setup
                     </h3>
                     <div x-show="open" x-collapse>
-                       
+                       <p><b>Do not worry about this section unless you're either an admin, or someone who is learning how to use Termius/SSH!</b></p>
+                       <p>In short snapshots use Btrfs to perform instantaneous snapshots.</p>
+                       <p>These folders are automatically backed up with strong transparent compression.</p>
+                       <p>They are accessible in: /mnt/Main/Sync</p>
+                       <p>The common subvolumes there are Backups, home, nginx, Servers.</p>
+                       <p>Note /home is a btrfs mount to the home subvolume there.</p>
+                       <p>We use a program called btrbk to create snapshots automatically. This is useful documentation <a href="https://github.com/digint/btrbk/">https://github.com/digint/btrbk/</a></p>
+                       <h4>General Use for mcsa</h4>
+                       <p>Server snapshot at: ~/Backups/Snapshot</p>
+                       <p>Home snapshot at: ~/HomeSnapshots</p>
+                       <h4>BTRFS and fstab Fundamentals</h4>
+                       <p>Before starting it's important to learn how mount points work.</p>
+                       <p>The root of the btrfs volume will have a structure like this.</p>
+                       <p>@cache (subvolume mounted to /var/cache)</p>
+                       <p>@log (subvolume mounted to /var/log)</p>
+                       <p>no_sync/ (folder)</p>
+                       <p>root (subvolume mounted to /      Other linux distributions might use @ as the subvolume name instead)</p>
+                       <p>Sync/ (folder)</p>
+                       <p>Sync/home (subvolume mounted to /home)</p>
+                       <p>Sync/Servers (subvolume not mounted anywhere special)</p>
+                       <p>Sync/snapshots (folder automatically filled with snapshots of the subvolumes in Sync)</p>
+                       <p>Since we mount a subvolume (root) into /. We wouldn't be able to see the “full structure” of the btrfs subvolume.</p>
+                       <p>So we also mount the full volume to /mnt/Main.</p>
+                       <p>This is why /mnt/Main/Sync/Servers is accessible.</p>
+                       <p>Here's an incomplete example of the fstab. Notice /mnt/Main doesn't specify any subvolume so that all points are visible. (noatime is used as filler to make the structure clearer.)</p>
+                       <p>UUID=DEVICE_ID      /                 btrfs    noatime,subvol=root</p>
+                       <p>UUID=DEVICE_ID      /home       btrfs    noatime,subvol=Sync/home</p>
+                       <p>UUID=DEVICE_ID      /mnt/Main       btrfs    noatime</p>
+                       <h4>Snapshot Setup</h4>
+                       <p>Copy and modify some of the existing files in /etc/btrbk.</p>
+                       <p>Mount the full volume as /mnt/Main.</p>
+                       <p>Make the corresponding common subvolumes above.</p>
+                       <ul>
+                        <li>btrfs subvol create /mnt/Main/Sync/[name]</li>
+                       </ul>
+                       <p>Create a regular folder for snapshots and Servers_snapshots.</p>
+                       <p>Get the btrbk sh files in /usr/local/bin</p>
+                       <p>Also get the backups service and timer systemd files in /etc/systemd/system. Check systemd page for more info.</p>
+                       <pre><code>
+                        systemctl enable backups.timer
+                        systemctl enable backups_pull.timer
+                        systemctl start backups.timer
+                        systemctl start backups_pull.timer
+                       </code></pre>
+                       <p>To fix selinux run: restorecon -rv /usr/local/bin</p>
+                       <h4>Permissions Setup</h4>
+                       <pre><code>
+                        # Restrict to mcsa
+                        chown -R mcsa:mcsa /mnt/Main/Sync/Servers
+                        chown mcsa:mcsa /mnt/Main/Sync/Servers_snapshots
+                        chmod 750 /mnt/Main/Sync/*Servers /mnt/Main/Sync/*Servers/* /mnt/Main/Sync/Servers_snapshots
+                        # Looser world permissions
+                        chmod 755 /mnt/Main/Sync /mnt/Main/Sync/OtherServers /mnt/Main/Sync/snapshots
+                       </code></pre>
                     </div>
                 </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Systemd
+                    </h3>
+                    <div x-show="open" x-collapse>
+                       <p>Configurations are in /home/mcsa/.config/systemd/user. These control nightly maintenance, regular per minute tasks, and startup scripts.</p>
+                       <p>Set up environment</p>
+                       <pre><code>
+                        export XDG_RUNTIME_DIR=/run/user/$(id -u)
+                       </code></pre>
+                       <p>Use systemctl --user commands</p>
+                       <pre><code>
+                        systemctl --user status/start name.service
+                        systemctl --user status/start name.timer
+                       </code></pre>
+                       <p>We use systemd to start processes when machine starts up and for regular tasks.</p>
+                       <p>Get backups_pull.service, backups_pull.timer, backups.service, backups.timer from another machine's /etc/system/systemd</p>
+                       <p>Also get btrbkPull.sh and btrbk.sh from other machine's /home/root</p>
+                       <p>Then run</p>
+                       <pre><code>
+                        sudo systemctl enable backups.timer
+                        sudo systemctl enable backups_pull.timer
+                       </code></pre>
+                       <p>Get backups_pull.service, backups_pull.timer, backups.service, backups.timer from another machine's /etc/system/systemd</p>
+                       <p>Also get btrbkPull.sh and btrbk.sh from other machine's /home/root</p>
+                       <p>Then run</p>
+                       <pre><code>
+                        sudo systemctl enable backups.timer
+                        sudo systemctl enable backups_pull.timer
+                       </code></pre>
+                       <h4>Guidelines</h4>
+                       <ul>
+                        <li>Use OnStartupSec instead of OnBootSec</li>
+                        <li>Use OnCalendar for scheduling (like cron)</li>
+                       </ul>
+                       <h4>Initial Setup</h4>
+                       <p>Enable for user <a href="https://askubuntu.com/a/859583">https://askubuntu.com/a/859583</a></p>
+                       <p><code>loginctl enable-linger USERNAME</code></p>
+                       <p>systemctl --user enable startup.service</p>
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Web Server / NGINX
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <p>Do not worry about this section unless you're either an admin, or someone who is learning how to use Termius/SSH!</p>
+                        <p>We use NGINX  as a web server. On some machines it also forwards the Matrix, Wiki, and BlueMaps to arcator.co.uk subdomains.</p>
+                        <p><a href="https://certbot.eff.org/">Certbot</a> setup and restart (If there's no open ports. Then we use Argo instead.)</p>
+                        <ul>
+                            <li>Fedora: <a href="https://certbot.eff.org/">https://certbot.eff.org/</a></li>
+                            <ul>
+                                <li>May need <a href="https://stackoverflow.com/a/68579520">https://stackoverflow.com/a/68579520</a></li>
+                                <li>Select “pip” as System to avoid using snap.</li>
+                            </ul>
+                            <li>For initial set up use certbot --nginx instead of editing /etc/nginx</li>
+                            <li>We auto renew using <code>/home/mcsa/sync/scripts/startup.sh which runs “sudo /opt/certbot/bin/certbot renew --nginx”</code></li>
+                            <ul>
+                                <li>It has permissions because of sudoers file</li>
+                            </ul>
+                            <li>We don't use Ubuntu anymore: <a href="https://mangolassi.it/topic/18355/setup-letsencrypt-certbot-with-cloudflare-dns-authentication-ubuntu">https://mangolassi.it/topic/18355/setup-letsencrypt-certbot-with-cloudflare-dns-authentication-ubuntu</a></li>
+                        </ul>
+                        <p>Password auth for *.arcator.co.uk/auth</p>
+                        <p><a href="https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-http-basic-authentication/">https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-http-basic-authentication/</a></p>
+                        <p>Security</p>
+                        <p>We have many custom settings in the http {} block of our /etc/nginx/nginx.conf</p>
+                        <p><a href="https://www.nginx.com/blog/rate-limiting-nginx/">https://www.nginx.com/blog/rate-limiting-nginx/</a></p>
+                        <p>There's also /standalone which some people use for personal projects</p>
+                        <p>Fancy Index (no longer maintained)</p>
+                        <p><a href="https://github.com/Naereen/Nginx-Fancyindex-Theme/blob/master/fancyindex.conf">https://github.com/Naereen/Nginx-Fancyindex-Theme/blob/master/fancyindex.conf</a></p>
+                        <p><a href="https://github.com/aperezdc/ngx-fancyindex#centos-rhel-fedora-linux">https://github.com/aperezdc/ngx-fancyindex#centos-rhel-fedora-linux</a></p>
+                        <h5>Initial Setup</h5>
+                        <p># Install on Fedora</p>
+                        <p>dnf install nginx</p>
+                        <p># Set up certbot and follow guide</p>
+                        <p><a href="https://certbot.eff.org/instructions?ws=nginx&os=fedora">https://certbot.eff.org/instructions?ws=nginx&os=fedora</a></p>
+                        <p>Fedora: Refer to /etc/nginx.conf</p>
+                        <p>Ubuntu: Refer to /etc/nginx/sites-enabled</p>
+                        <h4>Fix permissions</h4>
+                        <p><a href="https://www.nginx.com/blog/using-nginx-plus-with-selinux/">https://www.nginx.com/blog/using-nginx-plus-with-selinux/</a></p>
+                        <p>semanage fcontext -a -t httpd_sys_content_t "/mnt/Main/Sync/nginx(/.*)?"</p>
+                        <p><a href="https://stackoverflow.com/a/27438740">https://stackoverflow.com/a/27438740</a></p>
+                        <p>For Argo you need to add more ports</p>
+                        <p>semanage port -a -t http_port_t -r 's0' -p tcp 8080-8090</p>
+                        <p>For Matrix ports we run</p>
+                        <p>semanage port -a -t http_port_t -p tcp 8448</p>
+                        <h5>Configuration files</h5>
+                        <p>Ubuntu: /etc/nginx/sites-available symlinked to /etc/nginx/sites-enabled</p>
+                        <p>Fedora: /etc/nginx/nginx.conf</p>
+                        <p>Restart: sudo systemctl start/stop/restart nginx</p>
+                        <p>We format our nginx command with this program. <a href="https://github.com/slomkowski/nginx-config-formatter">https://github.com/slomkowski/nginx-config-formatter</a></p>
+                        <p>uvx nginxfmt -b /etc/nginx/nginx.conf</p>
+                        <p>Securing permissions</p>
+                        <ul>
+                            <li>find . -type d -exec chmod 750 {} \;</li>
+                            <li>find . -type f -exec chmod 660 {} \;</li>
+                            <li>find [relevant paths] -exec chown nginx:mcsa {} \;</li>
+                        </ul>
+                        <p>Fedora uses “nginx” Ubuntu uses “www-data”</p>
+                        <p>All sites should be stored in /mnt/Main/Sync/nginx to ensure they are backed up.
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Wireguard (Tunnels)
+                    </h3>
+                    <div x-show="open" x-collapse>
+                       <h4>Usage</h4>
+                       <p>We use WireGuard to create a Virtual Private Network on 10.0.0.x for each server with machine number sX.</p>
+                       <p>This connects databases, IRC, Matrix, Bungee, and more. (In hindsight we should have picked 10.0.1.x to avoid conflicts with people's wifi networks)</p>
+                       <h4ֱ>Set Up</h4>
+                       <h5>Ports</h5>
+                       <p>We use 59999 UDP. We need 59999 UDP open on at least one machine althrough two is preferred.</p>
+                       <p>For example, if Jylina has 59999 UDP closed and Vulcan has it open.</p>
+                       <p>Ping Vulcan → Jylina Failure</p>
+                       <p>Ping Jylina → Vulcan Success (Uses ephemeral port to allow Vulcan → Jylina routing)</p>
+                       <p>Ping Vulcan → Jylina Success!</p>
+                       <p>However if Vulcan changes its IP. Then Jylina needs to reconfigure its connection or the tunnel will break.</p>
+                       <pre><code>sudo wg set wg0 peer PUBLIC_KEY_HERE endpoint vulcan.arcator.co.uk:59999</code></pre>
+                       <p>If you are routing connections. Add /etc/sysctl.d/10-arc.conf to allow a host to bridge connections.</p>
+                       <h4>Files</h4>
+                       <p>/etc/wireguard/wg0.conf - Config</p>
+                       <p>/etc/wireguard/[machine]key - Public Key</p>
+                       <p>/etc/wireguard/privatekey - DO NOT OPEN IN SSH OR PREVIEW THIS FILE OR WE MUST REGENERATE KEYS.</p>
+                       <p>Run: sudo wg-quick up wg0</p>
+                       <p>To view status: wg</p>
+                       <h5>On machines with UFW (we recommend firewalld instead)</h5>
+                       <pre><code>
+                        # Tentative and needs new testing
+                        ufw allow in on wg0
+                        ufw route allow in on wg0
+                        # Try skipping this
+                        # ufw route allow in on eth0 out on wg0 to 10.0.0.1 port 25565
+                        </code></pre>
+                        <p>For firewalld (if you hadn't earlier)</p>
+                        <p>firewall-cmd --permanent --zone=trusted --add-interface=wg0</p>
+                        <p>Creating Services</p>
+                        <p>https://www.ivpn.net/knowledgebase/linux/linux-autostart-wireguard-in-systemd/</p>
+                        <pre><code>
+                            sudo systemctl enable wg-quick@wg0.service
+                            sudo systemctl enable nftables # If not using firewalld
+                            sudo systemctl daemon-reload
+                            sudo systemctl start wg-quick@wg0
+                        </code></pre>
+                        <p>Uncomment line in /etc/sysconfig/nftables.conf</p>
+                    </div>
+                </div>
+                
             </div>
 
             <!-- Machines Tab -->
