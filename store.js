@@ -119,7 +119,7 @@ function registerStore() {
                 case 'github': provider = new GithubAuthProvider(); break;
                 case 'twitter': provider = new TwitterAuthProvider(); break;
                 case 'apple': provider = new OAuthProvider('apple.com'); break;
-                case 'discord': provider = new OAuthProvider('discord.com'); break;
+                case 'discord': provider = new OAuthProvider('oidc.oidc.discord'); break;
             }
             
             const result = await signInWithPopup(auth, provider);
@@ -151,7 +151,7 @@ function registerStore() {
                 case 'github': return new GithubAuthProvider();
                 case 'twitter': return new TwitterAuthProvider();
                 case 'apple': return new OAuthProvider('apple.com');
-                case 'discord': return new OAuthProvider('discord.com');
+                case 'discord': return new OAuthProvider('oidc.oidc.discord');
             }
         },
 

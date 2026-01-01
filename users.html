@@ -27,14 +27,7 @@
     isSignUp: false,
     profile: {}, 
     get user() { return this.$store.auth?.user }, 
-    get storeProfile() { return this.$store.auth?.profile },
-    linkDiscord() {
-        const clientId = '1141136277146304520';
-        const redirectUri = encodeURIComponent(window.location.origin + '/discord-callback.html');
-        const state = Math.random().toString(36).substring(7);
-        sessionStorage.setItem('discord_oauth_state', state);
-        window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=identify&state=${state}`;
-    }
+    get storeProfile() { return this.$store.auth?.profile }
 }" x-init="$watch('storeProfile', v => { if(v) profile = {...v} }); if($store.auth?.profile) profile = {...$store.auth.profile}">
 
     <!-- Sign In / Sign Up -->
@@ -237,14 +230,11 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="d-flex justify-content-between align-items-center p-2 border rounded">
-                                    <div>
-                                        <span>Discord</span>
-                                        <small x-show="storeProfile?.discordLinked" class="text-success ms-2" x-text="storeProfile?.discordTag"></small>
-                                    </div>
+                                    <span>Discord</span>
                                     <button type="button" class="btn btn-sm" 
-                                        :class="storeProfile?.discordLinked ? 'btn-outline-danger' : 'btn-outline-primary'"
-                                        @click="storeProfile?.discordLinked ? $store.auth.saveProfile($store.auth.user.uid, {discordLinked: false, discordId: null, discordTag: null, discordPic: null}).then(() => Swal.fire('Unlinked', 'Discord disconnected', 'success')) : linkDiscord()"
-                                        x-text="storeProfile?.discordLinked ? 'Unlink' : 'Link'" title="Link or Unlink Discord"></button>
+                                        :class="$store.auth.isProviderLinked('oidc.oidc.discord') ? 'btn-outline-danger' : 'btn-outline-primary'"
+                                        @click="$store.auth.isProviderLinked('oidc.oidc.discord') ? $store.auth.unlinkProvider('oidc.oidc.discord').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('discord').catch(e => Swal.fire('Error', e.message, 'error'))"
+                                        x-text="$store.auth.isProviderLinked('oidc.oidc.discord') ? 'Unlink' : 'Link'" title="Link or Unlink Discord"></button>
                                 </div>
                             </div>
                             <div class="col-md-6">
