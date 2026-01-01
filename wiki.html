@@ -616,8 +616,7 @@
                         <p>SRV Record: Protocol -> Subdomain / domain</p>
                     </div>
                 </div>
-            </div>
-            <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Chat Relay
                     </h3>
@@ -631,8 +630,7 @@
                         <p><a href="https://github.com/Restitutor/OnfimVelocity">OnfimVelocity</a></p>
                     </div>
                 </div>
-            </div>
-            <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Crash Debugging
                     </h3>
@@ -672,8 +670,7 @@
                         </ul>
                     </div>
                 </div>
-            </div>
-             <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Database Management
                     </h3>
@@ -730,8 +727,7 @@
                         <p>Get .my.cnf and dbBackup.py for /home/dba</p>
                     </div>
                 </div>
-            </div>
-            <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>FAQ
                     </h3>
@@ -770,8 +766,7 @@
                        <p>A: Opens /etc/thing then "ok" then "why". Putting quotes is important when using spaces in arguments.</p>
                     </div>
                 </div>
-            </div>
-            <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Machine Ports
                     </h3>
@@ -806,8 +801,7 @@
                      <p>MC Plan at 401xx.</p>  
                     </div>
                 </div>
-            </div>
-                        <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Onfim Administration
                     </h3>
@@ -849,8 +843,7 @@
                         <p>He will call his scripts automatically using ~/sync/scripts handlers from startup, night_maintenance, and regular.sh.</p>
                     </div>
                 </div>
-            </div>
-            <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Regular Maintenance
                     </h3>
@@ -899,8 +892,7 @@
                         <p>Although we should run btrfs balance at least once a year. The runtime is proportional to the number of subvolumes (so we should clear extra snapshots before doing so). In practice we stopped using btrfs balance entirely.</p>
                     </div>
                 </div>
-            </div>
-            <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>SA 3 BTRFS Guide
                     </h3>
@@ -1021,8 +1013,15 @@
                     <p>Btrfs grabs large chunks of space for Metadata (your file "map") and doesn't like to give them back. If Metadata Used is 18GB but Metadata Size is 100GB, running the -musage commands above will force Btrfs to shrink that 100GB down and give the space back to your files.</p>
                     </div>
                 </div>
-            </div>
-            <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>X
+                    </h3>
+                    <div x-show="open" x-collapse>
+                       
+                    </div>
+                </div>
+                <div x-data="{ open: false }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
                         <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>X
                     </h3>
@@ -1031,16 +1030,6 @@
                     </div>
                 </div>
             </div>
-            <div x-data="{ open: false }" class="mb-3">
-                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
-                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>X
-                    </h3>
-                    <div x-show="open" x-collapse>
-                       
-                    </div>
-                </div>
-            </div>
-        </div>
 
             <!-- Machines Tab -->
             <div x-show="tab === 'machines'" class="fade-in" x-cloak>
