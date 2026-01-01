@@ -1738,12 +1738,11 @@
             </div>
             <div x-show="tab === 'growth'" class="fade-in" x-cloak>
                 <h2 class="mb-4">Growth Plans</h2>
-                <div x-data="{ open: false }" class="mb-3">
+                <div x-data="{ open: true }" class="mb-3">
                     <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
-                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Hub (MC1)
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Growth Plans 🌱
                     </h3>
                     <div x-show="open" x-collapse>
-                        <h4>Growth Plans 🌱</h4>
                         <p>Areas for ‘Immediate’ Growth/Dev</p>
                         <ul>
                             <li>Seek out unique ideas to grow</li>
