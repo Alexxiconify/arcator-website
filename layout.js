@@ -14,7 +14,7 @@ const NAV_HTML = `
                 <li class="nav-item"><a class="nav-link" href="./resources.html">Resources</a></li>
                 <li class="nav-item"><a class="nav-link" href="./about.html">About</a></li>
                 <li class="nav-item"><a class="nav-link" href="./privacy.html">Legal</a></li>
-                <li class="nav-item"><a class="nav-link" href="./mod.html">Admin</a></li>
+                <li class="nav-item" id="admin-link" style="display:none"><a class="nav-link" href="./mod.html">Admin</a></li>
             </ul>
             <div id="user-section" class="d-flex align-items-center">
                 <a href="./users.html" class="btn btn-primary btn-sm" id="sign-in-btn">Sign In</a>
@@ -57,12 +57,12 @@ export function initLayout() {
     if (footerPlaceholder) footerPlaceholder.innerHTML = FOOTER_HTML;
 }
 
-// Update user section when auth state changes
-export function updateUserSection(user, profile) {
+export function updateUserSection(user, profile, isAdmin = false) {
     const signInBtn = document.getElementById('sign-in-btn');
     const profileLink = document.getElementById('user-profile-link');
     const avatar = document.getElementById('user-avatar');
     const userName = document.getElementById('user-name');
+    const adminLink = document.getElementById('admin-link');
     
     if (!signInBtn || !profileLink) return;
     
@@ -72,9 +72,11 @@ export function updateUserSection(user, profile) {
         profileLink.classList.add('d-flex');
         if (avatar) avatar.src = profile?.photoURL || user.photoURL || './defaultuser.png';
         if (userName) userName.textContent = profile?.displayName || user.displayName || 'User';
+        if (adminLink) adminLink.style.display = isAdmin ? '' : 'none';
     } else {
         signInBtn.classList.remove('d-none');
         profileLink.classList.add('d-none');
         profileLink.classList.remove('d-flex');
+        if (adminLink) adminLink.style.display = 'none';
     }
 }

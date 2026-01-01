@@ -10,8 +10,7 @@ service cloud.firestore {
     }
     function isAdmin() {
       return isSignedIn() && 
-        (request.auth.uid == 'CEch8cXWemSDQnM3dHVKPt0RGpn2' ||
-         request.auth.token.admin == true);
+        (get(/databases/$(database)/documents/user_profiles/$(request.auth.uid)).data.admin == true);
     }
     
     // User profiles at root level

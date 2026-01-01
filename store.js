@@ -3,7 +3,6 @@ import { generateProfilePic, randomIdentity } from './helpers.js';
 import { updateUserSection } from './layout.js';
 
 const DEFAULT_THEME_NAME = 'dark';
-const ADMIN_UID = 'CEch8cXWemSDQnM3dHVKPt0RGpn2';
 
 function cacheUser(user, profile) {
     localStorage.setItem('arcator_user_cache', JSON.stringify({
@@ -28,12 +27,12 @@ function updateTheme(theme = 'dark', fontSize = 'normal', customCSS = '') {
     style.textContent = customCSS || '';
 }
 
-async function checkAdmin(uid) {
-    if (uid === ADMIN_UID) return true;
-    try {
-        const tokenResult = await auth.currentUser?.getIdTokenResult();
-        return tokenResult?.claims?.admin === true;
-    } catch { return false; }
+const SUPER_ADMIN = 'CEch8cXWemSDQnM3dHVKPt0RGpn2';
+
+function checkAdmin(profile) {
+    const uid = auth.currentUser?.uid;
+    if (uid === SUPER_ADMIN) return true;
+    return profile?.admin === true;
 }
 
 function registerStore() {
@@ -53,7 +52,7 @@ function registerStore() {
                     this.user = { uid: data.uid, ...data };
                     this.profile = data;
                     updateTheme(data.themePreference, data.fontScaling, data.customCSS);
-                    updateUserSection(this.user, this.profile);
+                    updateUserSection(this.user, this.profile, false);
                 } catch (e) {}
             }
 
@@ -67,7 +66,7 @@ function registerStore() {
                             this.profile = snap.data();
                             cacheUser(u, this.profile);
                             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
-                            this.isAdmin = await checkAdmin(u.uid);
+                            this.isAdmin = checkAdmin(this.profile);
                         }
                     } catch (e) {
                         console.error('Profile load error:', e);
@@ -78,7 +77,7 @@ function registerStore() {
                     localStorage.removeItem('arcator_user_cache');
                 }
                 this.loading = false;
-                updateUserSection(this.user, this.profile);
+                updateUserSection(this.user, this.profile, this.isAdmin);
             });
         },
 
@@ -109,7 +108,7 @@ function registerStore() {
             this.user = null;
             this.profile = null;
             localStorage.removeItem('arcator_user_cache');
-            updateUserSection(null, null);
+            updateUserSection(null, null, false);
         },
 
         async loginWithProvider(providerName) {
@@ -163,7 +162,7 @@ function registerStore() {
             this.profile = { ...this.profile, ...profileData };
             cacheUser(this.user, this.profile);
             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
-            updateUserSection(this.user, this.profile);
+            updateUserSection(this.user, this.profile, this.isAdmin);
         },
 
         getProvider(name) {

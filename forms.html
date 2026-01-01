@@ -426,7 +426,6 @@
                     ...this.newThread,
                     description,
                     authorId: user.uid,
-                    createdBy: Alpine.store('auth').profile?.displayName || 'Anonymous',
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
                     commentCount: 0,
@@ -472,9 +471,9 @@
                 let authorName = 'System';
                 let authorPic = '';
                 
-                if (thread.createdBy !== 'admin' && thread.authorId) {
+                if (thread.authorId) {
                     const author = this.getAuthor(thread.authorId);
-                    authorName = author.displayName;
+                    authorName = author.displayName || 'Unknown';
                     authorPic = `<img src="${author.photoURL || './defaultuser.png'}" class="profile-img-sm me-1" alt="">`;
                 }
 
@@ -570,8 +569,6 @@
                 await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), {
                     content,
                     authorId: user.uid,
-                    authorName: profile?.displayName || 'Anonymous',
-                    authorPhoto: profile?.photoURL || './defaultuser.png',
                     createdAt: serverTimestamp(),
                     parentCommentId: null
                 });
@@ -693,8 +690,6 @@
                     await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), {
                         content: value,
                         authorId: user.uid,
-                        authorName: profile?.displayName || 'Anonymous',
-                        authorPhoto: profile?.photoURL || './defaultuser.png',
                         createdAt: serverTimestamp(),
                         parentCommentId: actualParentId
                     });
