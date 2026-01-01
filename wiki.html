@@ -632,6 +632,414 @@
                     </div>
                 </div>
             </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Crash Debugging
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <p>GPT generated but very useful</p>
+                        <p>Primary crash investigation logs:</p>
+                        <ul>
+                            <li>journalctl -b -1 - Shows logs from the previous boot (most important for crash analysis)</li>
+                            <li>journalctl -p err - Displays only error-level messages across all boots</li>
+                            <li>journalctl -p crit - Shows critical messages that might indicate system failures</li>
+                        </ul>
+                        <p>Kernel and hardware logs:</p>
+                        <ul>
+                            <li>dmesg - Current boot's kernel ring buffer messages</li>
+                            <li>journalctl -k -b -1 - Kernel messages from the previous boot</li>
+                            <li>/var/log/messages - General system messages (if rsyslog is configured)</li>
+                        </ul>
+                        <p>System crash dumps:</p>
+                        <ul>
+                            <li>/var/crash/ - Location for kernel crash dumps (if kdump is configured)</li>
+                            <li>coredumpctl list - Shows any application core dumps</li>
+                            <li>coredumpctl info <PID> - Detailed info about specific core dumps</li>
+                        </ul>
+                        <p>Additional useful logs:</p>
+                        <ul>
+                            <li>journalctl -u systemd-coredump - Core dump service logs</li>
+                            <li>journalctl --since "1 hour ago" - Logs from before the crash time</li>
+                            <li>/var/log/Xorg.0.log - X server logs (for display-related crashes)</li>
+                        </ul>
+                        <p>Pro tips:</p>
+                        <ul>
+                            <li>Use journalctl -f to follow logs in real-time after reboot</li>
+                            <li>Check journalctl --list-boots to see available boot sessions</li>
+                            <li>Look for "segfault," "kernel panic," "Out of memory," or "Hardware Error" messages</li>
+                            <li>Pay attention to timestamps right before the crash occurred</li>
+                            <li>Start with journalctl -b -1 -p err to get the error messages from your last boot - this usually reveals the smoking gun.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+             <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Database Management
+                    </h3>
+                    <div x-show="open" x-collapse>
+                        <p><b>Do not worry about this section unless you're either an admin, or someone who is learning how to use Termius/SSH!</b></p>
+                        <p>We use MariaDB to run the database.</p>
+                        <p>Administration uses the dba user instead of mcsa.</p>
+                        <h4>Backups</h4>
+                        <p>We use a simple cron: 0 * * * *  /home/dba/doAll.sh</p>
+                        <p>/home/dba/doAll.sh calls dbBackup.py with appropriate permissions and target destination in argument.</p>
+                        <p>For example: /mnt/Main/Backups/DB_BACKUPS or /mnt/RAID1/Vulcan/DB</p>
+                        <h4>Replication</h4>
+                        <p>Replication syncs the DB in real time to other machines. https://wiki.arcator.co.uk/en/Sysadmin/MachineSetup/DBReplication</p>
+                        <h4>Data Location</h4>
+                        <p>There are 3 btrfs subvolume with nodatacow fstab for performance. Each of these are mounted to a corresponding /var location.</p>
+                        <ul>
+                            <li>/mnt/DB/mysql, /mnt/DB/log_mysql, /mnt/DB/postgres</li>
+                        </ul>
+                        <h4>Install Database</h4>
+                        <ul>
+                            <li><s><a href="https://docs.fedoraproject.org/en-US/quick-docs/installing-mysql-mariadb/#install-from-fedora-main-repo">Install from Fedora Main Repo</a></s></li>
+                            <ul>
+                                <li><s>Only follow: Install from Fedora Main Repo and Configuring MySql/MariaDB</s></li>
+                            </ul>
+                            <li><a href="https://mariadb.org/download/?t=repo-config&d=Fedora+Linux&v=11.1&r_m=acorn">Repo Config</a></li>
+                        </ul>
+                        <pre><code>
+                        dnf install mariadb-connector-c-devel MariaDB-server MariaDB-client MariaDB-backup
+                        systemctl enable mariadb
+                        systemctl start mariadb
+                        </code></pre>
+                        <ul>
+                            <li>Only For Ubuntu</li>
+                            <ul>
+                                <li>/etc/mysql/mariadb.conf.d/50-server.cnf</li>
+                            </ul>
+                            <li>Replace bind-address  = 127.0.0.1 with the proper 10.0.0.x IP</li>
+                            <li>In /etc/my.cnf.d (Ubuntu is /etc/mysql/conf.d)</li>
+                            <li>Add arcator.cnf and relevant host (example jylina.cnf)</li>
+                            <li>Remember to reapply restorecon -v -R /etc</li>
+                            <li>Install <a href="https://docs.fedoraproject.org/en-US/quick-docs/postgresql/">PostgreSQL</a></li>
+                            <ul>
+                                <li>Extra docs <a href="https://computingforgeeks.com/install-postgresql-database-fedora-linux/">Install PostgreSQL Database, Fedora Linux</a></li>
+                                <li>Whitelist pg_hba.conf using a pre-existing machine config</li>
+                                <li>To set the datadir use fstab to mount /var/lib/pgsql. Then restorecon it.</li>
+                            </ul>
+                        </ul>
+                        <h4>Configuration</h4>
+                        <p>Take /etc/my.cnf.d/arcator.cnf (Ubuntu uses /etc/mysql/arcator.cnf)</p>
+                        <p>Permissions (for backups to work from dba)</p>
+                        <p>find /var/lib/mysql -type d -exec chmod 770 {} \;</p>
+                        <p>find /var/lib/mysql -type f -exec chmod 660 {} \;</p>
+                        <p>usermod -a -G mysql dba</p>
+                        <p>Get .my.cnf and dbBackup.py for /home/dba</p>
+                    </div>
+                </div>
+            </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>FAQ
+                    </h3>
+                    <div x-show="open" x-collapse>
+                       <p>Q: How to scroll on tmux.</p>
+                       <p>A: Use ctrl-b then hit [. Scroll with the arrow keys or page up / down. Then hit Q to stop scrolling.</p>
+                       <p>Q: What is the | in a command.</p>
+                       <p>A: The pipe command sends input from the left command to right command.</p>
+                       <p>Q: What is a . argument in a command taking a path?</p>
+                       <p>A: The current directory.</p>
+                       <p>Q: Prompt Y/n</p>
+                       <p>A: If you hit enter Y is the default. Similarly y/N means N is default.</p>
+                       <p>Q: How to install programs. tar.gz or rpm?</p>
+                       <p>A: tar.gz is harder to install but works on more distros of Linux. rpm is easier to install but works on Fedora.</p>
+                       <p>Q: How to install programs. Software manager vs download from site?</p>
+                       <p>A: Software manager is a repo that may be outdated but easy to use. Check for an official download from a site / PPA first.</p>
+                       <p>Q: Check NVME drive status.</p>
+                       <p>A: Use nvme help.</p>
+                       <p>Drive checks: nvme device-self-test /dev/nvme0 -n 1 -s 2</p>
+                       <p>Q: Find dead symlinks</p>
+                       <p>A: <a href="https://unix.stackexchange.com/a/34260">https://unix.stackexchange.com/a/34260</a></p>
+                       <p>Q: How to install programs. tar.gz or rpm?</p>
+                       <p>A: tar.gz is harder to install but works on more distros of Linux. rpm is easier to install but works on Fedora.</p>
+                       <p>Q: How to install programs. Software manager vs download from site?</p>
+                       <p>A: Software manager is a repo that may be outdated but easy to use. Check for an official download from a site / PPA first.</p>
+                       <p>Q: Check NVME drive status.</p>
+                       <p>A: Use nvme help.</p>
+                       <p>Drive checks: nvme device-self-test /dev/nvme0 -n 1 -s 2</p>
+                       <p>Q: Find dead symlinks</p>
+                       <p>A: <a href="https://unix.stackexchange.com/a/34260">https://unix.stackexchange.com/a/34260</a></p>
+                       <p>Q: How to Debug Some System Errors</p>
+                       <p>1: Run: sudo journalctl -xe</p>
+                       <p>2: How to scroll: Page up and down (like tmux scroll)</p>
+                       <p>3: How to exit: Q (like tmux scroll)</p>
+                       <p>Q: nano /etc/thing ok why</p>
+                       <p>A: Opens /etc/thing then "ok" then "why". Putting quotes is important when using spaces in arguments.</p>
+                    </div>
+                </div>
+            </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Machine Ports
+                    </h3>
+                    <div x-show="open" x-collapse>
+                     <h4>Per System Ports</h4>
+                     <p>Do not worry about this section unless you're either an admin, or someone who is learning how to use Termius/SSH!</p>
+                     <p>All port ranges below are inclusive.</p>
+                     <ul>
+                        <li>Website HTTP / HTTPS: 80 (closed) 443 (open)</li>
+                        <li>SSH: 220 (open)</li>
+                        <li>Onfim: 2500 - 2504 (closed)</li>
+                        <li>MariaDB: 3306 (closed)</li>
+                        <li>Postgres: 5432 (closed)</li>
+                        <li>Matrix 8008, 8448</li>
+                        <li>Minecraft (all open)</li>
+                        <ul>
+                            <li>Arcator Velocity: 25565</li>
+                            <ul>
+                                <li>Extra Arcator servers: 25566 - 25569</li>
+                            </ul>
+                            <li>Non-Arcator servers: 25560 - 25564</li>
+                            <li>This is important because we check the ports to know which backups to take!</li>
+                        </ul>
+                        <li>Mosh 60000 - 61000 UDP (open)</li>
+                     </ul>
+                     <h5>Server X</h5>
+                     <p>Forwarded Backup SSH Ports: 123x.</p>
+                     <h5>Internal Ports For MCxx</h5>
+                     <p>To avoid conflicts we give each server an internal MC#.</p>
+                     <p>MC Server (Backend) at 300xx.</p>
+                     <p>MC RCON at 400xx.</p>
+                     <p>MC Plan at 401xx.</p>  
+                    </div>
+                </div>
+            </div>
+                        <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Onfim Administration
+                    </h3>
+                    <div x-show="open" x-collapse>
+                       <h4>System Install</h4>
+                       <ol>
+                            <li>mkdir -p /mnt/Main/shared/curium</li>
+                            <li>chmod 770 /mnt/Main/shared /mnt/Main/shared/curium</li>
+                            <li>chown onfim:curium /mnt/Main/shared /mnt/Main/shared/curium</li>
+                            <li>Copy /mnt/Main/shared/curium and /mnt/Main/shared/curium_env from another machine.</li>
+                       </ol>
+                       <h4>mcsa Install</h4>
+                       <ul>
+                            <li>Prerequisites</li>
+                            <li>System Install</li>
+                       </ul>
+                        <p>Ensure Wireguard is setup.</p>
+                        <p>## Install to ~/curium.</p>
+                        <p>bash /mnt/Main/shared/curium/sync.sh</p>
+                        <p>## Set up environment dependencies</p>
+                        <p>mkdir ~/curium_env</p>
+                        <p>cd ~/curium_env</p>
+                        <p>uv init</p>
+                        <p>uv add -r ~/curium/requirements.txt</p>
+                        <p>(Comment out mariadb if needed as only necessary for brain instance)</p>
+                       <h4>Configuration</h4>
+                       <ul>
+                            <li>Symlinks</li>
+                            <li>Ensure a ~/HomeSnapshots and ~/Backups/Snapshot exist</li>
+                            <li>Copy a ~/curium_data/btrbk.toml from another machine as reference</li>
+                       </ul>
+                       <p>Drive Scanning</p>
+                       <ul>
+                            <li>From another machine's ~/curium_data copy over btrfsVolumes.txt and driveScan.toml</li>
+                            <li>Edit the mount points and drives to fit the existing machine</li>
+                       </ul>
+                       <h4>Manual Use</h4>
+                        <p>Start up a microbrain in a tmux. bash ~/curium/run/microbrain.sh</p>
+                        <p>He will call his scripts automatically using ~/sync/scripts handlers from startup, night_maintenance, and regular.sh.</p>
+                    </div>
+                </div>
+            </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>Regular Maintenance
+                    </h3>
+                    <div x-show="open" x-collapse>
+                       <h4>Overview</h4>
+                       <p>We run these on a mix of crontab and systemd. Primarily on the mcsa user.</p>
+                       <h4>Every Minute</h4>
+                       <ul>
+                            <li>Check the DDNS</li>
+                            <li>Sync ~/curium</li>
+                            <li>Run ~/curium/microbrain/regular.sh</li>
+                            <li>Check if too many subvolumes in btrfs volume (Alert if failure)</li>
+                            <ul>
+                                <li>Check if > 95% disk usage on btrfs volume (Alert if failure)</li>
+                                <li>Update #machine-status</li>
+                                <li>Update #rules</li>
+                                <li>Check if Wireguard tunnels are active</li>
+                                <ul>
+                                    <li>Try to ping all machines and alert if failure for 30 seconds</li>
+                                </ul>
+                            </ul>
+                            <li>Run ~/curium/mb_poll/regular.sh</li>
+                        </ul> 
+                        <h4>Backups</h4>
+                        <ul>
+                            <li>Every 2 minutes take a snapshot</li>
+                            <li>Every 6 hours backup the worlds</li>
+                        </ul>
+                        <h4>Daily Maintenace (any time of day)</h4>
+                        <ul>
+                            <li>Check if no one is online before proceeding</li>
+                            <li>Backup server directories to ~/Backups/Server</li>
+                            <li>Check symlinks for ~/SERVER/logs and ~/SERVER/backups/worlds</li>
+                            <li>Restart Onfim Microbrain</li>
+                            <li>SMART scan the drives (Alert if failure)</li>
+                            <ul>
+                                <li>Short scan</li>
+                                <li>Do a "sector scan"</li>
+                                <ul>
+                                    <li><a href="https://unix.stackexchange.com/questions/92655/monitor-disk-health-using-smartd-in-smartmontools-on-a-high-availability-softw/92663#92663">Monitor disk health using smartd on a high availability software RAID 1 server</a></li>
+                                </ul>
+                                <li>Do a btrfs scrub (Alert if failure)</li>
+                            </ul>
+                        </ul>
+                        <h4>Manual</h4>
+                        <p>Although we should run btrfs balance at least once a year. The runtime is proportional to the number of subvolumes (so we should clear extra snapshots before doing so). In practice we stopped using btrfs balance entirely.</p>
+                    </div>
+                </div>
+            </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>SA 3 BTRFS Guide
+                    </h3>
+                    <div x-show="open" x-collapse>
+                    <p>How to use btrfs send and receive</p>
+                    <h4>BTRFS Snapshots and Balance Guide</h4>
+                    <h5>Basics of Btrfs Send/Receive</h5>
+                    <p>Here's a step-by-step guide to understanding btrfs send and receive, focusing on creating efficient incremental backups. This process is perfect for sending backups to another drive or over a network.</p>
+                    <p>(Note: All btrfs commands require sudo) We also use btrfs send --proto 2 for more efficiency.</p>
+                    <h6>1. Setup: Creating Our Data</h6>
+                    <p>First, let's create a workspace and our initial subvolume. A subvolume in Btrfs acts like its own independent directory tree.</p>
+                    <p>Bash</p>
+                    <pre><code>
+                        # Create a test area and move into it
+                        mkdir btrfs_test && cd btrfs_test
+                        # Create our first subvolume, which will hold our data
+                        sudo btrfs subvolume create data_v1
+                    </code></pre>
+                    <p>Now, let's add some data. We'll use two types of files to see how well compression works later.</p>
+                    <p>Bash</p>
+                    <pre><code>
+                        # Create a 200MB file of zeros (highly compressible)
+                        sudo dd if=/dev/zero of=data_v1/zeros.bin bs=1M count=200
+                        # Create a 200MB file of random data (not compressible)
+                        sudo dd if=/dev/urandom of=data_v1/random.bin bs=1M count=200
+                    </code></pre>
+                    <h6>2. The Full Backup (The Base)</h6>
+                    <p>To send a subvolume, we first need to create a snapshot. Think of a snapshot as an instantaneous, zero-cost atomic copy of the subvolume's state. For btrfs send, we need a read-only snapshot.</p>
+                    <p>Bash</p>
+                    <pre><code>
+                        # Create a read-only (-r) snapshot of our data
+                        sudo btrfs subvolume snapshot -r data_v1 data_v1_ro
+                    </code></pre>
+                    <p>Now, we'll serialize this snapshot into a file stream using btrfs send. We'll also compress it with zstd to save space.</p>
+                    <p>Bash</p>
+                    <pre><code>
+                        # Send the snapshot and compress it
+                        sudo btrfs send --proto 2 data_v1_ro | zstd > full_backup.zst
+                        # Let's check the size
+                        ls -lh full_backup.zst
+                    </code></pre>
+                    <p>You'll notice the compressed backup is just over 200MB, because the 200MB of zeros compressed to almost nothing, while the random data didn't.</p>
+                    <p>💡 To restore this backup, try btrfs receive:</p>
+                    <p>We make a destination because btrfs receive will remake the subvolume with the same name. We don't want conflicts.</p>
+                    <p>Bash</p>
+                     <pre><code>
+                        mkdir destination_folder
+                        zstdcat full_backup.zst | sudo btrfs receive ./destination_folder
+                     </code></pre>
+                     <h6>3. The Incremental Backup (The Changes)</h6>
+                     <p>An incremental backup only contains the changes since a previous snapshot. This is incredibly efficient. First, let's make some changes to our original data_v1 subvolume.</p>
+                     <p>Bash</p>
+                     <pre><code>
+                        # Add a new, small text file
+                        echo "This is a new file." | sudo tee data_v1/new_file.txt > /dev/null
+                        # Modify an existing file by appending data
+                        echo "More random data" | sudo dd of=data_v1/random.bin bs=1M seek=200 count=1 conv=notrunc
+                        # Delete the file of zeros
+                        sudo rm data_v1/zeros.bin
+                     </code></pre>
+                     <p>Now that we've made changes, we create a new read-only snapshot to capture this updated state.</p>
+                     <p>Bash</p>
+                     <pre><code>
+                        sudo btrfs subvolume snapshot -r data_v1 data_v2_ro
+                     </code></pre>
+                    <p>To create the incremental stream, we tell btrfs send to calculate the difference between the "parent" (-p) snapshot and the new one.</p>
+                    <p>Bash</p>
+                    <pre><code>
+                        # Send ONLY the changes between v1 and v2
+                        sudo btrfs send --proto 2 -p data_v1_ro data_v2_ro | zstd > incremental_backup.zst
+                        # Let's compare the sizes!
+                        ls -lh full_backup.zst incremental_backup.zst
+                    </code></pre>
+                    <p>The incremental_backup.zst file will be tiny compared to the full backup, because it only contains the small changes we made!</p>
+                    <p>Now extract this incremental backup. It will recognize the parent subvolume exists and use the data to extract efficiently.</p>
+                    <pre><code>
+                        zstdcat incremental_backup.zst | sudo btrfs receive ./destination_folder
+                    </code></pre>
+                    <h6>4. Cleanup</h6>
+                    <p>Once you're done, you can delete subvolumes (which includes snapshots) like this.</p>
+                    <p>Bash</p>
+                    <pre><code>
+                        sudo btrfs subvolume delete data_v1 data_v1_ro data_v2_ro
+                    </code></pre>
+                    <h6>Key Takeaways 📝</h6>
+                    <ul>
+                        <li>Snapshot First: Always send from a read-only snapshot. Sometimes this means making a temporary subvolume.</li>
+                        <li>>Full Backup: The first backup must be a full one, which acts as the base.</li>
+                        <ul>
+                            <li>sudo btrfs send &lt;snapshot_name></li>
+                        </ul>
+                        <li>Incremental Backup: Subsequent backups can be incremental by specifying a parent snapshot with the -p flag. This only sends the differences. However btrfs receive will only work if it can recognize the parent exists at the destination.</li>
+                        <ul>
+                            <li>sudo btrfs send -p &lt;parent_snapshot> &lt;new_snapshot></li>
+                        </ul>
+                        <li>The Snapshot Chain: To create an incremental backup from v2 to v3, the v2 snapshot must exist on the source machine. To receive it, the v2 snapshot must exist on the destination. Do not delete intermediate snapshots if you plan to continue a chain of incremental backups. This is the most common point of failure for scripts like btrbk.</li>
+                        <li>UUIDs are Key: Btrfs identifies subvolumes by a unique UUID. When you send a snapshot, its UUID is embedded in the stream. btrfs receive looks for a subvolume on the destination with the parent's UUID, not just a matching name. This makes the process very robust. You can see a subvolume's UUID with btrfs subvolume show &lt;path>.</li>
+                        <li>Always Compress: Piping the output of btrfs send to a compression tool like zstd is highly recommended to save space.</li>
+                    </ul>
+                    <h5ֱ>BTRFS Balance</h5>
+                    <h6>1. When to Balance</h6>
+                    <p>Consider a balance when the drive is starting to look full (80 - 90% usage).</p>
+                    <p>The Signal: Run btrfs filesystem usage /. If Device unallocated is less than 10 GiB or Metadata Size vs Used is less than 10%. It is a good idea.</p>
+                    <h6>2. The Simple Commands</h6>
+                    <p>Always start small. These commands consolidate "mostly empty" buckets into full ones, freeing up raw space.</p>
+                    <ul>
+                        <li>Step 1 (Cleanup empty buckets):sudo btrfs balance start -dusage=0 -musage=0 /</li>
+                        <li>Step 2 (Cleanup 5% full buckets):sudo btrfs balance start -dusage=5 -musage=5 /</li>
+                        <li>Step 3 (Cleanup 10% full buckets): sudo btrfs balance start -dusage=10 -musage=10 /</li>
+                    </ul>
+                    <p>Note: -d is for Data (files); -m is for Metadata (file maps).</p>
+                    <h6>3. What if it fails? (ENOSPC / Error -2)</h6>
+                    <p>If you get a "No space" error while balancing, it means the disk is too crowded to move things around.</p>
+                    <p>Go smaller: Use -dusage=1 instead of 10.</p>
+                    <p>Delete something: Delete a few large files or old snapshots to give the system breathing room.</p>
+                    <p>Try again: Run the Step 1 command above.</p>
+                    <h6>4. Why is Metadata so high?</h6>
+                    <p>Btrfs grabs large chunks of space for Metadata (your file "map") and doesn't like to give them back. If Metadata Used is 18GB but Metadata Size is 100GB, running the -musage commands above will force Btrfs to shrink that 100GB down and give the space back to your files.</p>
+                    </div>
+                </div>
+            </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>X
+                    </h3>
+                    <div x-show="open" x-collapse>
+                       
+                    </div>
+                </div>
+            </div>
+            <div x-data="{ open: false }" class="mb-3">
+                    <h3 @click="open = !open" class="collapsible-header cursor-pointer d-flex align-items-center">
+                        <span class="toggle-icon me-2" :class="{ 'rotate-90': open }">▶</span>X
+                    </h3>
+                    <div x-show="open" x-collapse>
+                       
+                    </div>
+                </div>
+            </div>
         </div>
 
             <!-- Machines Tab -->
