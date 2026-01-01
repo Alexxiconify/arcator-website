@@ -211,9 +211,9 @@ function registerForumData() {
                 data.comments = cSnap.docs.map(cd => ({ id: cd.id, ...cd.data() }));
                 return data;
             }));
-            this.threads = threads;
             const allIds = [...new Set([...threads.map(t => t.authorId), ...threads.flatMap(t => t.comments.map(c => c.authorId))].filter(Boolean))];
             await Promise.all(allIds.map(fetchAuthor));
+            this.threads = threads;
             this.loading = false;
         },
 
@@ -320,18 +320,7 @@ function registerForumData() {
 
 
 function registerMessageData() {
-    const userCache = {};
 
-    async function fetchAuthor(uid) {
-        if (!uid || userCache[uid]) return;
-        try { const snap = await getDoc(doc(db, 'user_profiles', uid)); if (snap.exists()) userCache[uid] = snap.data(); } catch (e) {}
-    }
-
-    function getAuthor(uid) {
-        if (userCache[uid]) return userCache[uid];
-        const s = Alpine.store('auth'); if (s.user?.uid === uid && s.profile) return s.profile;
-        return { displayName: 'Unknown', photoURL: './defaultuser.png' };
-    }
 
     Alpine.data('messageData', () => ({
         conversations: [], selectedConv: null, messages: [], newMessage: '', unsubscribe: null,
