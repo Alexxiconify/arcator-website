@@ -10,11 +10,10 @@
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body>
+<body x-data="wikiApp">
 <div id="navbar-placeholder"></div>
-<div x-data="wikiApp" class="d-flex w-100">
+<div class="d-flex w-100">
     <button class="btn btn-primary d-md-none position-fixed bottom-0 end-0 m-3 z-3 rounded-circle p-3 shadow" 
             @click="showSidebar = !showSidebar" aria-label="Toggle Sidebar">
         <i class="bi" :class="showSidebar ? 'bi-x-lg' : 'bi-list'"></i>
@@ -57,88 +56,10 @@
     </div>
 </div>
 <div id="footer-placeholder"></div>
-<script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js" defer></script>
-<script type="module">
-import { db, COLLECTIONS, getDocs, getDoc, updateDoc, doc, collection, firebaseReadyPromise, serverTimestamp } from './app.js';
-
-document.addEventListener('alpine:init', () => {
-    Alpine.data('wikiApp', () => ({
-        tab: 'home',
-        showSidebar: false,
-        loading: true,
-        tabs: [
-            {id: 'home', label: 'Welcome', icon: 'bi-house'},
-            {id: 'servers', label: 'Servers', icon: 'bi-hdd-network'},
-            {id: 'software', label: 'Software', icon: 'bi-code-square'},
-            {id: 'sysadmin', label: 'Sysadmin', icon: 'bi-terminal'},
-            {id: 'machines', label: 'Machines', icon: 'bi-pc-display'},
-            {id: 'staff', label: 'Staff', icon: 'bi-people'},
-            {id: 'mcadmin', label: 'MCAdmin', icon: 'bi-shield-lock'},
-            {id: 'growth', label: 'Growth Plans', icon: 'bi-graph-up'}
-        ],
-        tabContent: {},
-        tabMeta: {},
-        
-        get currentUser() { return Alpine.store('auth')?.user; },
-        get isAdmin() { return Alpine.store('auth')?.isAdmin; },
-        get canEdit() {
-            if (!this.currentUser) return false;
-            if (this.isAdmin) return true;
-            const meta = this.tabMeta[this.tab];
-            return meta?.allowedEditors?.includes(this.currentUser.uid);
-        },
-        
-        async init() {
-            await firebaseReadyPromise;
-            const snap = await getDocs(collection(db, COLLECTIONS.WIKI_PAGES));
-            snap.forEach(d => {
-                const data = d.data();
-                this.tabContent[d.id] = data.content;
-                this.tabMeta[d.id] = { allowedEditors: data.allowedEditors || [], updatedAt: data.updatedAt };
-            });
-            this.loading = false;
-            this.$nextTick(() => this.renderTab(this.tab));
-        },
-        
-        renderTab(tabId) {
-            const container = document.querySelector(`.wiki-content[data-tab="${tabId}"]`);
-            if (!container || !this.tabContent[tabId]) return;
-            container.innerHTML = this.tabContent[tabId];
-            container.querySelectorAll('[x-data]').forEach(el => Alpine.initTree(el));
-        },
-        
-        selectTab(tabId) {
-            this.tab = tabId;
-            this.showSidebar = false;
-            this.$nextTick(() => this.renderTab(tabId));
-        },
-        
-        async editCurrentTab() {
-            const content = this.tabContent[this.tab] || '';
-            const { value } = await Swal.fire({
-                title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`,
-                width: '900px',
-                html: `<textarea id="wiki-edit" class="form-control font-monospace" rows="20">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>`,
-                showCancelButton: true,
-                didOpen: () => { document.getElementById('wiki-edit').value = content; },
-                preConfirm: () => document.getElementById('wiki-edit').value
-            });
-            if (value !== undefined) {
-                try {
-                    await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, this.tab), { content: value, updatedAt: serverTimestamp() });
-                    this.tabContent[this.tab] = value;
-                    this.renderTab(this.tab);
-                    Swal.fire('Saved', 'Wiki section updated', 'success');
-                } catch (e) {
-                    console.error(e);
-                    Swal.fire('Error', 'Failed to save changes', 'error');
-                }
-            }
-        }
-    }));
-});
-</script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module" src="./app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </body>
 </html>
+

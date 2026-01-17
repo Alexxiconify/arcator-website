@@ -659,11 +659,673 @@ function registerPageWikiManagement() {
     });
 }
 
+function registerWikiApp() {
+    Alpine.data('wikiApp', () => ({
+        tab: 'home',
+        showSidebar: false,
+        loading: true,
+        tabs: [
+            {id: 'home', label: 'Welcome', icon: 'bi-house'},
+            {id: 'servers', label: 'Servers', icon: 'bi-hdd-network'},
+            {id: 'software', label: 'Software', icon: 'bi-code-square'},
+            {id: 'sysadmin', label: 'Sysadmin', icon: 'bi-terminal'},
+            {id: 'machines', label: 'Machines', icon: 'bi-pc-display'},
+            {id: 'staff', label: 'Staff', icon: 'bi-people'},
+            {id: 'mcadmin', label: 'MCAdmin', icon: 'bi-shield-lock'},
+            {id: 'growth', label: 'Growth Plans', icon: 'bi-graph-up'}
+        ],
+        tabContent: {},
+        tabMeta: {},
+        
+        get currentUser() { return Alpine.store('auth')?.user; },
+        get isAdmin() { return Alpine.store('auth')?.isAdmin; },
+        get canEdit() {
+            if (!this.currentUser) return false;
+            if (this.isAdmin) return true;
+            const meta = this.tabMeta[this.tab];
+            return meta?.allowedEditors?.includes(this.currentUser.uid);
+        },
+        
+        async init() {
+            await firebaseReadyPromise;
+            const snap = await getDocs(collection(db, COLLECTIONS.WIKI_PAGES));
+            snap.forEach(d => {
+                const data = d.data();
+                this.tabContent[d.id] = data.content;
+                this.tabMeta[d.id] = { allowedEditors: data.allowedEditors || [], updatedAt: data.updatedAt };
+            });
+            this.loading = false;
+            this.$nextTick(() => this.renderTab(this.tab));
+        },
+        
+        renderTab(tabId) {
+            const container = document.querySelector(`.wiki-content[data-tab="${tabId}"]`);
+            if (!container || !this.tabContent[tabId]) return;
+            container.innerHTML = this.tabContent[tabId];
+            container.querySelectorAll('[x-data]').forEach(el => Alpine.initTree(el));
+        },
+        
+        selectTab(tabId) {
+            this.tab = tabId;
+            this.showSidebar = false;
+            this.$nextTick(() => this.renderTab(tabId));
+        },
+        
+        async editCurrentTab() {
+            const content = this.tabContent[this.tab] || '';
+            const { value } = await Swal.fire({
+                title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`,
+                width: '900px',
+                html: `<textarea id="wiki-edit" class="form-control font-monospace" rows="20">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>`,
+                showCancelButton: true,
+                didOpen: () => { document.getElementById('wiki-edit').value = content; },
+                preConfirm: () => document.getElementById('wiki-edit').value
+            });
+            if (value !== undefined) {
+                try {
+                    await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, this.tab), { content: value, updatedAt: serverTimestamp() });
+                    this.tabContent[this.tab] = value;
+                    this.renderTab(this.tab);
+                    Swal.fire('Saved', 'Wiki section updated', 'success');
+                } catch (e) {
+                    console.error(e);
+                    Swal.fire('Error', 'Failed to save changes', 'error');
+                }
+            }
+        }
+    }));
+}
+
+function registerPagesData() {
+    Alpine.data('pagesData', () => ({
+        pages: [],
+        currentPage: null,
+        currentPageId: new URL(location.href).searchParams.get('id'),
+        loading: true,
+        authorName: 'Unknown',
+        showSidebar: false,
+        get currentUser() { return Alpine.store('auth')?.user; },
+        get isAdmin() { return Alpine.store('auth')?.isAdmin; },
+        get canEdit() {
+            if (!this.currentUser || !this.currentPage) return false;
+            if (this.isAdmin) return true;
+            if (this.currentPage.authorId === this.currentUser.uid) return true;
+            return false;
+        },
+
+        async init() {
+            await firebaseReadyPromise;
+            await this.loadPagesList();
+            if (this.currentPageId) {
+                await this.loadSinglePage(this.currentPageId);
+            }
+        },
+
+        async loadPagesList() {
+            try {
+                const q = query(collection(db, COLLECTIONS.PAGES), orderBy('createdAt', 'desc'));
+                const snap = await getDocs(q);
+                this.pages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            } catch (e) {
+                console.error(e);
+            } finally {
+                if (!this.currentPageId) this.loading = false;
+            }
+        },
+
+        async loadSinglePage(id) {
+            try {
+                const snap = await getDoc(doc(db, COLLECTIONS.PAGES, id));
+                if (snap.exists()) {
+                    this.currentPage = { id: snap.id, ...snap.data() };
+                    document.title = `${this.currentPage.title || 'Page'} - Arcator`;
+                    await this.loadAuthor(this.currentPage.createdBy || this.currentPage.authorId);
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async loadAuthor(uid) {
+            if (!uid) return;
+            try {
+                const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
+                if (snap.exists()) {
+                    this.authorName = snap.data().displayName || snap.data().email || 'Unknown';
+                } else {
+                    this.authorName = uid;
+                }
+            } catch (e) {
+                this.authorName = uid;
+            }
+        },
+
+        formatDate(ts) { return formatDate(ts); },
+
+        renderContent(content) {
+            if (!content) return '';
+            const isHtml = /<[a-z][\s\S]*>/i.test(content);
+            return DOMPurify.sanitize(isHtml ? content : marked.parse(content));
+        },
+
+        async createPage() {
+            if (!this.currentUser) return Swal.fire('Error', 'You must be logged in.', 'error');
+            const { value } = await Swal.fire({
+                title: 'New Page', width: '800px',
+                html: '<input id="np-title" class="form-control mb-2" placeholder="Title"><input id="np-slug" class="form-control mb-2" placeholder="Slug (optional)"><input id="np-desc" class="form-control mb-2" placeholder="Description"><input id="np-tags" class="form-control mb-2" placeholder="Tags (comma separated)"><textarea id="np-content" class="form-control" rows="10" placeholder="HTML Content"></textarea>',
+                showCancelButton: true,
+                preConfirm: () => ({
+                    title: document.getElementById('np-title').value,
+                    slug: document.getElementById('np-slug').value,
+                    description: document.getElementById('np-desc').value,
+                    tags: document.getElementById('np-tags').value.split(',').map(t => t.trim()).filter(t => t),
+                    content: document.getElementById('np-content').value,
+                    authorId: this.currentUser.uid, createdBy: this.currentUser.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+                })
+            });
+            if (value) {
+                if (!value.title) return Swal.fire('Error', 'Title is required', 'error');
+                const docRef = await addDoc(collection(db, COLLECTIONS.PAGES), value);
+                await this.loadPagesList();
+                window.location.href = `?id=${docRef.id}`;
+            }
+        },
+
+        async editPage() {
+            if (!this.currentPage) return;
+            const { value } = await Swal.fire({
+                title: 'Edit Page', width: '800px',
+                html: `<input id="ep-title" class="form-control mb-2" placeholder="Title" value="${this.currentPage.title || ''}"><input id="ep-slug" class="form-control mb-2" placeholder="Slug" value="${this.currentPage.slug || ''}"><input id="ep-desc" class="form-control mb-2" placeholder="Description" value="${this.currentPage.description || ''}"><input id="ep-tags" class="form-control mb-2" placeholder="Tags" value="${(this.currentPage.tags || []).join(', ')}"><textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content">${this.currentPage.content || ''}</textarea>`,
+                showCancelButton: true,
+                preConfirm: () => ({
+                    title: document.getElementById('ep-title').value,
+                    slug: document.getElementById('ep-slug').value,
+                    description: document.getElementById('ep-desc').value,
+                    tags: document.getElementById('ep-tags').value.split(',').map(t => t.trim()).filter(t => t),
+                    content: document.getElementById('ep-content').value,
+                    updatedAt: serverTimestamp()
+                })
+            });
+            if (value) {
+                await updateDoc(doc(db, COLLECTIONS.PAGES, this.currentPage.id), value);
+                await this.loadSinglePage(this.currentPage.id);
+                await this.loadPagesList();
+                Swal.fire('Success', 'Page updated', 'success');
+            }
+        },
+
+        async deletePage() {
+            if (!this.currentPage) return;
+            if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) {
+                await deleteDoc(doc(db, COLLECTIONS.PAGES, this.currentPage.id));
+                window.location.href = 'pages.html';
+            }
+        },
+    }));
+}
+
+function registerAdminDashboard() {
+    Alpine.data('adminDashboard', () => ({
+        tab: 'dashboard',
+        mobileMenu: false,
+        loading: true,
+        isAdmin: false,
+        currentUser: null,
+        
+        users: [],
+        pages: [],
+        threads: [],
+        dms: [],
+        wikiSections: [],
+        
+        searchUser: '',
+
+        get pageTitle() {
+            return this.tab.charAt(0).toUpperCase() + this.tab.slice(1);
+        },
+
+        get filteredUsers() {
+            if (!this.searchUser) return this.users;
+            const lower = this.searchUser.toLowerCase();
+            return this.users.filter(u => 
+                (u.displayName && u.displayName.toLowerCase().includes(lower)) ||
+                (u.email && u.email.toLowerCase().includes(lower))
+            );
+        },
+
+        get recentActivity() {
+            const acts = [
+                ...this.threads.map(t => ({ id: t.id, text: `New thread: ${t.title}`, time: t.createdAt, icon: 'bi-chat-square-text text-warning' })),
+                ...this.dms.map(d => ({ id: d.id, text: `Message in ${d.participantNames ? Object.values(d.participantNames).join(', ') : 'Conversation'}`, time: d.lastMessageTime, icon: 'bi-envelope text-info' }))
+            ];
+            return acts.sort((a, b) => {
+                const ta = a.time?.seconds || 0;
+                const tb = b.time?.seconds || 0;
+                return tb - ta;
+            }).slice(0, 5);
+        },
+
+        async init() {
+            document.addEventListener('admin-edit-msg', (e) => this.editMessage(e.detail.cid, {id: e.detail.mid, content: e.detail.content}));
+            document.addEventListener('admin-del-msg', (e) => this.deleteMessage(e.detail.cid, e.detail.mid));
+            document.addEventListener('admin-edit-comment', (e) => this.editComment(e.detail.tid, {id: e.detail.cid, content: e.detail.content}));
+            document.addEventListener('admin-del-comment', (e) => this.deleteComment(e.detail.tid, e.detail.cid));
+
+            Alpine.effect(async () => {
+                const store = Alpine.store('auth');
+                if (!store.loading) {
+                    if (store.user) {
+                        this.currentUser = store.user;
+                        this.isAdmin = store.isAdmin;
+                        if (this.isAdmin) await this.refreshAll();
+                    } else {
+                        this.isAdmin = false;
+                    }
+                    this.loading = false;
+                }
+            });
+        },
+
+        async refreshAll() {
+            try {
+                const [uSnap, pSnap, tSnap, dSnap, wSnap] = await Promise.all([
+                    getDocs(collection(db, COLLECTIONS.USER_PROFILES)),
+                    getDocs(collection(db, COLLECTIONS.PAGES)),
+                    getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'))),
+                    getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), orderBy('lastMessageTime', 'desc'))),
+                    getDocs(collection(db, COLLECTIONS.WIKI_PAGES))
+                ]);
+
+                this.users = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                this.pages = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                this.threads = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                this.dms = dSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                this.wikiSections = wSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            } catch (e) {
+                console.error('Refresh failed', e);
+                Swal.fire('Error', 'Failed to load data', 'error');
+            }
+        },
+
+        getAuthorName(uid) {
+            const u = this.users.find(x => x.id === uid);
+            return u ? (u.displayName || u.email) : 'Unknown';
+        },
+
+        getDMName(dm) {
+            if (dm.name && dm.name !== 'Chat') return dm.name;
+            return dm.participants.map(uid => this.getAuthorName(uid)).join(', ');
+        },
+
+        formatDate(ts) { return formatDate(ts); },
+
+        async createPage() { await Alpine.store('mgmt').createPage(() => this.refreshAll()); },
+        async editPage(page) { await Alpine.store('mgmt').editPage(page, () => this.refreshAll()); },
+        async deletePage(id) { await Alpine.store('mgmt').deletePage(id, () => this.refreshAll()); },
+
+        async createWikiSection() { await Alpine.store('mgmt').createWikiSection(() => this.refreshAll()); },
+        async editWikiSection(section) { await Alpine.store('mgmt').editWikiSection(section, () => this.refreshAll()); },
+        async manageWikiEditors(section) { await Alpine.store('mgmt').manageWikiEditors(section, this.users, () => this.refreshAll()); },
+        async deleteWikiSection(id) { await Alpine.store('mgmt').deleteWikiSection(id, () => this.refreshAll()); },
+
+        async editUser(user) {
+            const isSelf = this.currentUser.uid === user.id;
+            const { value } = await Swal.fire({
+                title: 'Edit User Profile',
+                width: '800px',
+                html: `
+                    <div class="text-start admin-modal-scroll">
+                        <h6 class="text-primary mb-3">General Info</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6"><label class="form-label small">Display Name</label><input id="eu-name" class="form-control form-control-sm" value="${user.displayName || ''}"></div>
+                            <div class="col-md-6"><label class="form-label small">Handle</label><input id="eu-handle" class="form-control form-control-sm" value="${user.handle || ''}"></div>
+                            <div class="col-md-6"><label class="form-label small">Email</label><input id="eu-email" class="form-control form-control-sm" value="${user.email || ''}"></div>
+                            <div class="col-md-6"><label class="form-label small">Photo URL</label><input id="eu-photo" class="form-control form-control-sm" value="${user.photoURL || ''}"></div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Role</label>
+                                <select id="eu-role" class="form-select form-select-sm">
+                                    <option value="user" ${!user.admin && user.role !== 'staff' ? 'selected' : ''}>User</option>
+                                    <option value="staff" ${user.role === 'staff' ? 'selected' : ''}>Staff</option>
+                                    <option value="admin" ${user.admin ? 'selected' : ''}>Admin</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6"><label class="form-label small">Custom CSS</label><input id="eu-css" class="form-control form-control-sm" value="${user.customCSS || ''}"></div>
+                        </div>
+                        <h6 class="text-primary mb-3 border-top pt-3">Social & Links</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6"><label class="form-label small">Discord ID</label><input id="eu-discordId" class="form-control form-control-sm" value="${user.discordId || ''}"></div>
+                            <div class="col-md-6"><label class="form-label small">Discord Tag</label><input id="eu-discordTag" class="form-control form-control-sm" value="${user.discordTag || ''}"></div>
+                            <div class="col-md-6"><label class="form-label small">Discord Pic URL</label><input id="eu-discordPic" class="form-control form-control-sm" value="${user.discordPic || ''}"></div>
+                            <div class="col-md-6"><label class="form-label small">Discord URL</label><input id="eu-discordURL" class="form-control form-control-sm" value="${user.discordURL || ''}"></div>
+                            <div class="col-md-6"><label class="form-label small">GitHub Pic URL</label><input id="eu-githubPic" class="form-control form-control-sm" value="${user.githubPic || ''}"></div>
+                            <div class="col-md-6"><label class="form-label small">GitHub URL</label><input id="eu-githubURL" class="form-control form-control-sm" value="${user.githubURL || ''}"></div>
+                        </div>
+                        <h6 class="text-primary mb-3 border-top pt-3">Preferences</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4"><label class="form-label small">Theme</label><select id="eu-theme" class="form-select form-select-sm"><option value="dark" ${user.themePreference === 'dark' ? 'selected' : ''}>Dark</option><option value="light" ${user.themePreference === 'light' ? 'selected' : ''}>Light</option></select></div>
+                            <div class="col-md-4"><label class="form-label small">Font Scaling</label><select id="eu-font" class="form-select form-select-sm"><option value="small" ${user.fontScaling === 'small' ? 'selected' : ''}>Small</option><option value="normal" ${user.fontScaling === 'normal' ? 'selected' : ''}>Normal</option><option value="large" ${user.fontScaling === 'large' ? 'selected' : ''}>Large</option></select></div>
+                            <div class="col-md-4"><label class="form-label small">Data Retention (Days)</label><input type="number" id="eu-retention" class="form-control form-control-sm" value="${user.dataRetention || 365}"></div>
+                            <div class="col-md-4"><label class="form-label small">Notif. Frequency</label><select id="eu-freq" class="form-select form-select-sm"><option value="immediate" ${user.notificationFrequency === 'immediate' ? 'selected' : ''}>Immediate</option><option value="daily" ${user.notificationFrequency === 'daily' ? 'selected' : ''}>Daily</option><option value="weekly" ${user.notificationFrequency === 'weekly' ? 'selected' : ''}>Weekly</option></select></div>
+                            <div class="col-md-4"><label class="form-label small">Shortcuts</label><select id="eu-shortcuts" class="form-select form-select-sm"><option value="enabled" ${user.keyboardShortcuts === 'enabled' ? 'selected' : ''}>Enabled</option><option value="disabled" ${user.keyboardShortcuts === 'disabled' ? 'selected' : ''}>Disabled</option></select></div>
+                        </div>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-6"><label class="form-label small">Glass Color</label><input id="eu-glassColor" class="form-control form-control-sm" value="${user.glassColor || ''}" placeholder="#000000"></div>
+                            <div class="col-md-6"><label class="form-label small">Glass Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" min="0" max="1" class="form-control form-control-sm" value="${user.glassOpacity || 0.95}"></div>
+                            <div class="col-md-6"><label class="form-label small">Glass Blur</label><input id="eu-glassBlur" type="number" class="form-control form-control-sm" value="${user.glassBlur || ''}" placeholder="px"></div>
+                            <div class="col-12"><label class="form-label small">Background Image</label><input id="eu-bgImg" class="form-control form-control-sm" value="${user.backgroundImage || ''}" placeholder="URL"></div>
+                        </div>
+                        <h6 class="text-primary mb-3 border-top pt-3">Flags & Settings</h6>
+                        <div class="row g-2">
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-activity" ${user.activityTracking ? 'checked' : ''}><label class="form-check-label small">Activity Tracking</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-debug" ${user.debugMode ? 'checked' : ''}><label class="form-check-label small">Debug Mode</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-discordLinked" ${user.discordLinked ? 'checked' : ''}><label class="form-check-label small">Discord Linked</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-discordNotif" ${user.discordNotifications ? 'checked' : ''}><label class="form-check-label small">Discord Notifs</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-emailNotif" ${user.emailNotifications ? 'checked' : ''}><label class="form-check-label small">Email Notifs</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-focus" ${user.focusIndicators ? 'checked' : ''}><label class="form-check-label small">Focus Indicators</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-contrast" ${user.highContrast ? 'checked' : ''}><label class="form-check-label small">High Contrast</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-visible" ${user.profileVisible ? 'checked' : ''}><label class="form-check-label small">Profile Visible</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-push" ${user.pushNotifications ? 'checked' : ''}><label class="form-check-label small">Push Notifs</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-motion" ${user.reducedMotion ? 'checked' : ''}><label class="form-check-label small">Reduced Motion</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-reader" ${user.screenReader ? 'checked' : ''}><label class="form-check-label small">Screen Reader</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-sharing" ${user.thirdPartySharing ? 'checked' : ''}><label class="form-check-label small">3rd Party Sharing</label></div></div>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                preConfirm: () => ({
+                    displayName: document.getElementById('eu-name').value,
+                    handle: document.getElementById('eu-handle').value,
+                    email: document.getElementById('eu-email').value,
+                    photoURL: document.getElementById('eu-photo').value,
+                    role: document.getElementById('eu-role').value,
+                    admin: document.getElementById('eu-role').value === 'admin',
+                    customCSS: document.getElementById('eu-css').value,
+                    discordId: document.getElementById('eu-discordId').value,
+                    discordTag: document.getElementById('eu-discordTag').value,
+                    discordPic: document.getElementById('eu-discordPic').value,
+                    discordURL: document.getElementById('eu-discordURL').value,
+                    githubPic: document.getElementById('eu-githubPic').value,
+                    githubURL: document.getElementById('eu-githubURL').value,
+                    themePreference: document.getElementById('eu-theme').value,
+                    fontScaling: document.getElementById('eu-font').value,
+                    dataRetention: parseInt(document.getElementById('eu-retention').value),
+                    notificationFrequency: document.getElementById('eu-freq').value,
+                    keyboardShortcuts: document.getElementById('eu-shortcuts').value,
+                    backgroundImage: document.getElementById('eu-bgImg').value,
+                    glassColor: document.getElementById('eu-glassColor').value,
+                    glassOpacity: parseFloat(document.getElementById('eu-glassOpacity').value),
+                    glassBlur: parseInt(document.getElementById('eu-glassBlur').value),
+                    activityTracking: document.getElementById('eu-activity').checked,
+                    debugMode: document.getElementById('eu-debug').checked,
+                    discordLinked: document.getElementById('eu-discordLinked').checked,
+                    discordNotifications: document.getElementById('eu-discordNotif').checked,
+                    emailNotifications: document.getElementById('eu-emailNotif').checked,
+                    focusIndicators: document.getElementById('eu-focus').checked,
+                    highContrast: document.getElementById('eu-contrast').checked,
+                    profileVisible: document.getElementById('eu-visible').checked,
+                    pushNotifications: document.getElementById('eu-push').checked,
+                    reducedMotion: document.getElementById('eu-motion').checked,
+                    screenReader: document.getElementById('eu-reader').checked,
+                    thirdPartySharing: document.getElementById('eu-sharing').checked
+                })
+            });
+            if (value) {
+                if (isSelf && !value.admin) {
+                    Swal.fire('Error', 'You cannot remove your own admin status', 'error');
+                    return;
+                }
+                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.id), value);
+                await this.refreshAll();
+                Swal.fire('Success', 'User updated', 'success');
+            }
+        },
+
+        async editThread(thread) {
+            const { value } = await Swal.fire({
+                title: 'Edit Thread',
+                html: `
+                    <input id="et-title" class="form-control mb-2" placeholder="Title" value="${thread.title}">
+                    <input id="et-tags" class="form-control mb-2" placeholder="Tags (comma separated)" value="${thread.tags || ''}">
+                    <select id="et-cat" class="form-select mb-2">
+                        <option value="General">General</option>
+                        <option value="Announcements">Announcements</option>
+                        <option value="Support">Support</option>
+                        <option value="Gaming">Gaming</option>
+                        <option value="Discussion">Discussion</option>
+                    </select>
+                    <div class="form-check text-start mb-2">
+                        <input class="form-check-input" type="checkbox" id="et-locked" ${thread.locked ? 'checked' : ''}>
+                        <label class="form-check-label" for="et-locked">Lock Thread</label>
+                    </div>
+                    <textarea id="et-desc" class="form-control" rows="5" placeholder="Description">${thread.description}</textarea>
+                `,
+                didOpen: () => document.getElementById('et-cat').value = thread.category || 'General',
+                showCancelButton: true,
+                preConfirm: () => ({
+                    title: document.getElementById('et-title').value,
+                    tags: document.getElementById('et-tags').value,
+                    category: document.getElementById('et-cat').value,
+                    locked: document.getElementById('et-locked').checked,
+                    description: document.getElementById('et-desc').value
+                })
+            });
+            if (value) {
+                await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), value);
+                await this.refreshAll();
+                Swal.fire('Success', 'Thread updated', 'success');
+            }
+        },
+
+        async deleteThread(id) {
+            if ((await Swal.fire({ title: 'Delete Thread?', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                await deleteDoc(doc(db, COLLECTIONS.FORMS, id));
+                await this.refreshAll();
+                Swal.fire('Deleted', '', 'success');
+            }
+        },
+
+        async viewThread(thread) {
+            const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc')));
+            const comments = snap.docs.map(d => {
+                const data = d.data();
+                const author = this.getAuthorName(data.authorId);
+                return `
+                    <div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-info">${author}</small>
+                            <small class="text-muted">${this.formatDate(data.createdAt)}</small>
+                        </div>
+                        <div class="my-1">${data.content}</div>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-comment', {detail: {tid: '${thread.id}', cid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-comment', {detail: {tid: '${thread.id}', cid: '${d.id}'}}))">Del</button>
+                        </div>
+                    </div>`;
+            }).join('');
+            
+            Swal.fire({
+                title: thread.title,
+                html: `<div class="text-start">${thread.description}</div><hr><div class="text-start admin-list-scroll">${comments || 'No comments'}</div>`,
+                width: 800
+            });
+        },
+
+        async viewDM(dm) {
+            const snap = await getDocs(query(collection(db, COLLECTIONS.CONV_MESSAGES(dm.id)), orderBy('createdAt', 'asc')));
+            const msgs = snap.docs.map(d => {
+                const data = d.data();
+                const author = dm.participantNames ? dm.participantNames[data.senderId] : this.getAuthorName(data.senderId);
+                return `
+                    <div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-info">${author}</small>
+                            <small class="text-muted">${this.formatDate(data.createdAt)}</small>
+                        </div>
+                        <div class="my-1">${data.content}</div>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-msg', {detail: {cid: '${dm.id}', mid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-msg', {detail: {cid: '${dm.id}', mid: '${d.id}'}}))">Del</button>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            Swal.fire({
+                title: 'Conversation Log',
+                html: `<div class="text-start" style="max-height:400px;overflow-y:auto">${msgs || 'No messages'}</div>`,
+                width: 600
+            });
+        },
+
+        async deleteDM(id) {
+            if ((await Swal.fire({ title: 'Delete Conversation?', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                await deleteDoc(doc(db, COLLECTIONS.CONVERSATIONS, id));
+                await this.refreshAll();
+                Swal.fire('Deleted', '', 'success');
+            }
+        },
+
+        async deleteMessage(convId, msgId) {
+            if ((await Swal.fire({ title: 'Delete Message?', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msgId));
+                const openModal = Swal.getPopup();
+                if (openModal) {
+                    const dm = this.dms.find(d => d.id === convId);
+                    if (dm) this.viewDM(dm);
+                }
+            }
+        },
+
+        async editMessage(convId, msg) {
+            const { value } = await Swal.fire({
+                title: 'Edit Message',
+                input: 'textarea',
+                inputValue: msg.content,
+                showCancelButton: true
+            });
+            if (value) {
+                await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msg.id), { content: value });
+                const openModal = Swal.getPopup();
+                if (openModal) {
+                    const dm = this.dms.find(d => d.id === convId);
+                    if (dm) this.viewDM(dm);
+                }
+            }
+        },
+
+        async deleteComment(threadId, commentId) {
+            if ((await Swal.fire({ title: 'Delete Comment?', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), commentId));
+                await updateDoc(doc(db, COLLECTIONS.FORMS, threadId), { commentCount: increment(-1) });
+                const openModal = Swal.getPopup();
+                if (openModal) {
+                    const t = this.threads.find(x => x.id === threadId);
+                    if (t) this.viewThread(t);
+                }
+            }
+        },
+
+        async editComment(threadId, comment) {
+            const { value } = await Swal.fire({
+                title: 'Edit Comment',
+                input: 'textarea',
+                inputValue: comment.content,
+                showCancelButton: true
+            });
+            if (value) {
+                await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), comment.id), { content: value });
+                const openModal = Swal.getPopup();
+                if (openModal) {
+                    const t = this.threads.find(x => x.id === threadId);
+                    if (t) this.viewThread(t);
+                }
+            }
+        }
+    }));
+}
+
+function registerResourcesData() {
+    Alpine.data('resourcesData', () => ({
+        censusHeader: [],
+        censusData: [],
+        censusLoading: true,
+        adminLoading: true,
+        adminContent: '',
+        sortBy: 'name',
+
+        async init() {
+            await this.loadCensus();
+            await this.loadAdminDoc();
+        },
+
+        parseCSV(text) {
+            const rows = [];
+            let row = [], field = '', inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i], next = text[i+1];
+                if (c === '"' && !inQuotes) { inQuotes = true; continue; }
+                if (c === '"' && inQuotes) { if (next === '"') { field += '"'; i++; } else { inQuotes = false; } continue; }
+                if (c === ',' && !inQuotes) { row.push(field.trim()); field = ''; continue; }
+                if ((c === '\n' || c === '\r') && !inQuotes) { if (field || row.length) { row.push(field.trim()); rows.push(row); } row = []; field = ''; if (c === '\r' && next === '\n') i++; continue; }
+                field += c;
+            }
+            if (field || row.length) { row.push(field.trim()); rows.push(row); }
+            return rows;
+        },
+
+        async loadCensus() {
+            try {
+                const url = 'https://docs.google.com/spreadsheets/d/1T25WAAJekQAjrU-dhVtDFgiIqJHHlaGIOySToTWrrp8/export?format=csv&gid=1977273024';
+                const res = await fetch(url);
+                const csv = await res.text();
+                const rows = this.parseCSV(csv);
+                
+                if (rows.length < 2) throw new Error('No data');
+                
+                this.censusHeader = rows[0];
+                this.censusData = rows.slice(1).filter(r => r[0] && r[0].length > 0);
+                this.censusLoading = false;
+            } catch (e) {
+                console.error('Census error:', e);
+                this.censusLoading = false;
+                // Handle error in UI
+            }
+        },
+
+        async loadAdminDoc() {
+            try {
+                const url = 'https://docs.google.com/document/d/1WvxTStjkBbQh9dp-59v1jJbaLPuofrnk_4N12mSMFo4/export?format=html';
+                const res = await fetch(url);
+                const html = await res.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                this.adminContent = doc.body.innerHTML;
+                this.adminLoading = false;
+            } catch (e) {
+                console.error('Admin doc error:', e);
+                this.adminLoading = false;
+            }
+        },
+
+        get filteredCensus() {
+            let data = [...this.censusData];
+            if (this.sortBy === 'name') data.sort((a,b) => a[0].localeCompare(b[0]));
+            else if (this.sortBy === 'total') data.sort((a,b) => (parseInt(b[1])||0) - (parseInt(a[1])||0));
+            return data;
+        }
+    }));
+}
+
 function registerAll() {
     registerAuthStore();
     registerForumData();
     registerMessageData();
     registerPageWikiManagement();
+    registerWikiApp();
+    registerPagesData();
+    registerAdminDashboard();
+    registerResourcesData();
 }
 
 document.addEventListener('alpine:init', registerAll);
