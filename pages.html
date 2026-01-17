@@ -52,11 +52,7 @@
 
         <!-- Main Content -->
         <div class="main-content w-100">
-            <template x-if="loading">
-                <div class="d-flex justify-content-center align-items-center h-100">
-                    <div class="spinner-border text-primary"></div>
-                </div>
-            </template>
+            <div x-spinner="loading"></div>
 
             <template x-if="!loading && !currentPageId">
                 <div class="d-flex flex-column justify-content-center align-items-center h-100 text-muted" style="min-height: 60vh;">

@@ -882,6 +882,24 @@ function registerAdminDashboard() {
         
         searchUser: '',
 
+        navItems: [
+            { id: 'dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+            { id: 'users', label: 'Users', icon: 'bi-people' },
+            { id: 'pages', label: 'Pages', icon: 'bi-file-earmark-text' },
+            { id: 'wiki', label: 'Wiki', icon: 'bi-book' },
+            { id: 'forums', label: 'Forums', icon: 'bi-chat-square-text' },
+            { id: 'dms', label: 'Messages', icon: 'bi-envelope' }
+        ],
+
+        get stats() {
+            return [
+                { label: 'Total Users', value: this.users.length, icon: 'bi-people', color: 'text-primary' },
+                { label: 'Pages', value: this.pages.length, icon: 'bi-file-earmark', color: 'text-success' },
+                { label: 'Threads', value: this.threads.length, icon: 'bi-chat-square-text', color: 'text-warning' },
+                { label: 'Messages', value: this.dms.length, icon: 'bi-envelope', color: 'text-info' }
+            ];
+        },
+
         get pageTitle() {
             return this.tab.charAt(0).toUpperCase() + this.tab.slice(1);
         },
@@ -979,10 +997,18 @@ function registerAdminDashboard() {
                     <div class="text-start admin-modal-scroll">
                         <h6 class="text-primary mb-3">General Info</h6>
                         <div class="row g-2 mb-3">
-                            <div class="col-md-6"><label class="form-label small">Display Name</label><input id="eu-name" class="form-control form-control-sm" value="${user.displayName || ''}"></div>
-                            <div class="col-md-6"><label class="form-label small">Handle</label><input id="eu-handle" class="form-control form-control-sm" value="${user.handle || ''}"></div>
-                            <div class="col-md-6"><label class="form-label small">Email</label><input id="eu-email" class="form-control form-control-sm" value="${user.email || ''}"></div>
-                            <div class="col-md-6"><label class="form-label small">Photo URL</label><input id="eu-photo" class="form-control form-control-sm" value="${user.photoURL || ''}"></div>
+                            ${[
+                                { id: 'eu-name', label: 'Display Name', value: user.displayName || '' },
+                                { id: 'eu-handle', label: 'Handle', value: user.handle || '' },
+                                { id: 'eu-email', label: 'Email', value: user.email || '' },
+                                { id: 'eu-photo', label: 'Photo URL', value: user.photoURL || '' },
+                                { id: 'eu-css', label: 'Custom CSS', value: user.customCSS || '' }
+                            ].map(f => `
+                                <div class="col-md-6">
+                                    <label class="form-label small">${f.label}</label>
+                                    <input id="${f.id}" class="form-control form-control-sm" value="${f.value}">
+                                </div>
+                            `).join('')}
                             <div class="col-md-6">
                                 <label class="form-label small">Role</label>
                                 <select id="eu-role" class="form-select form-select-sm">
@@ -991,17 +1017,25 @@ function registerAdminDashboard() {
                                     <option value="admin" ${user.admin ? 'selected' : ''}>Admin</option>
                                 </select>
                             </div>
-                            <div class="col-md-6"><label class="form-label small">Custom CSS</label><input id="eu-css" class="form-control form-control-sm" value="${user.customCSS || ''}"></div>
                         </div>
+
                         <h6 class="text-primary mb-3 border-top pt-3">Social & Links</h6>
                         <div class="row g-2 mb-3">
-                            <div class="col-md-6"><label class="form-label small">Discord ID</label><input id="eu-discordId" class="form-control form-control-sm" value="${user.discordId || ''}"></div>
-                            <div class="col-md-6"><label class="form-label small">Discord Tag</label><input id="eu-discordTag" class="form-control form-control-sm" value="${user.discordTag || ''}"></div>
-                            <div class="col-md-6"><label class="form-label small">Discord Pic URL</label><input id="eu-discordPic" class="form-control form-control-sm" value="${user.discordPic || ''}"></div>
-                            <div class="col-md-6"><label class="form-label small">Discord URL</label><input id="eu-discordURL" class="form-control form-control-sm" value="${user.discordURL || ''}"></div>
-                            <div class="col-md-6"><label class="form-label small">GitHub Pic URL</label><input id="eu-githubPic" class="form-control form-control-sm" value="${user.githubPic || ''}"></div>
-                            <div class="col-md-6"><label class="form-label small">GitHub URL</label><input id="eu-githubURL" class="form-control form-control-sm" value="${user.githubURL || ''}"></div>
+                            ${[
+                                { id: 'eu-discordId', label: 'Discord ID', value: user.discordId || '' },
+                                { id: 'eu-discordTag', label: 'Discord Tag', value: user.discordTag || '' },
+                                { id: 'eu-discordPic', label: 'Discord Pic URL', value: user.discordPic || '' },
+                                { id: 'eu-discordURL', label: 'Discord URL', value: user.discordURL || '' },
+                                { id: 'eu-githubPic', label: 'GitHub Pic URL', value: user.githubPic || '' },
+                                { id: 'eu-githubURL', label: 'GitHub URL', value: user.githubURL || '' }
+                            ].map(f => `
+                                <div class="col-md-6">
+                                    <label class="form-label small">${f.label}</label>
+                                    <input id="${f.id}" class="form-control form-control-sm" value="${f.value}">
+                                </div>
+                            `).join('')}
                         </div>
+
                         <h6 class="text-primary mb-3 border-top pt-3">Preferences</h6>
                         <div class="row g-2 mb-3">
                             <div class="col-md-4"><label class="form-label small">Theme</label><select id="eu-theme" class="form-select form-select-sm"><option value="dark" ${user.themePreference === 'dark' ? 'selected' : ''}>Dark</option><option value="light" ${user.themePreference === 'light' ? 'selected' : ''}>Light</option></select></div>
@@ -1016,20 +1050,30 @@ function registerAdminDashboard() {
                             <div class="col-md-6"><label class="form-label small">Glass Blur</label><input id="eu-glassBlur" type="number" class="form-control form-control-sm" value="${user.glassBlur || ''}" placeholder="px"></div>
                             <div class="col-12"><label class="form-label small">Background Image</label><input id="eu-bgImg" class="form-control form-control-sm" value="${user.backgroundImage || ''}" placeholder="URL"></div>
                         </div>
+
                         <h6 class="text-primary mb-3 border-top pt-3">Flags & Settings</h6>
                         <div class="row g-2">
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-activity" ${user.activityTracking ? 'checked' : ''}><label class="form-check-label small">Activity Tracking</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-debug" ${user.debugMode ? 'checked' : ''}><label class="form-check-label small">Debug Mode</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-discordLinked" ${user.discordLinked ? 'checked' : ''}><label class="form-check-label small">Discord Linked</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-discordNotif" ${user.discordNotifications ? 'checked' : ''}><label class="form-check-label small">Discord Notifs</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-emailNotif" ${user.emailNotifications ? 'checked' : ''}><label class="form-check-label small">Email Notifs</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-focus" ${user.focusIndicators ? 'checked' : ''}><label class="form-check-label small">Focus Indicators</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-contrast" ${user.highContrast ? 'checked' : ''}><label class="form-check-label small">High Contrast</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-visible" ${user.profileVisible ? 'checked' : ''}><label class="form-check-label small">Profile Visible</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-push" ${user.pushNotifications ? 'checked' : ''}><label class="form-check-label small">Push Notifs</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-motion" ${user.reducedMotion ? 'checked' : ''}><label class="form-check-label small">Reduced Motion</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-reader" ${user.screenReader ? 'checked' : ''}><label class="form-check-label small">Screen Reader</label></div></div>
-                            <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-sharing" ${user.thirdPartySharing ? 'checked' : ''}><label class="form-check-label small">3rd Party Sharing</label></div></div>
+                            ${[
+                                { id: 'eu-activity', label: 'Activity Tracking', checked: user.activityTracking },
+                                { id: 'eu-debug', label: 'Debug Mode', checked: user.debugMode },
+                                { id: 'eu-discordLinked', label: 'Discord Linked', checked: user.discordLinked },
+                                { id: 'eu-discordNotif', label: 'Discord Notifs', checked: user.discordNotifications },
+                                { id: 'eu-emailNotif', label: 'Email Notifs', checked: user.emailNotifications },
+                                { id: 'eu-focus', label: 'Focus Indicators', checked: user.focusIndicators },
+                                { id: 'eu-contrast', label: 'High Contrast', checked: user.highContrast },
+                                { id: 'eu-visible', label: 'Profile Visible', checked: user.profileVisible },
+                                { id: 'eu-push', label: 'Push Notifs', checked: user.pushNotifications },
+                                { id: 'eu-motion', label: 'Reduced Motion', checked: user.reducedMotion },
+                                { id: 'eu-reader', label: 'Screen Reader', checked: user.screenReader },
+                                { id: 'eu-sharing', label: '3rd Party Sharing', checked: user.thirdPartySharing }
+                            ].map(f => `
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="${f.id}" ${f.checked ? 'checked' : ''}>
+                                        <label class="form-check-label small">${f.label}</label>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
                 `,
@@ -1289,7 +1333,6 @@ function registerResourcesData() {
             } catch (e) {
                 console.error('Census error:', e);
                 this.censusLoading = false;
-                // Handle error in UI
             }
         },
 
@@ -1328,8 +1371,29 @@ function registerAll() {
     registerResourcesData();
 }
 
-document.addEventListener('alpine:init', registerAll);
-if (window.Alpine) registerAll();
+document.addEventListener('alpine:init', () => {
+    Alpine.directive('spinner', (el, { value, modifiers, expression }, { evaluateLater, effect }) => {
+        const getLoading = evaluateLater(expression);
+        const isSm = modifiers.includes('sm');
+        const sizeClass = isSm ? 'spinner-border-sm' : '';
+        const containerClasses = isSm ? ['text-center', 'py-1'] : ['d-flex', 'justify-content-center', 'align-items-center', 'vh-80'];
+        
+        el.classList.add(...containerClasses);
+        el.innerHTML = `<div class="spinner-border text-primary ${sizeClass}" role="status"></div>`;
+        
+        effect(() => {
+            getLoading(loading => {
+                if (loading) {
+                    el.style.setProperty('display', isSm ? 'block' : 'flex', 'important');
+                } else {
+                    el.style.setProperty('display', 'none', 'important');
+                }
+            });
+        });
+    });
+    registerAll();
+});
+if (window.Alpine) {}
 document.addEventListener('DOMContentLoaded', initLayout);
 
 export {

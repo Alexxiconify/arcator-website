@@ -44,10 +44,7 @@
                         <i class="bi bi-pencil"></i> Edit
                     </button>
                 </div>
-                <div x-show="loading" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="mt-3 text-muted">Loading wiki...</p>
-                </div>
+                <div x-spinner="loading"></div>
                 <template x-for="t in tabs" :key="t.id">
                     <div x-show="tab === t.id && !loading" class="fade-in wiki-content" :data-tab="t.id" x-cloak></div>
                 </template>

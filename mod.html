@@ -12,40 +12,24 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body x-data="adminDashboard">
-    <!-- Top Navbar Placeholder -->
     <div id="navbar-placeholder"></div>
     <div class="d-flex w-100">
         
-        <!-- Mobile Toggle -->
         <button class="btn btn-dark position-fixed start-0 m-3 d-md-none z-3 top-70" @click="mobileMenu = !mobileMenu" title="Toggle Menu" aria-label="Toggle Menu">
             <i class="bi bi-list fs-4"></i>
         </button>
 
-        <!-- Sidebar -->
         <aside class="sidebar d-flex flex-column p-3" :class="{ 'show': mobileMenu }">
             <div class="mb-4 px-2 d-flex align-items-center gap-2">
                 <h5 class="m-0 fw-bold text-white">Admin Tools</h5>
             </div>
             
             <nav class="nav flex-column flex-grow-1">
-                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'dashboard' }" @click.prevent="tab = 'dashboard'; mobileMenu = false">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </a>
-                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'users' }" @click.prevent="tab = 'users'; mobileMenu = false">
-                    <i class="bi bi-people"></i> Users
-                </a>
-                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'pages' }" @click.prevent="tab = 'pages'; mobileMenu = false">
-                    <i class="bi bi-file-earmark-text"></i> Pages
-                </a>
-                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'wiki' }" @click.prevent="tab = 'wiki'; mobileMenu = false">
-                    <i class="bi bi-book"></i> Wiki
-                </a>
-                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'forums' }" @click.prevent="tab = 'forums'; mobileMenu = false">
-                    <i class="bi bi-chat-square-text"></i> Forums
-                </a>
-                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'dms' }" @click.prevent="tab = 'dms'; mobileMenu = false">
-                    <i class="bi bi-envelope"></i> Messages
-                </a>
+                <template x-for="item in navItems" :key="item.id">
+                    <a href="#" class="nav-link-custom" :class="{ 'active': tab === item.id }" @click.prevent="tab = item.id; mobileMenu = false">
+                        <i :class="item.icon"></i> <span x-text="item.label"></span>
+                    </a>
+                </template>
             </nav>
         </aside>
 
@@ -53,11 +37,7 @@
         <main class="main-content w-100">
             <div class="flex-grow-1">
             <!-- Loading State -->
-            <template x-if="loading">
-                <div class="d-flex justify-content-center align-items-center vh-80">
-                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-                </div>
-            </template>
+            <div x-spinner="loading"></div>
 
             <!-- Access Denied -->
             <template x-if="!loading && !isAdmin">
@@ -93,34 +73,15 @@
 
                 <!-- Dashboard Tab -->
                 <div x-show="tab === 'dashboard'" class="row g-4">
-                    <div class="col-md-3">
-                        <div class="glass-card p-4 stat-card">
-                            <h6 class="text-muted text-uppercase mb-2">Total Users</h6>
-                            <h2 class="fw-bold mb-0" x-text="users.length">0</h2>
-                            <i class="bi bi-people position-absolute top-0 end-0 m-3 fs-1 text-primary opacity-25"></i>
+                    <template x-for="stat in stats" :key="stat.label">
+                        <div class="col-md-3">
+                            <div class="glass-card p-4 stat-card">
+                                <h6 class="text-muted text-uppercase mb-2" x-text="stat.label"></h6>
+                                <h2 class="fw-bold mb-0" x-text="stat.value">0</h2>
+                                <i :class="stat.icon + ' ' + stat.color" class="position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="glass-card p-4 stat-card">
-                            <h6 class="text-muted text-uppercase mb-2">Pages</h6>
-                            <h2 class="fw-bold mb-0" x-text="pages.length">0</h2>
-                            <i class="bi bi-file-earmark text-success position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="glass-card p-4 stat-card">
-                            <h6 class="text-muted text-uppercase mb-2">Threads</h6>
-                            <h2 class="fw-bold mb-0" x-text="threads.length">0</h2>
-                            <i class="bi bi-chat-square-text text-warning position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="glass-card p-4 stat-card">
-                            <h6 class="text-muted text-uppercase mb-2">Messages</h6>
-                            <h2 class="fw-bold mb-0" x-text="dms.length">0</h2>
-                            <i class="bi bi-envelope text-info position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i>
-                        </div>
-                    </div>
+                    </template>
 
                     <div class="col-md-8">
                         <div class="glass-card p-4 h-100">
