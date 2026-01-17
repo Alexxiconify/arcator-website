@@ -1222,11 +1222,10 @@ function registerResourcesData() {
             let row = [], field = '', inQuotes = false;
             for (let i = 0; i < text.length; i++) {
                 const c = text[i], next = text[i+1];
-                if (c === '"' && !inQuotes) { inQuotes = true; continue; }
-                if (c === '"' && inQuotes) { if (next === '"') { field += '"'; i++; } else { inQuotes = false; } continue; }
-                if (c === ',' && !inQuotes) { row.push(field.trim()); field = ''; continue; }
-                if ((c === '\n' || c === '\r') && !inQuotes) { if (field || row.length) { row.push(field.trim()); rows.push(row); } row = []; field = ''; if (c === '\r' && next === '\n') i++; continue; }
-                field += c;
+                if (c === '"') { if (inQuotes && next === '"') { field += '"'; i++; } else inQuotes = !inQuotes; }
+                else if (c === ',' && !inQuotes) { row.push(field.trim()); field = ''; }
+                else if ((c === '\n' || c === '\r') && !inQuotes) { if (field || row.length) { row.push(field.trim()); rows.push(row); } row = []; field = ''; if (c === '\r' && next === '\n') i++; }
+                else field += c;
             }
             if (field || row.length) { row.push(field.trim()); rows.push(row); }
             return rows;
