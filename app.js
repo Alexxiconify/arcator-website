@@ -12,18 +12,7 @@ const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
 
 const art = `artifacts/${projectId}`;
-const COLLECTIONS = {
-    USERS: 'user_profiles', 
-    USER_PROFILES: 'user_profiles', 
-    FORMS: `${art}/public/data/forms`,
-    SUBMISSIONS: (formId) => `${art}/public/data/forms/${formId}/submissions`,
-    CONVERSATIONS: 'conversations',
-    CONV_MESSAGES: (convId) => `conversations/${convId}/messages`,
-    THEMES: `${art}/public/data/custom_themes`,
-    PAGES: `${art}/public/data/temp_pages`,
-    WIKI_CONFIG: `${art}/public/data/wiki_config`,
-    WIKI_PAGES: `${art}/public/data/wiki_pages`
-};
+const COLLECTIONS = {USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FORMS: `${art}/public/data/forms`, SUBMISSIONS: (formId) => `${art}/public/data/forms/${formId}/submissions`, CONVERSATIONS: 'conversations', CONV_MESSAGES: (convId) => `conversations/${convId}/messages`, THEMES: `${art}/public/data/custom_themes`, PAGES: `${art}/public/data/temp_pages`, WIKI_CONFIG: `${art}/public/data/wiki_config`, WIKI_PAGES: `${art}/public/data/wiki_pages`};
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
@@ -32,14 +21,7 @@ function formatDate(ts) {
     if (!ts) return '';
     const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
     const now = new Date();
-    const diff = now - d;
     const isToday = d.toDateString() === now.toDateString();
-    
-    if (typeof dayjs !== 'undefined') {
-        if (isToday) return dayjs(d).format('HH:mm:ss');
-        if (diff < 86400000 * 7) return dayjs(d).format('ddd HH:mm');
-        return dayjs(d).format('DD/MM/YY HH:mm');
-    }
     const pad = n => String(n).padStart(2, '0');
     if (isToday) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)}`;
@@ -123,12 +105,9 @@ function initLayout() {
     const footerPlaceholder = document.getElementById('footer-placeholder');
     if (footerPlaceholder) footerPlaceholder.innerHTML = FOOTER_HTML;
 
-    // Re-run user section update in case auth loaded before layout
     if (window.Alpine) {
         const store = Alpine.store('auth');
-        if (store && !store.loading) {
-            updateUserSection(store.user, store.profile, store.isAdmin);
-        }
+        if (store && !store.loading) updateUserSection(store.user, store.profile, store.isAdmin);
     }
 }
 
@@ -162,17 +141,7 @@ function updateUserSection(user, profile, isAdmin = false) {
 const DEFAULT_THEME = 'dark';
 
 function cacheUser(user, profile) {
-    localStorage.setItem('arcator_user_cache', JSON.stringify({
-        uid: user.uid,
-        displayName: profile?.displayName || user.displayName,
-        photoURL: profile?.photoURL || user.photoURL,
-        themePreference: profile?.themePreference || 'dark',
-        fontScaling: profile?.fontScaling || 'normal',
-        backgroundImage: profile?.backgroundImage,
-        glassColor: profile?.glassColor,
-        glassOpacity: profile?.glassOpacity,
-        glassBlur: profile?.glassBlur
-    }));
+    localStorage.setItem('arcator_user_cache', JSON.stringify({uid: user.uid, displayName: profile?.displayName || user.displayName, photoURL: profile?.photoURL || user.photoURL, themePreference: profile?.themePreference || 'dark', fontScaling: profile?.fontScaling || 'normal', backgroundImage: profile?.backgroundImage, glassColor: profile?.glassColor, glassOpacity: profile?.glassOpacity, glassBlur: profile?.glassBlur}));
 }
 
 function updateTheme(theme = 'dark', fontSize = 'normal', customCSS = '', bgImg = '', glassColor = '', glassOpacity = 0.95, glassBlur = '') {
@@ -214,19 +183,14 @@ async function fetchAuthor(uid) {
     if (!uid || userCache[uid]) return;
     try {
         const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
-        if (snap.exists()) {
-            userCache[uid] = snap.data();
-        } else {
-            console.warn(`Author not found: ${uid}`);
-            userCache[uid] = { displayName: 'Unknown User', photoURL: './defaultuser.png', uid };
-        }
+        userCache[uid] = snap.exists() ? snap.data() : { displayName: 'Unknown User', photoURL: './defaultuser.png', uid };
     } catch (e) { console.error(`Fetch error ${uid}:`, e); }
 }
 
 function getAuthor(uid) {
     if (userCache[uid]) return userCache[uid];
     const store = Alpine.store('auth');
-    if (store.user?.uid === uid && store.profile) return store.profile;
+    if (store?.user?.uid === uid && store.profile) return store.profile;
     return { displayName: 'Unknown', photoURL: './defaultuser.png' };
 }
 
@@ -810,59 +774,9 @@ function registerPagesData() {
             return DOMPurify.sanitize(isHtml ? content : marked.parse(content));
         },
 
-        async createPage() {
-            if (!this.currentUser) return Swal.fire('Error', 'You must be logged in.', 'error');
-            const { value } = await Swal.fire({
-                title: 'New Page', width: '800px',
-                html: '<input id="np-title" class="form-control mb-2" placeholder="Title"><input id="np-slug" class="form-control mb-2" placeholder="Slug (optional)"><input id="np-desc" class="form-control mb-2" placeholder="Description"><input id="np-tags" class="form-control mb-2" placeholder="Tags (comma separated)"><textarea id="np-content" class="form-control" rows="10" placeholder="HTML Content"></textarea>',
-                showCancelButton: true,
-                preConfirm: () => ({
-                    title: document.getElementById('np-title').value,
-                    slug: document.getElementById('np-slug').value,
-                    description: document.getElementById('np-desc').value,
-                    tags: document.getElementById('np-tags').value.split(',').map(t => t.trim()).filter(t => t),
-                    content: document.getElementById('np-content').value,
-                    authorId: this.currentUser.uid, createdBy: this.currentUser.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
-                })
-            });
-            if (value) {
-                if (!value.title) return Swal.fire('Error', 'Title is required', 'error');
-                const docRef = await addDoc(collection(db, COLLECTIONS.PAGES), value);
-                await this.loadPagesList();
-                window.location.href = `?id=${docRef.id}`;
-            }
-        },
-
-        async editPage() {
-            if (!this.currentPage) return;
-            const { value } = await Swal.fire({
-                title: 'Edit Page', width: '800px',
-                html: `<input id="ep-title" class="form-control mb-2" placeholder="Title" value="${this.currentPage.title || ''}"><input id="ep-slug" class="form-control mb-2" placeholder="Slug" value="${this.currentPage.slug || ''}"><input id="ep-desc" class="form-control mb-2" placeholder="Description" value="${this.currentPage.description || ''}"><input id="ep-tags" class="form-control mb-2" placeholder="Tags" value="${(this.currentPage.tags || []).join(', ')}"><textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content">${this.currentPage.content || ''}</textarea>`,
-                showCancelButton: true,
-                preConfirm: () => ({
-                    title: document.getElementById('ep-title').value,
-                    slug: document.getElementById('ep-slug').value,
-                    description: document.getElementById('ep-desc').value,
-                    tags: document.getElementById('ep-tags').value.split(',').map(t => t.trim()).filter(t => t),
-                    content: document.getElementById('ep-content').value,
-                    updatedAt: serverTimestamp()
-                })
-            });
-            if (value) {
-                await updateDoc(doc(db, COLLECTIONS.PAGES, this.currentPage.id), value);
-                await this.loadSinglePage(this.currentPage.id);
-                await this.loadPagesList();
-                Swal.fire('Success', 'Page updated', 'success');
-            }
-        },
-
-        async deletePage() {
-            if (!this.currentPage) return;
-            if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) {
-                await deleteDoc(doc(db, COLLECTIONS.PAGES, this.currentPage.id));
-                window.location.href = 'pages.html';
-            }
-        },
+        async createPage() { await Alpine.store('mgmt').createPage(() => this.loadPagesList()); },
+        async editPage() { if (this.currentPage) await Alpine.store('mgmt').editPage(this.currentPage, () => this.loadSinglePage(this.currentPage.id)); },
+        async deletePage() { if (this.currentPage) await Alpine.store('mgmt').deletePage(this.currentPage.id, () => window.location.href = 'pages.html'); },
     }));
 }
 
@@ -1396,6 +1310,4 @@ document.addEventListener('alpine:init', () => {
 if (window.Alpine) {}
 document.addEventListener('DOMContentLoaded', initLayout);
 
-export {
-    app, auth, db, projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection, collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, startAfter, serverTimestamp, increment, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, signOut, updateProfile, sendPasswordResetEmail
-};
+export {app, auth, db, projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection, collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, startAfter, serverTimestamp, increment, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, signOut, updateProfile, sendPasswordResetEmail};
