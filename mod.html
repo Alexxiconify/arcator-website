@@ -37,6 +37,9 @@
                 <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'pages' }" @click.prevent="tab = 'pages'; mobileMenu = false">
                     <i class="bi bi-file-earmark-text"></i> Pages
                 </a>
+                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'wiki' }" @click.prevent="tab = 'wiki'; mobileMenu = false">
+                    <i class="bi bi-book"></i> Wiki
+                </a>
                 <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'forums' }" @click.prevent="tab = 'forums'; mobileMenu = false">
                     <i class="bi bi-chat-square-text"></i> Forums
                 </a>
@@ -221,6 +224,40 @@
                     </div>
                 </div>
 
+                <!-- Wiki Tab -->
+                <div x-show="tab === 'wiki'">
+                    <div class="glass-card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">Wiki Sections</h5>
+                            <button class="btn btn-primary btn-sm" @click="createWikiSection"><i class="bi bi-plus-lg"></i> New Section</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover align-middle">
+                                <thead><tr><th>Section ID</th><th>Allowed Editors</th><th>Last Updated</th><th>Actions</th></tr></thead>
+                                <tbody>
+                                    <template x-for="section in wikiSections" :key="section.id">
+                                        <tr>
+                                            <td><code class="text-info" x-text="section.id"></code></td>
+                                            <td>
+                                                <span class="badge bg-secondary" x-text="section.allowedEditors?.length ? section.allowedEditors.length + ' users' : 'Admins only'"></span>
+                                            </td>
+                                            <td x-text="formatDate(section.updatedAt)"></td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a :href="'./wiki.html#' + section.id" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                                    <button class="btn btn-outline-primary" @click="editWikiSection(section)"><i class="bi bi-pencil"></i></button>
+                                                    <button class="btn btn-outline-info" @click="manageWikiEditors(section)"><i class="bi bi-people"></i></button>
+                                                    <button class="btn btn-outline-danger" @click="deleteWikiSection(section.id)"><i class="bi bi-trash"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Forums Tab -->
                 <div x-show="tab === 'forums'">
                     <div class="glass-card p-4">
@@ -287,7 +324,7 @@
     </div>
     <script type="module" src="./app.js"></script>
     <script type="module">
-        import { db, COLLECTIONS, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, limit, increment } from './app.js';
+        import { db, COLLECTIONS, collection, getDocs, addDoc, updateDoc, deleteDoc, setDoc, doc, query, orderBy, limit, increment, serverTimestamp } from './app.js';
         import { formatDate } from './app.js';
 
         document.addEventListener('alpine:init', () => {
@@ -302,6 +339,7 @@
                 pages: [],
                 threads: [],
                 dms: [],
+                wikiSections: [],
                 
                 searchUser: '',
 
@@ -356,17 +394,19 @@
 
                 async refreshAll() {
                     try {
-                        const [uSnap, pSnap, tSnap, dSnap] = await Promise.all([
+                        const [uSnap, pSnap, tSnap, dSnap, wSnap] = await Promise.all([
                             getDocs(collection(db, COLLECTIONS.USER_PROFILES)),
                             getDocs(collection(db, COLLECTIONS.PAGES)),
                             getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'))),
-                            getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), orderBy('lastMessageTime', 'desc')))
+                            getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), orderBy('lastMessageTime', 'desc'))),
+                            getDocs(collection(db, COLLECTIONS.WIKI_PAGES))
                         ]);
 
                         this.users = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                         this.pages = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                         this.threads = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                         this.dms = dSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        this.wikiSections = wSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                     } catch (e) {
                         console.error('Refresh failed', e);
                         Swal.fire('Error', 'Failed to load data', 'error');
@@ -434,6 +474,75 @@
                         await deleteDoc(doc(db, COLLECTIONS.PAGES, id));
                         await this.refreshAll();
                         Swal.fire('Deleted', 'Page has been deleted.', 'success');
+                    }
+                },
+
+                // Wiki Section Management
+                async createWikiSection() {
+                    const { value } = await Swal.fire({
+                        title: 'Create Wiki Section',
+                        html: `
+                            <input id="nw-id" class="form-control mb-2" placeholder="Section ID (e.g. servers, software)">
+                            <textarea id="nw-content" class="form-control font-monospace" rows="12" placeholder="HTML Content"></textarea>
+                        `,
+                        showCancelButton: true,
+                        preConfirm: () => ({
+                            id: document.getElementById('nw-id').value.toLowerCase().replace(/\s+/g, '-'),
+                            content: document.getElementById('nw-content').value
+                        })
+                    });
+                    if (value && value.id) {
+                        await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, value.id), {
+                            content: value.content,
+                            allowedEditors: [],
+                            updatedAt: serverTimestamp()
+                        });
+                        await this.refreshAll();
+                        Swal.fire('Success', 'Wiki section created', 'success');
+                    }
+                },
+
+                async editWikiSection(section) {
+                    const { value } = await Swal.fire({
+                        title: `Edit: ${section.id}`,
+                        width: '900px',
+                        html: `<textarea id="ew-content" class="form-control font-monospace" rows="20">${section.content || ''}</textarea>`,
+                        showCancelButton: true,
+                        preConfirm: () => document.getElementById('ew-content').value
+                    });
+                    if (value !== undefined) {
+                        await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, section.id), { content: value, updatedAt: serverTimestamp() });
+                        await this.refreshAll();
+                        Swal.fire('Success', 'Wiki section updated', 'success');
+                    }
+                },
+
+                async manageWikiEditors(section) {
+                    const currentEditors = section.allowedEditors || [];
+                    const editorNames = currentEditors.map(uid => this.getAuthorName(uid)).join(', ') || 'None';
+                    const userOpts = this.users.map(u => `<option value="${u.id}" ${currentEditors.includes(u.id) ? 'selected' : ''}>${u.displayName || u.email}</option>`).join('');
+                    
+                    const { value } = await Swal.fire({
+                        title: `Allowed Editors: ${section.id}`,
+                        html: `
+                            <p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p>
+                            <select id="ew-editors" class="form-select" multiple size="10">${userOpts}</select>
+                        `,
+                        showCancelButton: true,
+                        preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value)
+                    });
+                    if (value !== undefined) {
+                        await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, section.id), { allowedEditors: value, updatedAt: serverTimestamp() });
+                        await this.refreshAll();
+                        Swal.fire('Success', 'Editors updated', 'success');
+                    }
+                },
+
+                async deleteWikiSection(id) {
+                    if ((await Swal.fire({ title: 'Delete Wiki Section?', text: 'This cannot be undone!', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                        await deleteDoc(doc(db, COLLECTIONS.WIKI_PAGES, id));
+                        await this.refreshAll();
+                        Swal.fire('Deleted', 'Section removed.', 'success');
                     }
                 },
 

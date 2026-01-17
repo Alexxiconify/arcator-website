@@ -3,24 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Wiki - Arcator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body>
 <div id="navbar-placeholder"></div>
 <div x-data="wikiApp" class="d-flex w-100">
-    <!-- Mobile Sidebar Toggle -->
     <button class="btn btn-primary d-md-none position-fixed bottom-0 end-0 m-3 z-3 rounded-circle p-3 shadow" 
-            @click="showSidebar = !showSidebar" title="Toggle Sidebar" aria-label="Toggle Sidebar">
+            @click="showSidebar = !showSidebar" aria-label="Toggle Sidebar">
         <i class="bi" :class="showSidebar ? 'bi-x-lg' : 'bi-list'"></i>
     </button>
-
-    <!-- Sidebar -->
     <div class="sidebar p-3" :class="showSidebar ? 'show' : ''">
         <div>
             <div class="mb-4 px-2">
@@ -31,31 +28,26 @@
             </div>
             <div class="nav flex-column nav-pills gap-2">
                 <template x-for="t in tabs" :key="t.id">
-                    <a href="#" class="nav-link nav-link-custom" 
-                       :class="tab === t.id ? 'active' : ''" 
-                       @click.prevent="selectTab(t.id)">
+                    <a href="#" class="nav-link nav-link-custom" :class="tab === t.id ? 'active' : ''" @click.prevent="selectTab(t.id)">
                         <i class="bi" :class="t.icon"></i> <span x-text="t.label"></span>
                     </a>
                 </template>
             </div>
-            <!-- Admin Upload Button -->
-            <template x-if="isAdmin">
-                <button class="btn btn-outline-warning btn-sm mt-4 w-100" @click="uploadToFirebase()">
-                    <i class="bi bi-cloud-upload"></i> Upload to Firebase
-                </button>
-            </template>
         </div>
     </div>
-
-    <!-- Main Content -->
     <div class="main-content w-100">
         <div class="container-fluid">
             <div class="glass-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3" x-show="!loading">
+                    <h5 class="mb-0" x-text="tabs.find(t => t.id === tab)?.label || 'Wiki'"></h5>
+                    <button class="btn btn-outline-primary btn-sm" x-show="canEdit" @click="editCurrentTab">
+                        <i class="bi bi-pencil"></i> Edit
+                    </button>
+                </div>
                 <div x-show="loading" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status"></div>
                     <p class="mt-3 text-muted">Loading wiki...</p>
                 </div>
-                <!-- Content containers for each tab -->
                 <template x-for="t in tabs" :key="t.id">
                     <div x-show="tab === t.id && !loading" class="fade-in wiki-content" :data-tab="t.id" x-cloak></div>
                 </template>
@@ -66,14 +58,13 @@
 <div id="footer-placeholder"></div>
 <script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js" defer></script>
 <script type="module">
-import { db, COLLECTIONS, doc, setDoc, getDocs, collection, firebaseReadyPromise } from './app.js';
+import { db, COLLECTIONS, getDocs, getDoc, updateDoc, doc, collection, firebaseReadyPromise, serverTimestamp } from './app.js';
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('wikiApp', () => ({
         tab: 'home',
         showSidebar: false,
         loading: true,
-        isAdmin: false,
         tabs: [
             {id: 'home', label: 'Welcome', icon: 'bi-house'},
             {id: 'servers', label: 'Servers', icon: 'bi-hdd-network'},
@@ -85,42 +76,34 @@ document.addEventListener('alpine:init', () => {
             {id: 'growth', label: 'Growth Plans', icon: 'bi-graph-up'}
         ],
         tabContent: {},
+        tabMeta: {},
+        
+        get currentUser() { return Alpine.store('auth')?.user; },
+        get isAdmin() { return Alpine.store('auth')?.isAdmin; },
+        get canEdit() {
+            if (!this.currentUser) return false;
+            if (this.isAdmin) return true;
+            const meta = this.tabMeta[this.tab];
+            return meta?.allowedEditors?.includes(this.currentUser.uid);
+        },
         
         async init() {
             await firebaseReadyPromise;
-            this.isAdmin = Alpine.store('auth')?.isAdmin || false;
-            this.$watch('$store.auth.isAdmin', v => this.isAdmin = v);
-            
-            await this.loadContent();
+            const snap = await getDocs(collection(db, COLLECTIONS.WIKI_PAGES));
+            snap.forEach(d => {
+                const data = d.data();
+                this.tabContent[d.id] = data.content;
+                this.tabMeta[d.id] = { allowedEditors: data.allowedEditors || [], updatedAt: data.updatedAt };
+            });
             this.loading = false;
             this.$nextTick(() => this.renderTab(this.tab));
-        },
-        
-        async loadContent() {
-            try {
-                const snap = await getDocs(collection(db, COLLECTIONS.WIKI_PAGES));
-                if (!snap.empty) {
-                    snap.forEach(d => this.tabContent[d.id] = d.data().content);
-                    return;
-                }
-            } catch (e) { console.warn('Firebase load failed:', e); }
-            
-            for (const t of this.tabs) {
-                try {
-                    const res = await fetch(`./wiki-content/${t.id}.html`);
-                    if (res.ok) this.tabContent[t.id] = await res.text();
-                } catch (e) { console.warn(`Failed to load ${t.id}:`, e); }
-            }
         },
         
         renderTab(tabId) {
             const container = document.querySelector(`.wiki-content[data-tab="${tabId}"]`);
             if (!container || !this.tabContent[tabId]) return;
-            
             container.innerHTML = this.tabContent[tabId];
-            if (window.Alpine) {
-                container.querySelectorAll('[x-data]').forEach(el => Alpine.initTree(el));
-            }
+            container.querySelectorAll('[x-data]').forEach(el => Alpine.initTree(el));
         },
         
         selectTab(tabId) {
@@ -129,21 +112,26 @@ document.addEventListener('alpine:init', () => {
             this.$nextTick(() => this.renderTab(tabId));
         },
         
-        async uploadToFirebase() {
-            if (!confirm('Upload all wiki content to Firebase?')) return;
-            try {
-                for (const t of this.tabs) {
-                    if (this.tabContent[t.id]) {
-                        await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, t.id), {
-                            content: this.tabContent[t.id],
-                            updatedAt: new Date().toISOString()
-                        });
-                    }
+        async editCurrentTab() {
+            const content = this.tabContent[this.tab] || '';
+            const { value } = await Swal.fire({
+                title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`,
+                width: '900px',
+                html: `<textarea id="wiki-edit" class="form-control font-monospace" rows="20">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>`,
+                showCancelButton: true,
+                didOpen: () => { document.getElementById('wiki-edit').value = content; },
+                preConfirm: () => document.getElementById('wiki-edit').value
+            });
+            if (value !== undefined) {
+                try {
+                    await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, this.tab), { content: value, updatedAt: serverTimestamp() });
+                    this.tabContent[this.tab] = value;
+                    this.renderTab(this.tab);
+                    Swal.fire('Saved', 'Wiki section updated', 'success');
+                } catch (e) {
+                    console.error(e);
+                    Swal.fire('Error', 'Failed to save changes', 'error');
                 }
-                alert('Wiki content uploaded to Firebase successfully!');
-            } catch (e) {
-                console.error('Upload failed:', e);
-                alert('Upload failed: ' + e.message);
             }
         }
     }));

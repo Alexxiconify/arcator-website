@@ -13,6 +13,8 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 </head>
 <body>
     <div id="navbar-placeholder"></div>
@@ -123,12 +125,12 @@
                 loading: true,
                 authorName: 'Unknown',
                 showSidebar: false,
-                get currentUser() { return Alpine.store('auth').user; },
+                get currentUser() { return Alpine.store('auth')?.user; },
+                get isAdmin() { return Alpine.store('auth')?.isAdmin; },
                 get canEdit() {
                     if (!this.currentUser || !this.currentPage) return false;
-                    if (this.currentUser.admin) return true;
+                    if (this.isAdmin) return true;
                     if (this.currentPage.authorId === this.currentUser.uid) return true;
-                    // Check if user is in permitted editors list (if implemented)
                     return false;
                 },
 
@@ -283,7 +285,5 @@
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 </body>
 </html>
