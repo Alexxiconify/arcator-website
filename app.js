@@ -1,7 +1,7 @@
 import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1/+esm';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
 import {createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, onAuthStateChanged, onIdTokenChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, signOut, updateProfile} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-import {addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+import {addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where, writeBatch} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
 const cfg = {apiKey: "AIzaSyCP5Zb1CRermAKn7p_S30E8qzCbvsMxhm4", authDomain: "arcator-web.firebaseapp.com", databaseURL: "https://arcator-web-default-rtdb.firebaseio.com", projectId: "arcator-web", storageBucket: "arcator-web.firebasestorage.app", messagingSenderId: "1033082068049", appId: "1:1033082068049:web:dd154c8b188bde1930ec70", measurementId: "G-DJXNT1L7CM"};
 const app = initializeApp(cfg);
@@ -287,8 +287,11 @@ function registerForumData() {
         async postComment(fid) {
             const t = this.threads.find(t => t.id === fid); if (!t?.quill) return;
             const c = t.quill.root.innerHTML; if (!c || c === '<p><br></p>') return;
-            await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(fid)), { content: c, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp(), parentCommentId: null });
-            await updateDoc(doc(db, COLLECTIONS.FORMS, fid), { commentCount: increment(1) });
+            const batch = writeBatch(db);
+            const newCommentRef = doc(collection(db, COLLECTIONS.SUBMISSIONS(fid)));
+            batch.set(newCommentRef, { content: c, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp(), parentCommentId: null });
+            batch.update(doc(db, COLLECTIONS.FORMS, fid), { commentCount: increment(1) });
+            await batch.commit();
             t.quill.root.innerHTML = ''; t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(fid)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
         },
         async vote(fid, c, type) {
@@ -304,15 +307,19 @@ function registerForumData() {
         async replyTo(t, p) {
             const c = await promptEditor('Reply', '', '', 'Write reply...');
             if (c) {
-                await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), { content: c, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp(), parentCommentId: p.parentCommentId || p.id });
-                await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), { commentCount: increment(1) });
+                const batch = writeBatch(db);
+                const newCommentRef = doc(collection(db, COLLECTIONS.SUBMISSIONS(t.id)));
+                batch.set(newCommentRef, { content: c, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp(), parentCommentId: p.parentCommentId || p.id });
+                batch.update(doc(db, COLLECTIONS.FORMS, t.id), { commentCount: increment(1) });
+                await batch.commit();
                 t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
             }
-        },
         async deleteComment(fid, cid) {
             if (!confirm('Delete?')) return;
-            await updateDoc(doc(db, COLLECTIONS.FORMS, fid), { commentCount: increment(-1) });
-            await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(fid), cid));
+            const batch = writeBatch(db);
+            batch.update(doc(db, COLLECTIONS.FORMS, fid), { commentCount: increment(-1) });
+            batch.delete(doc(db, COLLECTIONS.SUBMISSIONS(fid), cid));
+            await batch.commit();
             const t = this.threads.find(t => t.id === fid); if (t) t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(fid)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
         },
         async editThread(t) {
@@ -373,8 +380,11 @@ function registerMessageData() {
         },
         async sendMessage() {
             if (!this.newMessage.trim() || !this.selectedConv) return; const u = Alpine.store('auth').user;
-            await addDoc(collection(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id)), { content: this.newMessage, senderId: u.uid, createdAt: serverTimestamp() });
-            await updateDoc(doc(db, COLLECTIONS.CONVERSATIONS, this.selectedConv.id), { lastMessage: this.newMessage, lastMessageTime: serverTimestamp() });
+            const batch = writeBatch(db);
+            const newMsgRef = doc(collection(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id)));
+            batch.set(newMsgRef, { content: this.newMessage, senderId: u.uid, createdAt: serverTimestamp() });
+            batch.update(doc(db, COLLECTIONS.CONVERSATIONS, this.selectedConv.id), { lastMessage: this.newMessage, lastMessageTime: serverTimestamp() });
+            await batch.commit();
             this.newMessage = '';
         },
         async deleteMessage(id) { if (confirm('Delete?')) await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), id)); },

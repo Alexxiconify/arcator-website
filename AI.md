@@ -9,7 +9,7 @@
 **2. Architecture: "Thick Client"**
 
 * 
-**Structure:** The application relies on standard ES modules directly in the browser.
+**Structure:** The application relies on a single `app.js` file using ES modules directly in the browser. This monolithic approach is intentional to avoid complexity and build tools.
 
 
 * 
