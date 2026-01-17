@@ -418,6 +418,8 @@ function registerForumData() {
             this.loading = false;
         },
 
+        getAuthor, fetchAuthor, formatDate,
+
         getThreadMeta(thread) {
             let name = 'System', pic = '';
             if (thread.authorId) { const a = getAuthor(thread.authorId); name = a.displayName || 'Unknown'; pic = `<img src="${a.photoURL || './defaultuser.png'}" class="profile-img-sm me-1" alt="">`; }
@@ -533,6 +535,8 @@ function registerMessageData() {
             await Promise.all(allParticipants.map(fetchAuthor));
             this.conversations = convs;
         },
+
+        getAuthor, fetchAuthor, formatDate,
 
         getConvName(conv) {
             const user = Alpine.store('auth').user;
