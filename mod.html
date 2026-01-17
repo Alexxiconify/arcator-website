@@ -263,8 +263,8 @@
                                         <tr>
                                             <td>
                                                 <div class="d-flex flex-column">
-                                                    <span class="fw-bold" x-text="getDMName(dm)"></span>
-                                                    <small class="text-muted" x-text="dm.participants.map(uid => getAuthorName(uid)).join(', ')"></small>
+                                                    <span class="fw-bold" x-text="dm.participantNames ? Object.values(dm.participantNames).join(', ') : getDMName(dm)"></span>
+                                                    <small class="text-muted" x-show="!dm.participantNames" x-text="dm.participants.map(uid => getAuthorName(uid)).join(', ')"></small>
                                                 </div>
                                             </td>
                                             <td class="text-truncate" style="max-width: 200px;" x-text="dm.lastMessage || 'No messages'"></td>
@@ -325,7 +325,7 @@
                     // Combine threads and DMs for a simple activity feed
                     const acts = [
                         ...this.threads.map(t => ({ id: t.id, text: `New thread: ${t.title}`, time: t.createdAt, icon: 'bi-chat-square-text text-warning' })),
-                        ...this.dms.map(d => ({ id: d.id, text: `Message in ${this.getDMName(d)}`, time: d.lastMessageTime, icon: 'bi-envelope text-info' }))
+                        ...this.dms.map(d => ({ id: d.id, text: `Message in ${d.participantNames ? Object.values(d.participantNames).join(', ') : 'Conversation'}`, time: d.lastMessageTime, icon: 'bi-envelope text-info' }))
                     ];
                     return acts.sort((a, b) => {
                         const ta = a.time?.seconds || 0;
@@ -683,9 +683,9 @@
 
                 async viewDM(dm) {
                     const snap = await getDocs(query(collection(db, COLLECTIONS.CONV_MESSAGES(dm.id)), orderBy('createdAt', 'asc')));
-                    const msgs = snap.docs.map(d => {
+                        const msgs = snap.docs.map(d => {
                         const data = d.data();
-                        const author = this.getAuthorName(data.senderId);
+                        const author = dm.participantNames ? dm.participantNames[data.senderId] : this.getAuthorName(data.senderId);
                         const isMe = this.currentUser.uid === data.senderId;
                         return `
                             <div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25">

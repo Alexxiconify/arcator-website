@@ -84,6 +84,8 @@ main { flex: 1; }
     background-position: center;
     background-attachment: fixed;
     padding-top: var(--navbar-height);
+    background-color: #000; /* Fallback */
+    color: #fff;
 }
 .backdrop-overlay {
     position: fixed;
@@ -101,8 +103,8 @@ main { flex: 1; }
     position: fixed;
     top: var(--navbar-height);
     left: 0;
-    background: var(--glass-bg, rgba(5, 5, 5, 0.95));
-    border-right: 1px solid var(--glass-border, rgba(255, 255, 255, 0.05));
+    background: var(--glass-bg);
+    border-right: 1px solid var(--glass-border);
     z-index: 900;
     transition: transform 0.3s ease;
     overflow-y: auto;
@@ -116,8 +118,8 @@ main { flex: 1; }
     min-height: calc(100vh - var(--navbar-height));
 }
 .glass-card {
-    background: var(--glass-bg, rgba(5, 5, 5, 0.95));
-    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.05));
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
     border-radius: 1rem;
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
@@ -165,3 +167,10 @@ main { flex: 1; }
 ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
