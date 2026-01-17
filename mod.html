@@ -3,144 +3,627 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Admin - Arcator</title>
+    <title>Admin Dashboard - Arcator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --glass-bg: rgba(33, 37, 41, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            background-image: url('./creativespawn.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .backdrop-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            z-index: -1;
+        }
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: var(--glass-bg);
+            border-right: 1px solid var(--glass-border);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            transition: margin-left 0.3s ease;
+        }
+        .glass-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .nav-link {
+            color: rgba(255, 255, 255, 0.7);
+            padding: 0.8rem 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .nav-link.active {
+            background: var(--bs-primary);
+            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
+        }
+        .stat-card {
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        .avatar-sm {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+        }
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-color: var(--bs-primary);
+            box-shadow: none;
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+        }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+    </style>
 </head>
 <body>
-<div id="navbar-placeholder"></div>
+    <div class="backdrop-overlay"></div>
 
-<div x-data="adminData">
-    <div x-show="loading" class="container py-5 text-center"><div class="spinner-border text-primary"></div></div>
+    <div x-data="adminDashboard" class="d-flex w-100">
+        
+        <!-- Mobile Toggle -->
+        <button class="btn btn-dark position-fixed top-0 start-0 m-3 d-md-none z-3" @click="mobileMenu = !mobileMenu">
+            <i class="bi bi-list fs-4"></i>
+        </button>
 
-    <div x-show="!loading && !isAdmin" class="container py-5 text-center">
-        <div class="alert alert-warning">You must be an admin to access this page.</div>
-        <a href="./users.html" class="btn btn-primary">Sign In</a>
-    </div>
-
-    <div x-show="!loading && isAdmin">
-        <section class="hero-section">
-            <img src="./creativespawn.png" alt="Hero" loading="lazy">
-            <div class="hero-overlay"></div>
-            <div class="hero-content">
-                <h1 class="display-4 fw-bold mb-3">Admin Panel</h1>
-                <p class="lead">Manage users, pages, and forums</p>
+        <!-- Sidebar -->
+        <aside class="sidebar d-flex flex-column p-3" :class="{ 'show': mobileMenu }">
+            <div class="mb-4 px-2 d-flex align-items-center gap-2">
+                <img src="./favicon.png" width="32" alt="Logo">
+                <h4 class="m-0 fw-bold text-white">Arcator Admin</h4>
             </div>
-        </section>
+            
+            <nav class="nav flex-column flex-grow-1">
+                <a href="#" class="nav-link" :class="{ 'active': tab === 'dashboard' }" @click.prevent="tab = 'dashboard'; mobileMenu = false">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="#" class="nav-link" :class="{ 'active': tab === 'users' }" @click.prevent="tab = 'users'; mobileMenu = false">
+                    <i class="bi bi-people"></i> Users
+                </a>
+                <a href="#" class="nav-link" :class="{ 'active': tab === 'pages' }" @click.prevent="tab = 'pages'; mobileMenu = false">
+                    <i class="bi bi-file-earmark-text"></i> Pages
+                </a>
+                <a href="#" class="nav-link" :class="{ 'active': tab === 'forums' }" @click.prevent="tab = 'forums'; mobileMenu = false">
+                    <i class="bi bi-chat-square-text"></i> Forums
+                </a>
+                <a href="#" class="nav-link" :class="{ 'active': tab === 'dms' }" @click.prevent="tab = 'dms'; mobileMenu = false">
+                    <i class="bi bi-envelope"></i> Messages
+                </a>
+            </nav>
 
-        <main class="container py-5">
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <div class="card h-100">
-                        <div class="card-header"><h5 class="mb-0">Users</h5></div>
-                        <div class="card-body">
-                            <div class="list-group list-group-flush admin-list-scroll">
-                                <template x-for="user in users" :key="user.id">
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <img :src="user.photoURL || './defaultuser.png'" class="profile-img-sm" alt="Profile">
-                                            <span x-text="user.displayName || user.email || 'Unknown'"></span>
+            <div class="mt-auto pt-3 border-top border-secondary">
+                <a href="./index.html" class="nav-link text-danger">
+                    <i class="bi bi-box-arrow-right"></i> Exit Admin
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content w-100">
+            <!-- Loading State -->
+            <div x-show="loading" class="d-flex justify-content-center align-items-center" style="height: 80vh;">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+            </div>
+
+            <!-- Access Denied -->
+            <div x-show="!loading && !isAdmin" class="d-flex justify-content-center align-items-center" style="height: 80vh;">
+                <div class="glass-card p-5 text-center">
+                    <i class="bi bi-shield-lock fs-1 text-warning mb-3"></i>
+                    <h2>Access Denied</h2>
+                    <p class="text-muted">You do not have permission to view this page.</p>
+                    <a href="./index.html" class="btn btn-primary mt-3">Go Home</a>
+                </div>
+            </div>
+
+            <!-- Dashboard Content -->
+            <div x-show="!loading && isAdmin" x-transition.opacity>
+                
+                <!-- Header -->
+                <header class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="fw-bold mb-1" x-text="pageTitle"></h2>
+                        <p class="text-muted m-0">Welcome back, Admin.</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <button class="btn btn-outline-light btn-sm" @click="refreshAll" title="Refresh Data">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <div class="d-flex align-items-center gap-2 glass-card px-3 py-2 rounded-pill">
+                            <img :src="currentUser?.photoURL || './defaultuser.png'" class="avatar-sm">
+                            <span class="fw-medium" x-text="currentUser?.displayName || 'User'"></span>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Dashboard Tab -->
+                <div x-show="tab === 'dashboard'" class="row g-4">
+                    <div class="col-md-3">
+                        <div class="glass-card p-4 stat-card">
+                            <h6 class="text-muted text-uppercase mb-2">Total Users</h6>
+                            <h2 class="fw-bold mb-0" x-text="users.length">0</h2>
+                            <i class="bi bi-people position-absolute top-0 end-0 m-3 fs-1 text-primary opacity-25"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="glass-card p-4 stat-card">
+                            <h6 class="text-muted text-uppercase mb-2">Pages</h6>
+                            <h2 class="fw-bold mb-0" x-text="pages.length">0</h2>
+                            <i class="bi bi-file-earmark text-success position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="glass-card p-4 stat-card">
+                            <h6 class="text-muted text-uppercase mb-2">Threads</h6>
+                            <h2 class="fw-bold mb-0" x-text="threads.length">0</h2>
+                            <i class="bi bi-chat-square-text text-warning position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="glass-card p-4 stat-card">
+                            <h6 class="text-muted text-uppercase mb-2">Messages</h6>
+                            <h2 class="fw-bold mb-0" x-text="dms.length">0</h2>
+                            <i class="bi bi-envelope text-info position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i>
+                        </div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <div class="glass-card p-4 h-100">
+                            <h5 class="mb-4">Recent Activity</h5>
+                            <div class="list-group list-group-flush bg-transparent">
+                                <template x-for="item in recentActivity" :key="item.id">
+                                    <div class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between align-items-center px-0">
+                                        <div>
+                                            <i :class="item.icon" class="me-2"></i>
+                                            <span x-text="item.text"></span>
                                         </div>
-                                        <button class="btn btn-outline-primary btn-sm" @click="editUser(user)">Edit</button>
+                                        <small class="text-muted" x-text="formatDate(item.time)"></small>
                                     </div>
                                 </template>
+                                <div x-show="recentActivity.length === 0" class="text-muted text-center py-3">No recent activity</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="glass-card p-4 h-100">
+                            <h5 class="mb-4">Quick Actions</h5>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" @click="createPage"><i class="bi bi-plus-lg me-2"></i> New Page</button>
+                                <button class="btn btn-outline-light" @click="tab='users'"><i class="bi bi-person-gear me-2"></i> Manage Users</button>
+                                <button class="btn btn-outline-light" @click="tab='forums'"><i class="bi bi-shield-check me-2"></i> Moderate Forums</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-6">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Pages</h5>
-                            <button class="btn btn-primary btn-sm" @click="createPage">New Page</button>
+                <!-- Users Tab -->
+                <div x-show="tab === 'users'">
+                    <div class="glass-card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <input type="text" class="form-control search-input w-25" placeholder="Search users..." x-model="searchUser">
+                            <span class="badge bg-primary rounded-pill" x-text="filteredUsers.length + ' Users'"></span>
                         </div>
-                        <div class="card-body">
-                            <div class="list-group list-group-flush admin-list-scroll">
-                                <template x-for="page in pages" :key="page.id">
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <span x-text="page.title || 'Untitled'"></span>
-                                        <div class="btn-group btn-group-sm">
-                                            <a :href="'./pages.html?id=' + page.id" class="btn btn-outline-secondary">View</a>
-                                            <button class="btn btn-outline-primary" @click="editPage(page)">Edit</button>
-                                            <button class="btn btn-outline-danger" @click="deletePage(page.id)">Delete</button>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header"><h5 class="mb-0">Forum Threads</h5></div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Date</th><th>Actions</th></tr></thead>
-                                    <tbody>
-                                        <template x-for="thread in threads" :key="thread.id">
-                                            <tr>
-                                                <td x-text="thread.title || 'Untitled'"></td>
-                                                <td x-text="getAuthorName(thread.authorId)"></td>
-                                                <td x-text="thread.category || 'General'"></td>
-                                                <td x-text="formatDate(thread.createdAt)"></td>
-                                                <td>
-                                                    <div class="btn-group btn-group-sm">
-                                                        <button class="btn btn-outline-secondary" @click="viewThread(thread)">View</button>
-                                                        <button class="btn btn-outline-primary" @click="editThread(thread)">Edit</button>
-                                                        <button class="btn btn-outline-danger" @click="deleteThread(thread.id)">Delete</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Joined</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="user in filteredUsers" :key="user.id">
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <img :src="user.photoURL || './defaultuser.png'" class="avatar-sm">
+                                                    <span x-text="user.displayName || 'Unknown'"></span>
+                                                </div>
+                                            </td>
+                                            <td x-text="user.email"></td>
+                                            <td>
+                                                <span class="badge" :class="user.admin ? 'bg-danger' : 'bg-secondary'" x-text="user.admin ? 'Admin' : 'User'"></span>
+                                            </td>
+                                            <td x-text="formatDate(user.createdAt)"></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" @click="editUser(user)">Edit</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header"><h5 class="mb-0">Direct Messages</h5></div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead><tr><th>Name</th><th>Participants</th><th>Last Message</th><th>Date</th><th>Actions</th></tr></thead>
-                                    <tbody>
-                                        <template x-for="dm in dms" :key="dm.id">
-                                            <tr>
-                                                <td x-text="getDMName(dm)"></td>
-                                                <td x-text="dm.participants.map(uid => getAuthorName(uid)).join(', ')"></td>
-                                                <td x-text="dm.lastMessage || ''"></td>
-                                                <td x-text="formatDate(dm.lastMessageTime)"></td>
-                                                <td>
-                                                    <div class="btn-group btn-group-sm">
-                                                        <button class="btn btn-outline-primary" @click="viewDM(dm)">View</button>
-                                                        <button class="btn btn-outline-danger" @click="deleteDM(dm.id)">Delete</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
+                <!-- Pages Tab -->
+                <div x-show="tab === 'pages'">
+                    <div class="glass-card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">Custom Pages</h5>
+                            <button class="btn btn-primary btn-sm" @click="createPage"><i class="bi bi-plus-lg"></i> Create</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover align-middle">
+                                <thead><tr><th>Title</th><th>Slug</th><th>Actions</th></tr></thead>
+                                <tbody>
+                                    <template x-for="page in pages" :key="page.id">
+                                        <tr>
+                                            <td x-text="page.title"></td>
+                                            <td><code class="text-info" x-text="'/' + page.slug"></code></td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a :href="'./pages.html?id=' + page.id" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                                    <button class="btn btn-outline-primary" @click="editPage(page)"><i class="bi bi-pencil"></i></button>
+                                                    <button class="btn btn-outline-danger" @click="deletePage(page.id)"><i class="bi bi-trash"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
+
+                <!-- Forums Tab -->
+                <div x-show="tab === 'forums'">
+                    <div class="glass-card p-4">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover align-middle">
+                                <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Date</th><th>Actions</th></tr></thead>
+                                <tbody>
+                                    <template x-for="thread in threads" :key="thread.id">
+                                        <tr>
+                                            <td x-text="thread.title"></td>
+                                            <td x-text="getAuthorName(thread.authorId)"></td>
+                                            <td><span class="badge bg-info text-dark" x-text="thread.category"></span></td>
+                                            <td x-text="formatDate(thread.createdAt)"></td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-secondary" @click="viewThread(thread)">View</button>
+                                                    <button class="btn btn-outline-primary" @click="editThread(thread)">Edit</button>
+                                                    <button class="btn btn-outline-danger" @click="deleteThread(thread.id)">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DMs Tab -->
+                <div x-show="tab === 'dms'">
+                    <div class="glass-card p-4">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover align-middle">
+                                <thead><tr><th>Conversation</th><th>Last Message</th><th>Time</th><th>Actions</th></tr></thead>
+                                <tbody>
+                                    <template x-for="dm in dms" :key="dm.id">
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-bold" x-text="getDMName(dm)"></span>
+                                                    <small class="text-muted" x-text="dm.participants.map(uid => getAuthorName(uid)).join(', ')"></small>
+                                                </div>
+                                            </td>
+                                            <td class="text-truncate" style="max-width: 200px;" x-text="dm.lastMessage || 'No messages'"></td>
+                                            <td x-text="formatDate(dm.lastMessageTime)"></td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" @click="viewDM(dm)">Spy</button>
+                                                    <button class="btn btn-outline-danger" @click="deleteDM(dm.id)">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
-</div>
 
-<div id="footer-placeholder"></div>
+    <script type="module" src="./app.js"></script>
+    <script type="module">
+        import { db, COLLECTIONS, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, limit } from './app.js';
+        import { formatDate } from './app.js';
 
-<script type="module" src="./app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('adminDashboard', () => ({
+                tab: 'dashboard',
+                mobileMenu: false,
+                loading: true,
+                isAdmin: false,
+                currentUser: null,
+                
+                users: [],
+                pages: [],
+                threads: [],
+                dms: [],
+                
+                searchUser: '',
+
+                get pageTitle() {
+                    return this.tab.charAt(0).toUpperCase() + this.tab.slice(1);
+                },
+
+                get filteredUsers() {
+                    if (!this.searchUser) return this.users;
+                    const lower = this.searchUser.toLowerCase();
+                    return this.users.filter(u => 
+                        (u.displayName && u.displayName.toLowerCase().includes(lower)) ||
+                        (u.email && u.email.toLowerCase().includes(lower))
+                    );
+                },
+
+                get recentActivity() {
+                    // Combine threads and DMs for a simple activity feed
+                    const acts = [
+                        ...this.threads.map(t => ({ id: t.id, text: `New thread: ${t.title}`, time: t.createdAt, icon: 'bi-chat-square-text text-warning' })),
+                        ...this.dms.map(d => ({ id: d.id, text: `Message in ${this.getDMName(d)}`, time: d.lastMessageTime, icon: 'bi-envelope text-info' }))
+                    ];
+                    return acts.sort((a, b) => {
+                        const ta = a.time?.seconds || 0;
+                        const tb = b.time?.seconds || 0;
+                        return tb - ta;
+                    }).slice(0, 5);
+                },
+
+                async init() {
+                    // Wait for auth
+                    Alpine.effect(async () => {
+                        const store = Alpine.store('auth');
+                        if (!store.loading) {
+                            if (store.user) {
+                                this.currentUser = store.user;
+                                this.isAdmin = store.isAdmin;
+                                if (this.isAdmin) await this.refreshAll();
+                            } else {
+                                this.isAdmin = false;
+                            }
+                            this.loading = false;
+                        }
+                    });
+                },
+
+                async refreshAll() {
+                    try {
+                        const [uSnap, pSnap, tSnap, dSnap] = await Promise.all([
+                            getDocs(collection(db, COLLECTIONS.USER_PROFILES)),
+                            getDocs(collection(db, COLLECTIONS.PAGES)),
+                            getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'))),
+                            getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), orderBy('lastMessageTime', 'desc')))
+                        ]);
+
+                        this.users = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        this.pages = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        this.threads = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        this.dms = dSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch (e) {
+                        console.error('Refresh failed', e);
+                        Swal.fire('Error', 'Failed to load data', 'error');
+                    }
+                },
+
+                getAuthorName(uid) {
+                    const u = this.users.find(x => x.id === uid);
+                    return u ? (u.displayName || u.email) : 'Unknown';
+                },
+
+                getDMName(dm) {
+                    if (dm.name && dm.name !== 'Chat') return dm.name;
+                    return dm.participants.map(uid => this.getAuthorName(uid)).join(', ');
+                },
+
+                formatDate(ts) { return formatDate(ts); },
+
+                // --- Actions ---
+
+                async createPage() {
+                    const { value } = await Swal.fire({
+                        title: 'Create Page',
+                        html: '<input id="np-title" class="form-control mb-2" placeholder="Title"><input id="np-slug" class="form-control mb-2" placeholder="Slug"><textarea id="np-content" class="form-control" rows="10" placeholder="HTML Content"></textarea>',
+                        showCancelButton: true,
+                        preConfirm: () => ({
+                            title: document.getElementById('np-title').value,
+                            slug: document.getElementById('np-slug').value,
+                            content: document.getElementById('np-content').value,
+                            createdAt: new Date()
+                        })
+                    });
+                    if (value) {
+                        await addDoc(collection(db, COLLECTIONS.PAGES), value);
+                        await this.refreshAll();
+                        Swal.fire('Success', 'Page created', 'success');
+                    }
+                },
+
+                async editPage(page) {
+                    const { value } = await Swal.fire({
+                        title: 'Edit Page',
+                        html: `<input id="ep-title" class="form-control mb-2" value="${page.title}"><input id="ep-slug" class="form-control mb-2" value="${page.slug}"><textarea id="ep-content" class="form-control" rows="10">${page.content}</textarea>`,
+                        showCancelButton: true,
+                        preConfirm: () => ({
+                            title: document.getElementById('ep-title').value,
+                            slug: document.getElementById('ep-slug').value,
+                            content: document.getElementById('ep-content').value
+                        })
+                    });
+                    if (value) {
+                        await updateDoc(doc(db, COLLECTIONS.PAGES, page.id), value);
+                        await this.refreshAll();
+                        Swal.fire('Success', 'Page updated', 'success');
+                    }
+                },
+
+                async deletePage(id) {
+                    if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) {
+                        await deleteDoc(doc(db, COLLECTIONS.PAGES, id));
+                        await this.refreshAll();
+                        Swal.fire('Deleted', 'Page has been deleted.', 'success');
+                    }
+                },
+
+                async editUser(user) {
+                    const isSelf = this.currentUser.uid === user.id;
+                    const { value } = await Swal.fire({
+                        title: 'Edit User',
+                        html: `
+                            <input id="eu-name" class="form-control mb-2" placeholder="Display Name" value="${user.displayName || ''}">
+                            <input id="eu-handle" class="form-control mb-2" placeholder="Handle" value="${user.handle || ''}">
+                            <div class="form-check text-start">
+                                <input class="form-check-input" type="checkbox" id="eu-admin" ${user.admin ? 'checked' : ''} ${isSelf ? 'disabled' : ''}>
+                                <label class="form-check-label" for="eu-admin">Administrator</label>
+                            </div>
+                        `,
+                        showCancelButton: true,
+                        preConfirm: () => ({
+                            displayName: document.getElementById('eu-name').value,
+                            handle: document.getElementById('eu-handle').value,
+                            admin: document.getElementById('eu-admin').checked
+                        })
+                    });
+                    if (value) {
+                        if (isSelf) delete value.admin;
+                        await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.id), value);
+                        await this.refreshAll();
+                        Swal.fire('Success', 'User updated', 'success');
+                    }
+                },
+
+                async editThread(thread) {
+                    const { value } = await Swal.fire({
+                        title: 'Edit Thread',
+                        html: `<input id="et-title" class="form-control mb-2" value="${thread.title}"><select id="et-cat" class="form-select mb-2"><option value="General">General</option><option value="Announcements">Announcements</option><option value="Support">Support</option></select><textarea id="et-desc" class="form-control" rows="5">${thread.description}</textarea>`,
+                        didOpen: () => document.getElementById('et-cat').value = thread.category || 'General',
+                        showCancelButton: true,
+                        preConfirm: () => ({
+                            title: document.getElementById('et-title').value,
+                            category: document.getElementById('et-cat').value,
+                            description: document.getElementById('et-desc').value
+                        })
+                    });
+                    if (value) {
+                        await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), value);
+                        await this.refreshAll();
+                        Swal.fire('Success', 'Thread updated', 'success');
+                    }
+                },
+
+                async deleteThread(id) {
+                    if ((await Swal.fire({ title: 'Delete Thread?', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                        await deleteDoc(doc(db, COLLECTIONS.FORMS, id));
+                        await this.refreshAll();
+                        Swal.fire('Deleted', '', 'success');
+                    }
+                },
+
+                async viewThread(thread) {
+                    // Fetch comments
+                    const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc')));
+                    const comments = snap.docs.map(d => {
+                        const data = d.data();
+                        const author = this.getAuthorName(data.authorId);
+                        return `<div class="mb-2 p-2 border rounded border-secondary"><small class="text-info">${author}</small><br>${data.content}</div>`;
+                    }).join('');
+                    
+                    Swal.fire({
+                        title: thread.title,
+                        html: `<div class="text-start">${thread.description}</div><hr><div class="text-start" style="max-height:300px;overflow-y:auto">${comments || 'No comments'}</div>`,
+                        width: 800
+                    });
+                },
+
+                async viewDM(dm) {
+                    const snap = await getDocs(query(collection(db, COLLECTIONS.CONV_MESSAGES(dm.id)), orderBy('createdAt', 'asc')));
+                    const msgs = snap.docs.map(d => {
+                        const data = d.data();
+                        const author = this.getAuthorName(data.senderId);
+                        return `<div class="mb-1"><small class="text-muted">${author}:</small> ${data.content}</div>`;
+                    }).join('');
+
+                    Swal.fire({
+                        title: 'Conversation Log',
+                        html: `<div class="text-start" style="max-height:400px;overflow-y:auto">${msgs || 'No messages'}</div>`,
+                        width: 600
+                    });
+                },
+
+                async deleteDM(id) {
+                    if ((await Swal.fire({ title: 'Delete Conversation?', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                        await deleteDoc(doc(db, COLLECTIONS.CONVERSATIONS, id));
+                        await this.refreshAll();
+                        Swal.fire('Deleted', '', 'success');
+                    }
+                }
+            }));
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
 </body>
 </html>

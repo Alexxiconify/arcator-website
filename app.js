@@ -2,9 +2,6 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-
 import {createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, onAuthStateChanged, onIdTokenChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, signOut, updateProfile} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 import {addDoc, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
-// ==========================================
-// CONFIGURATION & INIT
-// ==========================================
 const cfg = {apiKey: "AIzaSyCP5Zb1CRermAKn7p_S30E8qzCbvsMxhm4", authDomain: "arcator-web.firebaseapp.com", databaseURL: "https://arcator-web-default-rtdb.firebaseio.com", projectId: "arcator-web", storageBucket: "arcator-web.firebasestorage.app", messagingSenderId: "1033082068049", appId: "1:1033082068049:web:dd154c8b188bde1930ec70", measurementId: "G-DJXNT1L7CM"};
 const app = initializeApp(cfg);
 const auth = getAuth(app);
@@ -29,9 +26,6 @@ const COLLECTIONS = {
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
 
-// ==========================================
-// HELPERS
-// ==========================================
 function formatDate(ts) {
     if (!ts) return '';
     const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
@@ -73,9 +67,6 @@ function randomIdentity() {
     return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` };
 }
 
-// ==========================================
-// LAYOUT
-// ==========================================
 const NAV_HTML = `
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top border-bottom border-primary">
     <div class="container-fluid px-4">
@@ -158,9 +149,6 @@ function updateUserSection(user, profile, isAdmin = false) {
     }
 }
 
-// ==========================================
-// STORE & LOGIC
-// ==========================================
 const DEFAULT_THEME = 'dark';
 
 function cacheUser(user, profile) {
@@ -231,7 +219,7 @@ function registerAuthStore() {
                             this.profile = snap.data();
                             cacheUser(u, this.profile);
                             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
-                            this.isAdmin = this.profile.admin === true;
+                            this.isAdmin = this.profile.admin === true || this.profile.staff === true || this.profile.role === 'staff';
                             if (!this.isAdmin) console.log("Not admin? Run this in console: Alpine.store('auth').makeMeAdmin()");
                         }
                     } catch (e) { console.error('Profile load error:', e); }
@@ -452,7 +440,7 @@ function registerForumData() {
         },
 
         async editThread(thread) {
-            const { value } = await Swal.fire({ title: 'Edit', html: `<input id="s1" class="swal2-input" value="${thread.title}"><input id="s2" class="swal2-input" value="${thread.tags||''}"><select id="s3" class="swal2-input"><option value="announcements"${thread.category==='announcements'?' selected':''}>Announcements</option><option value="gaming"${thread.category==='gaming'?' selected':''}>Gaming</option><option value="discussion"${thread.category==='discussion'?' selected':''}>Discussion</option><option value="support"${thread.category==='support'?' selected':''}>Support</option></select>`, preConfirm: () => [document.getElementById('s1').value, document.getElementById('s2').value, document.getElementById('s3').value] });
+            const { value } = await Swal.fire({ title: 'Edit', html: `<input id="s1" class="swal2-input" value="${thread.title}"><input id="s2" class="swal2-input" value="${thread.tags||''}"><select id="s3" class="swal2-input"><option value="announcements"${thread.category==='announcements'?' selected':''}>Announcements</option><option value="gaming"${thread.category==='gaming'?' selected':''}>Gaming</option><option value="discussion"${thread.category==='discussion'?' selected':''}>Discussion</option><option value="support"${thread.category==='support'?' selected':''}>Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10">${thread.description || ''}</textarea>`, preConfirm: () => [document.getElementById('s1').value, document.getElementById('s2').value, document.getElementById('s3').value] });
             if (value) { await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), { title: value[0], tags: value[1], category: value[2], updatedAt: serverTimestamp() }); Object.assign(thread, { title: value[0], tags: value[1], category: value[2] }); }
         },
 
@@ -484,10 +472,8 @@ function registerMessageData() {
             const q = query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', user.uid));
             const snap = await getDocs(q);
             const convs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            // Fetch all participant profiles first
             const allParticipants = [...new Set(convs.flatMap(c => c.participants))];
             await Promise.all(allParticipants.map(fetchAuthor));
-            // Now set conversations (names will resolve correctly)
             this.conversations = convs;
         },
 
@@ -549,12 +535,11 @@ function registerAll() {
     registerAuthStore();
     registerForumData();
     registerMessageData();
+    
 }
-
-if (window.Alpine) registerAll();
-else document.addEventListener('alpine:init', registerAll);
-initLayout();
 
 export {
     app, auth, db, projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection, collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, startAfter, serverTimestamp, increment, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, signOut, updateProfile, sendPasswordResetEmail
 };
+
+document.addEventListener('alpine:init', registerAll);
