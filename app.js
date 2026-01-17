@@ -505,120 +505,24 @@ function registerAdminDashboard() {
             if (v) { await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, u.id), v); this.refreshAll(); Swal.fire('Success', 'User updated', 'success'); }
         },
 
-        async editThread(thread) {
-            const { value } = await Swal.fire({
-                title: 'Edit Thread',
-                html: `
-                    <input id="et-title" class="form-control mb-2" placeholder="Title" value="${thread.title}">
-                    <input id="et-tags" class="form-control mb-2" placeholder="Tags (comma separated)" value="${thread.tags || ''}">
-                    <select id="et-cat" class="form-select mb-2">
-                        <option value="General">General</option>
-                        <option value="Announcements">Announcements</option>
-                        <option value="Support">Support</option>
-                        <option value="Gaming">Gaming</option>
-                        <option value="Discussion">Discussion</option>
-                    </select>
-                    <div class="form-check text-start mb-2">
-                        <input class="form-check-input" type="checkbox" id="et-locked" ${thread.locked ? 'checked' : ''}>
-                        <label class="form-check-label" for="et-locked">Lock Thread</label>
-                    </div>
-                    <textarea id="et-desc" class="form-control" rows="5" placeholder="Description">${thread.description}</textarea>
-                `,
-                didOpen: () => document.getElementById('et-cat').value = thread.category || 'General',
-                showCancelButton: true,
-                preConfirm: () => ({
-                    title: document.getElementById('et-title').value,
-                    tags: document.getElementById('et-tags').value,
-                    category: document.getElementById('et-cat').value,
-                    locked: document.getElementById('et-locked').checked,
-                    description: document.getElementById('et-desc').value
-                })
-            });
-            if (value) {
-                await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), value);
-                await this.refreshAll();
-                Swal.fire('Success', 'Thread updated', 'success');
-            }
+        async editThread(t) {
+            const { value: v } = await Swal.fire({ title: 'Edit Thread', html: `<input id="et-title" class="form-control mb-2" value="${t.title}"><input id="et-tags" class="form-control mb-2" value="${t.tags||''}"><select id="et-cat" class="form-select mb-2"><option value="General">General</option><option value="Announcements">Announcements</option><option value="Support">Support</option><option value="Gaming">Gaming</option><option value="Discussion">Discussion</option></select><div class="form-check text-start mb-2"><input class="form-check-input" type="checkbox" id="et-locked" ${t.locked?'checked':''}> <label class="form-check-label">Lock</label></div><textarea id="et-desc" class="form-control" rows="5">${t.description}</textarea>`, didOpen: () => document.getElementById('et-cat').value = t.category || 'General', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('et-title').value, tags: document.getElementById('et-tags').value, category: document.getElementById('et-cat').value, locked: document.getElementById('et-locked').checked, description: document.getElementById('et-desc').value }) });
+            if (v) { await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), v); this.refreshAll(); }
         },
-
-        async deleteThread(id) {
-            if ((await Swal.fire({ title: 'Delete Thread?', icon: 'warning', showCancelButton: true })).isConfirmed) {
-                await deleteDoc(doc(db, COLLECTIONS.FORMS, id));
-                await this.refreshAll();
-                Swal.fire('Deleted', '', 'success');
-            }
-        },
-
-        async viewThread(thread) {
-            const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc')));
-            const comments = snap.docs.map(d => {
-                const data = d.data();
-                const author = this.getAuthorName(data.authorId);
-                return `
-                    <div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25">
-                        <div class="d-flex justify-content-between">
-                            <small class="text-info">${author}</small>
-                            <small class="text-muted">${this.formatDate(data.createdAt)}</small>
-                        </div>
-                        <div class="my-1">${data.content}</div>
-                        <div class="d-flex gap-2 justify-content-end">
-                            <button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-comment', {detail: {tid: '${thread.id}', cid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button>
-                            <button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-comment', {detail: {tid: '${thread.id}', cid: '${d.id}'}}))">Del</button>
-                        </div>
-                    </div>`;
-            }).join('');
-            
-            Swal.fire({
-                title: thread.title,
-                html: `<div class="text-start">${thread.description}</div><hr><div class="text-start admin-list-scroll">${comments || 'No comments'}</div>`,
-                width: 800
-            });
+        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.FORMS, id)); this.refreshAll(); } },
+        async viewThread(t) {
+            const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), orderBy('createdAt', 'asc')));
+            const html = snap.docs.map(d => { const data = d.data(); return `<div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25"><div class="d-flex justify-content-between"><small class="text-info">${this.getAuthorName(data.authorId)}</small><small class="text-muted">${this.formatDate(data.createdAt)}</small></div><div class="my-1">${data.content}</div><div class="d-flex gap-2 justify-content-end"><button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-comment', {detail: {tid: '${t.id}', cid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button><button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-comment', {detail: {tid: '${t.id}', cid: '${d.id}'}}))">Del</button></div></div>`; }).join('');
+            Swal.fire({ title: t.title, html: `<div class="text-start">${t.description}</div><hr><div class="text-start admin-list-scroll">${html || 'No comments'}</div>`, width: 800 });
         },
 
         async viewDM(dm) {
             const snap = await getDocs(query(collection(db, COLLECTIONS.CONV_MESSAGES(dm.id)), orderBy('createdAt', 'asc')));
-            const msgs = snap.docs.map(d => {
-                const data = d.data();
-                const author = dm.participantNames ? dm.participantNames[data.senderId] : this.getAuthorName(data.senderId);
-                return `
-                    <div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25">
-                        <div class="d-flex justify-content-between">
-                            <small class="text-info">${author}</small>
-                            <small class="text-muted">${this.formatDate(data.createdAt)}</small>
-                        </div>
-                        <div class="my-1">${data.content}</div>
-                        <div class="d-flex gap-2 justify-content-end">
-                            <button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-msg', {detail: {cid: '${dm.id}', mid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button>
-                            <button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-msg', {detail: {cid: '${dm.id}', mid: '${d.id}'}}))">Del</button>
-                        </div>
-                    </div>`;
-            }).join('');
-
-            Swal.fire({
-                title: 'Conversation Log',
-                html: `<div class="text-start" style="max-height:400px;overflow-y:auto">${msgs || 'No messages'}</div>`,
-                width: 600
-            });
+            const html = snap.docs.map(d => { const data = d.data(); return `<div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25"><div class="d-flex justify-content-between"><small class="text-info">${dm.participantNames ? dm.participantNames[data.senderId] : this.getAuthorName(data.senderId)}</small><small class="text-muted">${this.formatDate(data.createdAt)}</small></div><div class="my-1">${data.content}</div><div class="d-flex gap-2 justify-content-end"><button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-msg', {detail: {cid: '${dm.id}', mid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button><button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-msg', {detail: {cid: '${dm.id}', mid: '${d.id}'}}))">Del</button></div></div>`; }).join('');
+            Swal.fire({ title: 'Conversation Log', html: `<div class="text-start" style="max-height:400px;overflow-y:auto">${html || 'No messages'}</div>`, width: 600 });
         },
-
-        async deleteDM(id) {
-            if ((await Swal.fire({ title: 'Delete Conversation?', icon: 'warning', showCancelButton: true })).isConfirmed) {
-                await deleteDoc(doc(db, COLLECTIONS.CONVERSATIONS, id));
-                await this.refreshAll();
-                Swal.fire('Deleted', '', 'success');
-            }
-        },
-
-        async deleteMessage(convId, msgId) {
-            if ((await Swal.fire({ title: 'Delete Message?', icon: 'warning', showCancelButton: true })).isConfirmed) {
-                await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msgId));
-                const openModal = Swal.getPopup();
-                if (openModal) {
-                    const dm = this.dms.find(d => d.id === convId);
-                    if (dm) this.viewDM(dm);
-                }
-            }
-        },
+        async deleteDM(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.CONVERSATIONS, id)); this.refreshAll(); } },
+        async deleteMessage(cid, mid) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(cid), mid)); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
 
         async editMessage(convId, msg) {
             const { value } = await Swal.fire({
