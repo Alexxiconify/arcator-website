@@ -19,5 +19,5 @@ jobs:
         with:
           args:
             -Dsonar.projectKey=Alexxiconify_arcator-website
-            -Dsonar. organization=alexxiconify
+            -Dsonar.organization=alexxiconify
           projectBaseDir: .
