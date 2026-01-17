@@ -314,6 +314,7 @@ function registerForumData() {
                 await batch.commit();
                 t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
             }
+        },
         async deleteComment(fid, cid) {
             if (!confirm('Delete?')) return;
             const batch = writeBatch(db);
@@ -325,17 +326,7 @@ function registerForumData() {
         async editThread(t) {
             const { value: v } = await Swal.fire({
                 title: 'Edit',
-                html: `
-                    <input id="s1" class="swal2-input" placeholder="Title">
-                    <input id="s2" class="swal2-input" placeholder="Tags">
-                    <select id="s3" class="swal2-input">
-                        <option value="announcements">Announcements</option>
-                        <option value="gaming">Gaming</option>
-                        <option value="discussion">Discussion</option>
-                        <option value="support">Support</option>
-                    </select>
-                    <textarea id="ed-thread-content" class="form-control" rows="10"></textarea>
-                `,
+                html: `<input id="s1" class="swal2-input" placeholder="Title"><input id="s2" class="swal2-input" placeholder="Tags"><select id="s3" class="swal2-input"><option value="announcements">Announcements</option><option value="gaming">Gaming</option><option value="discussion">Discussion</option><option value="support">Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10"></textarea>`,
                 didOpen: () => {
                     document.getElementById('s1').value = t.title;
                     document.getElementById('s2').value = t.tags || '';
@@ -406,27 +397,7 @@ function registerPageWikiManagement() {
             if (v) { await addDoc(collection(db, COLLECTIONS.PAGES), v); if (cb) cb(); Swal.fire('Success', 'Page created', 'success'); }
         },
         async editPage(p, cb) {
-            const { value: v } = await Swal.fire({
-                title: 'Edit Page',
-                width: '800px',
-                html: `
-                    <input id="ep-title" class="form-control mb-2" placeholder="Title">
-                    <input id="ep-slug" class="form-control mb-2" placeholder="Slug">
-                    <textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content"></textarea>
-                `,
-                showCancelButton: true,
-                didOpen: () => {
-                    document.getElementById('ep-title').value = p.title;
-                    document.getElementById('ep-slug').value = p.slug;
-                    document.getElementById('ep-content').value = p.content;
-                },
-                preConfirm: () => ({
-                    title: document.getElementById('ep-title').value,
-                    slug: document.getElementById('ep-slug').value,
-                    content: document.getElementById('ep-content').value,
-                    updatedAt: serverTimestamp()
-                })
-            });
+            const { value: v } = await Swal.fire({ title: 'Edit Page', width: '800px', html: `<input id="ep-title" class="form-control mb-2" placeholder="Title"><input id="ep-slug" class="form-control mb-2" placeholder="Slug"><textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ep-title').value = p.title; document.getElementById('ep-slug').value = p.slug; document.getElementById('ep-content').value = p.content; }, preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() }) });
             if (v) { await updateDoc(doc(db, COLLECTIONS.PAGES, p.id), v); if (cb) cb(); Swal.fire('Success', 'Page updated', 'success'); }
         },
         async deletePage(id, cb) {
@@ -437,16 +408,7 @@ function registerPageWikiManagement() {
             if (v?.id) { await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, v.id), { content: v.content, allowedEditors: [], updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Wiki section created', 'success'); }
         },
         async editWikiSection(s, cb) {
-            const { value: v } = await Swal.fire({
-                title: `Edit: ${escapeHtml(s.id)}`,
-                width: '900px',
-                html: `<textarea id="ew-content" class="form-control font-monospace" rows="20"></textarea>`,
-                showCancelButton: true,
-                didOpen: () => {
-                    document.getElementById('ew-content').value = s.content || '';
-                },
-                preConfirm: () => document.getElementById('ew-content').value
-            });
+            const { value: v } = await Swal.fire({ title: `Edit: ${escapeHtml(s.id)}`, width: '900px', html: `<textarea id="ew-content" class="form-control font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ew-content').value = s.content || ''; }, preConfirm: () => document.getElementById('ew-content').value });
             if (v !== undefined) { await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, s.id), { content: v, updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Wiki section updated', 'success'); }
         },
         async manageWikiEditors(s, users, cb) {
