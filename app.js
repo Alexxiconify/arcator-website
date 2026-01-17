@@ -1,7 +1,7 @@
 import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1/+esm';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
 import {createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, onAuthStateChanged, onIdTokenChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, signOut, updateProfile} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-import {addDoc, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+import {addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
 const cfg = {apiKey: "AIzaSyCP5Zb1CRermAKn7p_S30E8qzCbvsMxhm4", authDomain: "arcator-web.firebaseapp.com", databaseURL: "https://arcator-web-default-rtdb.firebaseio.com", projectId: "arcator-web", storageBucket: "arcator-web.firebasestorage.app", messagingSenderId: "1033082068049", appId: "1:1033082068049:web:dd154c8b188bde1930ec70", measurementId: "G-DJXNT1L7CM"};
 const app = initializeApp(cfg);
@@ -12,8 +12,7 @@ const appId = cfg.appId;
 const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
 
-const art = `artifacts/${projectId}`;
-const COLLECTIONS = {USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FORMS: `${art}/public/data/forms`, SUBMISSIONS: (formId) => `${art}/public/data/forms/${formId}/submissions`, CONVERSATIONS: 'conversations', CONV_MESSAGES: (convId) => `conversations/${convId}/messages`, THEMES: `${art}/public/data/custom_themes`, PAGES: `${art}/public/data/temp_pages`, WIKI_CONFIG: `${art}/public/data/wiki_config`, WIKI_PAGES: `${art}/public/data/wiki_pages`};
+const COLLECTIONS = {USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FORMS: 'forms', SUBMISSIONS: (formId) => `forms/${formId}/submissions`, CONVERSATIONS: 'conversations', CONV_MESSAGES: (convId) => `conversations/${convId}/messages`, THEMES: 'custom_themes', PAGES: 'temp_pages', WIKI_CONFIG: 'wiki_config', WIKI_PAGES: 'wiki_pages'};
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
@@ -126,7 +125,15 @@ function registerAuthStore() {
                             this.profile = snap.data();
                             cacheUser(u, this.profile);
                             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS, this.profile.backgroundImage, this.profile.glassColor, this.profile.glassOpacity, this.profile.glassBlur);
-                            this.isAdmin = this.profile.admin === true || this.profile.staff === true || this.profile.role === 'staff';
+                            
+                            // Check admins collection for source of truth
+                            try {
+                                const adminSnap = await getDoc(doc(db, 'admins', u.uid));
+                                this.isAdmin = adminSnap.exists();
+                            } catch (e) {
+                                console.error('Admin check failed:', e);
+                                this.isAdmin = false;
+                            }
                         }
                     } catch (e) { console.error('Profile load error:', e); }
                 } else {
@@ -140,14 +147,6 @@ function registerAuthStore() {
         },
 
         async checkAdmin(uid) { return this.isAdmin; },
-
-        async makeMeAdmin() {
-            if (!this.user) return console.error("Sign in first");
-            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, this.user.uid), { admin: true });
-            this.isAdmin = true;
-            this.profile.admin = true;
-            location.reload();
-        },
 
         async login(email, password) {
             const result = await signInWithEmailAndPassword(auth, email, password);
@@ -214,8 +213,10 @@ function registerAuthStore() {
         },
 
         async saveProfile(uid, profileData) {
-            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, uid), profileData);
-            this.profile = { ...this.profile, ...profileData };
+            const safeData = { ...profileData };
+            delete safeData.admin; delete safeData.role; delete safeData.staff;
+            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, uid), safeData);
+            this.profile = { ...this.profile, ...safeData };
             cacheUser(this.user, this.profile);
             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
             updateUserSection(this.user, this.profile, this.isAdmin);
@@ -475,6 +476,8 @@ function registerAdminDashboard() {
             document.addEventListener('admin-del-msg', e => this.deleteMessage(e.detail.cid, e.detail.mid));
             document.addEventListener('admin-edit-comment', e => this.editComment(e.detail.tid, {id:e.detail.cid,content:e.detail.content}));
             document.addEventListener('admin-del-comment', e => this.deleteComment(e.detail.tid, e.detail.cid));
+            document.addEventListener('admin-del-comment', e => this.deleteComment(e.detail.tid, e.detail.cid));
+            document.addEventListener('admin-del-comment', e => this.deleteComment(e.detail.tid, e.detail.cid));
             Alpine.effect(async () => { const s = Alpine.store('auth'); if (!s.loading) { if (s.user) { this.currentUser = s.user; this.isAdmin = s.isAdmin; if (this.isAdmin) await this.refreshAll(); } this.loading = false; } });
         },
         async refreshAll() {
@@ -493,6 +496,7 @@ function registerAdminDashboard() {
         async deleteWikiSection(id) { await Alpine.store('mgmt').deleteWikiSection(id, () => this.refreshAll()); },
 
         async editUser(u) {
+            if (!this.isAdmin) return Swal.fire('Error', 'Unauthorized', 'error');
             const { value: v } = await Swal.fire({
                 title: 'Edit User', width: '800px',
                 html: `<div class="text-start admin-modal-scroll"><h6 class="text-primary mb-3">General</h6><div class="row g-2 mb-3">${[{id:'eu-name',l:'Name',v:u.displayName||''},{id:'eu-handle',l:'Handle',v:u.handle||''},{id:'eu-email',l:'Email',v:u.email||''},{id:'eu-photo',l:'Photo',v:u.photoURL||''},{id:'eu-css',l:'CSS',v:u.customCSS||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${f.v}"></div>`).join('')}<div class="col-md-6"><label class="small">Role</label><select id="eu-role" class="form-select form-select-sm"><option value="user" ${!u.admin&&u.role!=='staff'?'selected':''}>User</option><option value="staff" ${u.role==='staff'?'selected':''}>Staff</option><option value="admin" ${u.admin?'selected':''}>Admin</option></select></div></div><h6 class="text-primary mb-3 border-top pt-3">Social</h6><div class="row g-2 mb-3">${[{id:'eu-discordId',l:'Discord ID',v:u.discordId||''},{id:'eu-discordTag',l:'Discord Tag',v:u.discordTag||''},{id:'eu-discordPic',l:'Discord Pic',v:u.discordPic||''},{id:'eu-discordURL',l:'Discord URL',v:u.discordURL||''},{id:'eu-githubPic',l:'GitHub Pic',v:u.githubPic||''},{id:'eu-githubURL',l:'GitHub URL',v:u.githubURL||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${f.v}"></div>`).join('')}</div><h6 class="text-primary mb-3 border-top pt-3">Preferences</h6><div class="row g-2 mb-3"><div class="col-md-4"><label class="small">Theme</label><select id="eu-theme" class="form-select form-select-sm"><option value="dark" ${u.themePreference==='dark'?'selected':''}>Dark</option><option value="light" ${u.themePreference==='light'?'selected':''}>Light</option></select></div><div class="col-md-4"><label class="small">Font</label><select id="eu-font" class="form-select form-select-sm"><option value="small" ${u.fontScaling==='small'?'selected':''}>Small</option><option value="normal" ${u.fontScaling==='normal'?'selected':''}>Normal</option><option value="large" ${u.fontScaling==='large'?'selected':''}>Large</option></select></div><div class="col-md-4"><label class="small">Retention</label><input type="number" id="eu-retention" class="form-control form-control-sm" value="${u.dataRetention||365}"></div></div><div class="row g-2 mt-2"><div class="col-md-6"><label class="small">Glass Color</label><input id="eu-glassColor" class="form-control form-control-sm" value="${u.glassColor||''}"></div><div class="col-md-6"><label class="small">Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" class="form-control form-control-sm" value="${u.glassOpacity||0.95}"></div><div class="col-md-6"><label class="small">Blur</label><input id="eu-glassBlur" type="number" class="form-control form-control-sm" value="${u.glassBlur||''}"></div><div class="col-12"><label class="small">Background</label><input id="eu-bgImg" class="form-control form-control-sm" value="${u.backgroundImage||''}"></div></div><h6 class="text-primary mb-3 border-top pt-3">Flags</h6><div class="row g-2">${[{id:'eu-activity',l:'Activity',c:u.activityTracking},{id:'eu-debug',l:'Debug',c:u.debugMode},{id:'eu-discordLinked',l:'Discord Linked',c:u.discordLinked},{id:'eu-discordNotif',l:'Discord Notifs',c:u.discordNotifications},{id:'eu-emailNotif',l:'Email Notifs',c:u.emailNotifications},{id:'eu-focus',l:'Focus',c:u.focusIndicators},{id:'eu-contrast',l:'Contrast',c:u.highContrast},{id:'eu-visible',l:'Visible',c:u.profileVisible},{id:'eu-push',l:'Push',c:u.pushNotifications},{id:'eu-motion',l:'Motion',c:u.reducedMotion},{id:'eu-reader',l:'Reader',c:u.screenReader},{id:'eu-sharing',l:'Sharing',c:u.thirdPartySharing}].map(f=>`<div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="${f.id}" ${f.c?'checked':''}> <label class="small">${f.l}</label></div></div>`).join('')}</div></div>`,
@@ -501,7 +505,16 @@ function registerAdminDashboard() {
                     displayName: document.getElementById('eu-name').value, handle: document.getElementById('eu-handle').value, email: document.getElementById('eu-email').value, photoURL: document.getElementById('eu-photo').value, role: document.getElementById('eu-role').value, admin: document.getElementById('eu-role').value === 'admin', customCSS: document.getElementById('eu-css').value, discordId: document.getElementById('eu-discordId').value, discordTag: document.getElementById('eu-discordTag').value, discordPic: document.getElementById('eu-discordPic').value, discordURL: document.getElementById('eu-discordURL').value, githubPic: document.getElementById('eu-githubPic').value, githubURL: document.getElementById('eu-githubURL').value, themePreference: document.getElementById('eu-theme').value, fontScaling: document.getElementById('eu-font').value, dataRetention: parseInt(document.getElementById('eu-retention').value), glassColor: document.getElementById('eu-glassColor').value, glassOpacity: parseFloat(document.getElementById('eu-glassOpacity').value), glassBlur: parseInt(document.getElementById('eu-glassBlur').value), backgroundImage: document.getElementById('eu-bgImg').value, activityTracking: document.getElementById('eu-activity').checked, debugMode: document.getElementById('eu-debug').checked, discordLinked: document.getElementById('eu-discordLinked').checked, discordNotifications: document.getElementById('eu-discordNotif').checked, emailNotifications: document.getElementById('eu-emailNotif').checked, focusIndicators: document.getElementById('eu-focus').checked, highContrast: document.getElementById('eu-contrast').checked, profileVisible: document.getElementById('eu-visible').checked, pushNotifications: document.getElementById('eu-push').checked, reducedMotion: document.getElementById('eu-motion').checked, screenReader: document.getElementById('eu-reader').checked, thirdPartySharing: document.getElementById('eu-sharing').checked, updatedAt: serverTimestamp()
                 })
             });
-            if (v) { await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, u.id), v); this.refreshAll(); Swal.fire('Success', 'User updated', 'success'); }
+            if (v) {
+                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, u.id), v);
+                const adminDoc = doc(db, 'artifacts', projectId);
+                if (v.admin) {
+                    await setDoc(adminDoc, { admins: arrayUnion(u.id) }, { merge: true }).catch(e => console.error("Failed to sync admin add", e));
+                } else {
+                    await setDoc(adminDoc, { admins: arrayRemove(u.id) }, { merge: true }).catch(e => console.error("Failed to sync admin remove", e));
+                }
+                this.refreshAll(); Swal.fire('Success', 'User updated', 'success');
+            }
         },
 
         async editThread(t) {

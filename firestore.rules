@@ -10,7 +10,7 @@ service cloud.firestore {
     }
     function isAdmin() {
       return isSignedIn() && 
-        (get(/databases/$(database)/documents/user_profiles/$(request.auth.uid)).data.admin == true);
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
     // User profiles at root level
@@ -36,12 +36,12 @@ service cloud.firestore {
       }
     }
     
-    // Artifact-based paths (forums, pages, themes)
-    match /artifacts/arcator-web/public/data/{collection}/{docId} {
+    // Root-level collections (formerly artifacts)
+    match /forms/{docId} {
       allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin() ||
-                     (collection == 'forms' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'votes', 'viewCount'])));
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'votes', 'viewCount']));
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
       
       match /submissions/{commentId} {
@@ -53,8 +53,28 @@ service cloud.firestore {
       }
     }
     
-    // Admin whitelist
-    match /artifacts/arcator-web/public/data/whitelisted_admins/{uid} {
+    match /wiki_pages/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /custom_themes/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /temp_pages/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /wiki_config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Admins collection
+    match /admins/{uid} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
