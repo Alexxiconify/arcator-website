@@ -14,6 +14,7 @@
             --sidebar-width: 280px;
             --glass-bg: rgba(33, 37, 41, 0.85);
             --glass-border: rgba(255, 255, 255, 0.1);
+            --navbar-height: 56px; /* Approximate Bootstrap navbar height */
         }
         body {
             background-image: url('./creativespawn.png');
@@ -22,6 +23,7 @@
             background-attachment: fixed;
             min-height: 100vh;
             overflow-x: hidden;
+            padding-top: var(--navbar-height); /* Push content down for fixed navbar */
         }
         .backdrop-overlay {
             position: fixed;
@@ -35,14 +37,15 @@
         }
         .sidebar {
             width: var(--sidebar-width);
-            height: 100vh;
+            height: calc(100vh - var(--navbar-height));
             position: fixed;
-            top: 0;
+            top: var(--navbar-height);
             left: 0;
             background: var(--glass-bg);
             border-right: 1px solid var(--glass-border);
-            z-index: 1000;
+            z-index: 900; /* Below navbar (1030) */
             transition: transform 0.3s ease;
+            overflow-y: auto;
         }
         .main-content {
             margin-left: var(--sidebar-width);
@@ -56,7 +59,7 @@
             backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
-        .nav-link {
+        .nav-link-custom {
             color: rgba(255, 255, 255, 0.7);
             padding: 0.8rem 1.5rem;
             border-radius: 0.5rem;
@@ -65,13 +68,14 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            text-decoration: none;
         }
-        .nav-link:hover, .nav-link.active {
+        .nav-link-custom:hover, .nav-link-custom.active {
             color: #fff;
             background: rgba(255, 255, 255, 0.1);
             transform: translateX(5px);
         }
-        .nav-link.active {
+        .nav-link-custom.active {
             background: var(--bs-primary);
             box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
         }
@@ -114,45 +118,41 @@
     </style>
 </head>
 <body>
+    <!-- Top Navbar Placeholder -->
+    <div id="navbar-placeholder"></div>
+
     <div class="backdrop-overlay"></div>
 
     <div x-data="adminDashboard" class="d-flex w-100">
         
         <!-- Mobile Toggle -->
-        <button class="btn btn-dark position-fixed top-0 start-0 m-3 d-md-none z-3" @click="mobileMenu = !mobileMenu">
+        <button class="btn btn-dark position-fixed start-0 m-3 d-md-none z-3" style="top: 70px;" @click="mobileMenu = !mobileMenu">
             <i class="bi bi-list fs-4"></i>
         </button>
 
         <!-- Sidebar -->
         <aside class="sidebar d-flex flex-column p-3" :class="{ 'show': mobileMenu }">
             <div class="mb-4 px-2 d-flex align-items-center gap-2">
-                <img src="./favicon.png" width="32" alt="Logo">
-                <h4 class="m-0 fw-bold text-white">Arcator Admin</h4>
+                <h5 class="m-0 fw-bold text-white">Admin Tools</h5>
             </div>
             
             <nav class="nav flex-column flex-grow-1">
-                <a href="#" class="nav-link" :class="{ 'active': tab === 'dashboard' }" @click.prevent="tab = 'dashboard'; mobileMenu = false">
+                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'dashboard' }" @click.prevent="tab = 'dashboard'; mobileMenu = false">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
-                <a href="#" class="nav-link" :class="{ 'active': tab === 'users' }" @click.prevent="tab = 'users'; mobileMenu = false">
+                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'users' }" @click.prevent="tab = 'users'; mobileMenu = false">
                     <i class="bi bi-people"></i> Users
                 </a>
-                <a href="#" class="nav-link" :class="{ 'active': tab === 'pages' }" @click.prevent="tab = 'pages'; mobileMenu = false">
+                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'pages' }" @click.prevent="tab = 'pages'; mobileMenu = false">
                     <i class="bi bi-file-earmark-text"></i> Pages
                 </a>
-                <a href="#" class="nav-link" :class="{ 'active': tab === 'forums' }" @click.prevent="tab = 'forums'; mobileMenu = false">
+                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'forums' }" @click.prevent="tab = 'forums'; mobileMenu = false">
                     <i class="bi bi-chat-square-text"></i> Forums
                 </a>
-                <a href="#" class="nav-link" :class="{ 'active': tab === 'dms' }" @click.prevent="tab = 'dms'; mobileMenu = false">
+                <a href="#" class="nav-link-custom" :class="{ 'active': tab === 'dms' }" @click.prevent="tab = 'dms'; mobileMenu = false">
                     <i class="bi bi-envelope"></i> Messages
                 </a>
             </nav>
-
-            <div class="mt-auto pt-3 border-top border-secondary">
-                <a href="./index.html" class="nav-link text-danger">
-                    <i class="bi bi-box-arrow-right"></i> Exit Admin
-                </a>
-            </div>
         </aside>
 
         <!-- Main Content -->
