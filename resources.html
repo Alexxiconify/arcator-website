@@ -36,7 +36,7 @@
     <div class="tab-content">
         <!-- Census Tab -->
         <div class="tab-pane fade show active" id="census-tab">
-            <div class="resource-card p-4">
+            <div class="accent-card p-4">
                 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                     <div>
                         <h2 class="h4 mb-1"><span class="emoji-icon">🎮</span>Community Interests Census</h2>
@@ -56,7 +56,7 @@
                         <div class="loading-spinner mx-auto mb-3"></div>
                         <p class="text-secondary">Loading census data...</p>
                     </div>
-                    <table class="table table-dark census-table" x-show="!censusLoading" x-cloak>
+                    <table class="table table-dark data-table" x-show="!censusLoading" x-cloak>
                         <thead>
                             <tr>
                                 <th>Interest</th>
@@ -68,12 +68,12 @@
                         </thead>
                         <tbody>
                             <template x-for="row in filteredCensus">
-                                <tr class="interest-row">
+                                <tr>
                                     <td class="fw-medium" x-text="row[0]"></td>
-                                    <td><span class="player-count-badge" x-text="row[1]"></span></td>
+                                    <td><span class="status-badge success" x-text="row[1]"></span></td>
                                     <template x-for="val in row.slice(2)">
                                         <td>
-                                            <span class="player-dot" :class="val && val !== '0' ? 'active' : 'inactive'" x-text="val && val !== '0' ? '✓' : ''"></span>
+                                            <span class="dot-indicator" :class="val && val !== '0' ? 'active' : 'inactive'" x-text="val && val !== '0' ? '✓' : ''"></span>
                                         </td>
                                     </template>
                                 </tr>
@@ -86,7 +86,7 @@
 
         <!-- Admin Doc Tab -->
         <div class="tab-pane fade" id="admin-tab">
-            <div class="resource-card p-4">
+            <div class="accent-card p-4">
                 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                     <div>
                         <h2 class="h4 mb-1"><span class="emoji-icon">🌱</span>Arcator Growth Plans</h2>
@@ -102,7 +102,7 @@
                         <div class="loading-spinner mx-auto mb-3"></div>
                         <p class="text-secondary">Loading documentation...</p>
                     </div>
-                    <div x-show="!adminLoading" x-html="adminContent" class="doc-section" x-cloak></div>
+                    <div x-show="!adminLoading" x-html="adminContent" class="content-section" x-cloak></div>
                 </div>
             </div>
         </div>
