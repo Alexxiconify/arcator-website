@@ -1,4 +1,4 @@
-import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1/+esm';
+
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
 import {createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, onAuthStateChanged, onIdTokenChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, signOut, updateProfile} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 import {addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where, writeBatch} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
@@ -17,7 +17,7 @@ const COLLECTIONS = {USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FOR
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
 
-const formatDate = ts => { if (!ts) return ''; const d = ts.seconds ? dayjs(ts.seconds * 1000) : dayjs(ts); return d.isSame(dayjs(), 'day') ? d.format('HH:mm') : d.format('DD/MM/YY');};
+const formatDate = ts => { if (!ts) return ''; const d = new Date(ts.seconds ? ts.seconds * 1000 : ts), now = new Date(); return (d.getDate()===now.getDate()&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()) ? d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : d.toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'2-digit'});};
 const escapeHtml = str => { if (!str) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);};
 const generateProfilePic = name => { const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'], canvas = document.createElement('canvas'); canvas.width = canvas.height = 200; const ctx = canvas.getContext('2d'), hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0); ctx.fillStyle = colors[Math.abs(hash) % colors.length]; ctx.fillRect(0, 0, 200, 200); ctx.fillStyle = '#FFF'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), 100, 100); return canvas.toDataURL('image/png');};
 const randomIdentity = () => { const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'], noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl']; const a = adj[Math.floor(Math.random() * adj.length)], n = noun[Math.floor(Math.random() * noun.length)]; return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` };};

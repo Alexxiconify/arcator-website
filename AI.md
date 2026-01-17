@@ -64,6 +64,5 @@ The following external libraries and services are utilized to minimize custom im
 * **Bootstrap Icons (v1.11.3):** A comprehensive icon library used for UI elements throughout the application.
 * **Quill.js (v2.0.2):** A rich text editor used for composing forum threads and comments, ensuring consistent content formatting.
 * **SweetAlert2 (v11):** A library for creating responsive, customizable replacement popups for standard JavaScript alerts, confirms, and prompts.
-* **Day.js (v1+):** A minimalist JavaScript library for parsing, validating, manipulating, and formatting dates and times.
 * **DOMPurify (v3.0.8):** A sanitizer library used to clean HTML content (e.g., in forum posts) to prevent Cross-Site Scripting (XSS) attacks.
 * **Marked (via CDN):** A markdown parser used to convert markdown text into HTML for rendering page content.
