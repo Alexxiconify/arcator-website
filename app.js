@@ -17,30 +17,10 @@ const COLLECTIONS = {USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FOR
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
 
-const formatDate = ts => {
-    if (!ts) return '';
-    const d = ts.seconds ? dayjs(ts.seconds * 1000) : dayjs(ts);
-    return d.isSame(dayjs(), 'day') ? d.format('HH:mm') : d.format('DD/MM/YY');
-};
-const escapeHtml = str => {
-    if (!str) return '';
-    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
-};
-const generateProfilePic = name => {
-    const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'], canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 200;
-    const ctx = canvas.getContext('2d'), hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0);
-    ctx.fillStyle = colors[Math.abs(hash) % colors.length];
-    ctx.fillRect(0, 0, 200, 200);
-    ctx.fillStyle = '#FFF'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), 100, 100);
-    return canvas.toDataURL('image/png');
-};
-const randomIdentity = () => {
-    const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'], noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl'];
-    const a = adj[Math.floor(Math.random() * adj.length)], n = noun[Math.floor(Math.random() * noun.length)];
-    return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` };
-};
+const formatDate = ts => { if (!ts) return ''; const d = ts.seconds ? dayjs(ts.seconds * 1000) : dayjs(ts); return d.isSame(dayjs(), 'day') ? d.format('HH:mm') : d.format('DD/MM/YY');};
+const escapeHtml = str => { if (!str) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);};
+const generateProfilePic = name => { const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'], canvas = document.createElement('canvas'); canvas.width = canvas.height = 200; const ctx = canvas.getContext('2d'), hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0); ctx.fillStyle = colors[Math.abs(hash) % colors.length]; ctx.fillRect(0, 0, 200, 200); ctx.fillStyle = '#FFF'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), 100, 100); return canvas.toDataURL('image/png');};
+const randomIdentity = () => { const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'], noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl']; const a = adj[Math.floor(Math.random() * adj.length)], n = noun[Math.floor(Math.random() * noun.length)]; return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` };};
 const NAV_HTML = `<nav class="arc-nav"><div class="container-fluid px-4 arc-nav-inner"><a class="navbar-brand fw-bold" href="./index.html">Arcator</a><ul class="arc-nav-links"><li><a class="nav-link" href="./wiki.html">Wiki</a></li><li><a class="nav-link" href="./forms.html">Forums</a></li><li><a class="nav-link" href="./pages.html">Pages</a></li><li><a class="nav-link" href="./resources.html">Resources</a></li><li class="d-none" id="admin-link"><a class="nav-link" href="./mod.html">Admin</a></li></ul><div class="arc-user-section"><a href="./users.html" class="btn btn-primary btn-sm" id="sign-in-btn">Sign In</a><a href="./users.html" class="d-none arc-profile-link" id="user-profile-link"><img src="./defaultuser.png" class="avatar-sm" alt="Profile" id="user-avatar"></a></div></div></nav>`;
 const FOOTER_HTML = `<footer class="arc-footer"><div class="container-fluid px-4 arc-footer-inner"><div class="d-flex gap-3"><a href="https://ssmp.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a><a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a></div><span class="text-secondary">© 2025 Arcator</span></div></footer>`;
 function initLayout() {
