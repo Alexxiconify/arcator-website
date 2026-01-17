@@ -77,22 +77,27 @@ const updateTheme = (t = 'dark', f = 'normal', css = '', bg = '', gc = '', go = 
     s.textContent = (css || '') + (gb ? ` .glass-card, .card { backdrop-filter: blur(${gb}px) !important; } body::before { backdrop-filter: blur(${Math.max(0, gb - 5)}px) !important; }` : '');
 };
 
-const userCache = {};
-
-async function fetchAuthor(uid) {
-    if (!uid || userCache[uid]) return;
-    try {
-        const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
-        userCache[uid] = snap.exists() ? snap.data() : { displayName: 'Unknown User', photoURL: './defaultuser.png', uid };
-    } catch (e) { console.error(`Fetch error ${uid}:`, e); }
+function registerUsersStore() {
+    Alpine.store('users', {
+        cache: {},
+        async fetch(uid) {
+            if (!uid || this.cache[uid]) return;
+            try {
+                const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
+                const data = snap.exists() ? snap.data() : { displayName: 'Unknown User', photoURL: './defaultuser.png', uid };
+                this.cache = { ...this.cache, [uid]: data };
+            } catch (e) { console.error(`Fetch error ${uid}:`, e); }
+        },
+        get(uid) {
+            if (this.cache[uid]) return this.cache[uid];
+            const s = Alpine.store('auth');
+            if (s?.user?.uid === uid && s.profile) return s.profile;
+            return { displayName: 'Unknown', photoURL: './defaultuser.png' };
+        }
+    });
 }
-
-function getAuthor(uid) {
-    if (userCache[uid]) return userCache[uid];
-    const store = Alpine.store('auth');
-    if (store?.user?.uid === uid && store.profile) return store.profile;
-    return { displayName: 'Unknown', photoURL: './defaultuser.png' };
-}
+const fetchAuthor = uid => Alpine.store('users').fetch(uid);
+const getAuthor = uid => Alpine.store('users').get(uid);
 
 function registerAuthStore() {
     Alpine.store('auth', {
@@ -123,7 +128,6 @@ function registerAuthStore() {
                             cacheUser(u, this.profile);
                             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS, this.profile.backgroundImage, this.profile.glassColor, this.profile.glassOpacity, this.profile.glassBlur);
                             this.isAdmin = this.profile.admin === true || this.profile.staff === true || this.profile.role === 'staff';
-                            if (!this.isAdmin) console.log("Not admin? Run this in console: Alpine.store('auth').makeMeAdmin()");
                         }
                     } catch (e) { console.error('Profile load error:', e); }
                 } else {
@@ -341,69 +345,39 @@ function registerForumData() {
 function registerMessageData() {
     Alpine.data('messageData', () => ({
         conversations: [], selectedConv: null, messages: [], newMessage: '', unsubscribe: null,
-
-        init() {
-            this.$watch('$store.auth.user', u => { if (u) this.loadConversations(); else { this.conversations = []; this.selectedConv = null; } });
-            if (Alpine.store('auth').user) this.loadConversations();
-        },
-
+        init() { this.$watch('$store.auth.user', u => u ? this.loadConversations() : (this.conversations = [], this.selectedConv = null)); if (Alpine.store('auth').user) this.loadConversations(); },
         async loadConversations() {
-            const user = Alpine.store('auth').user; if (!user) return;
-            const snap = await getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', user.uid)));
-            const convs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            const allParticipants = [...new Set(convs.flatMap(c => c.participants))];
-            await Promise.all(allParticipants.map(fetchAuthor));
-            this.conversations = convs;
+            const u = Alpine.store('auth').user; if (!u) return;
+            const snap = await getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', u.uid)));
+            this.conversations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            await Promise.all([...new Set(this.conversations.flatMap(c => c.participants))].map(fetchAuthor));
         },
-
         getAuthor, fetchAuthor, formatDate,
-
-        getConvName(conv) {
-            const user = Alpine.store('auth').user;
-            if (conv.name && conv.name !== 'Notes') return conv.name;
-            if (conv.participants.length === 1) return 'Notes';
-            const others = conv.participants.filter(id => id !== user.uid);
-            return others.map(id => getAuthor(id).displayName).join(', ') || 'Chat';
+        getConvName(c) {
+            const u = Alpine.store('auth').user; if (c.name && c.name !== 'Notes') return c.name; if (c.participants.length === 1) return 'Notes';
+            return c.participants.filter(id => id !== u.uid).map(id => getAuthor(id).displayName).join(', ') || 'Chat';
         },
-
-        async selectConv(conv) {
-            this.selectedConv = conv;
-            if (this.unsubscribe) this.unsubscribe();
-            this.unsubscribe = onSnapshot(query(collection(db, COLLECTIONS.CONV_MESSAGES(conv.id)), orderBy('createdAt', 'asc')), snap => {
+        async selectConv(c) {
+            this.selectedConv = c; if (this.unsubscribe) this.unsubscribe();
+            this.unsubscribe = onSnapshot(query(collection(db, COLLECTIONS.CONV_MESSAGES(c.id)), orderBy('createdAt', 'asc')), snap => {
                 this.messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.$nextTick(() => { const el = document.getElementById('msg-list'); if (el) el.scrollTop = el.scrollHeight; });
             });
         },
-
         async sendMessage() {
-            if (!this.newMessage.trim() || !this.selectedConv) return;
-            const user = Alpine.store('auth').user;
-            await addDoc(collection(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id)), { content: this.newMessage, senderId: user.uid, createdAt: serverTimestamp() });
+            if (!this.newMessage.trim() || !this.selectedConv) return; const u = Alpine.store('auth').user;
+            await addDoc(collection(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id)), { content: this.newMessage, senderId: u.uid, createdAt: serverTimestamp() });
             await updateDoc(doc(db, COLLECTIONS.CONVERSATIONS, this.selectedConv.id), { lastMessage: this.newMessage, lastMessageTime: serverTimestamp() });
             this.newMessage = '';
         },
-
-        async deleteMessage(msgId) { if (confirm('Delete?')) await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), msgId)); },
-
-        async editMessage(msg) {
-            const content = await promptEditor('Edit', '', msg.content);
-            if (content) await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), msg.id), { content });
-        },
-
+        async deleteMessage(id) { if (confirm('Delete?')) await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), id)); },
+        async editMessage(m) { const c = await promptEditor('Edit', '', m.content); if (c) await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), m.id), { content: c }); },
         async createConversation() {
-            const snap = await getDocs(collection(db, COLLECTIONS.USER_PROFILES));
-            const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            const currentUser = Alpine.store('auth').user;
-            const others = users.filter(u => u.id !== currentUser.uid);
-            if (!others.length) { Swal.fire('No users', 'No other users to message.', 'info'); return; }
-            const opts = others.map(u => `<option value="${u.id}">${u.displayName || u.email || 'Unknown'}</option>`).join('');
-            const { value: uid } = await Swal.fire({ title: 'New Conversation', html: `<select id="new-conv" class="form-select">${opts}</select>`, preConfirm: () => document.getElementById('new-conv').value, showCancelButton: true });
-            if (uid) {
-                const existing = this.conversations.find(c => c.participants.includes(uid) && c.participants.length === 2);
-                if (existing) { this.selectConv(existing); return; }
-                await addDoc(collection(db, COLLECTIONS.CONVERSATIONS), { participants: [currentUser.uid, uid], createdAt: serverTimestamp(), lastMessageTime: serverTimestamp() });
-                this.loadConversations();
-            }
+            const snap = await getDocs(collection(db, COLLECTIONS.USER_PROFILES)); const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const u = Alpine.store('auth').user; const others = users.filter(x => x.id !== u.uid); if (!others.length) return Swal.fire('No users', '', 'info');
+            const opts = others.map(x => `<option value="${x.id}">${x.displayName || x.email}</option>`).join('');
+            const { value: id } = await Swal.fire({ title: 'New Conversation', html: `<select id="new-conv" class="form-select">${opts}</select>`, preConfirm: () => document.getElementById('new-conv').value, showCancelButton: true });
+            if (id) { const ex = this.conversations.find(c => c.participants.includes(id) && c.participants.length === 2); if (ex) return this.selectConv(ex); await addDoc(collection(db, COLLECTIONS.CONVERSATIONS), { participants: [u.uid, id], createdAt: serverTimestamp(), lastMessageTime: serverTimestamp() }); this.loadConversations(); }
         }
     }));
 }
@@ -489,262 +463,47 @@ function registerPagesData() {
 
 function registerAdminDashboard() {
     Alpine.data('adminDashboard', () => ({
-        tab: 'dashboard',
-        mobileMenu: false,
-        loading: true,
-        isAdmin: false,
-        currentUser: null,
-        
-        users: [],
-        pages: [],
-        threads: [],
-        dms: [],
-        wikiSections: [],
-        
-        searchUser: '',
-
-        navItems: [
-            { id: 'dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
-            { id: 'users', label: 'Users', icon: 'bi-people' },
-            { id: 'pages', label: 'Pages', icon: 'bi-file-earmark-text' },
-            { id: 'wiki', label: 'Wiki', icon: 'bi-book' },
-            { id: 'forums', label: 'Forums', icon: 'bi-chat-square-text' },
-            { id: 'dms', label: 'Messages', icon: 'bi-envelope' }
-        ],
-
-        get stats() {
-            return [
-                { label: 'Total Users', value: this.users.length, icon: 'bi-people', color: 'text-primary' },
-                { label: 'Pages', value: this.pages.length, icon: 'bi-file-earmark', color: 'text-success' },
-                { label: 'Threads', value: this.threads.length, icon: 'bi-chat-square-text', color: 'text-warning' },
-                { label: 'Messages', value: this.dms.length, icon: 'bi-envelope', color: 'text-info' }
-            ];
-        },
-
-        get pageTitle() {
-            return this.tab.charAt(0).toUpperCase() + this.tab.slice(1);
-        },
-
-        get filteredUsers() {
-            if (!this.searchUser) return this.users;
-            const lower = this.searchUser.toLowerCase();
-            return this.users.filter(u => 
-                (u.displayName && u.displayName.toLowerCase().includes(lower)) ||
-                (u.email && u.email.toLowerCase().includes(lower))
-            );
-        },
-
+        tab: 'dashboard', mobileMenu: false, loading: true, isAdmin: false, currentUser: null, users: [], pages: [], threads: [], dms: [], wikiSections: [], searchUser: '',
+        navItems: [{id:'dashboard',label:'Dashboard',icon:'bi-speedometer2'},{id:'users',label:'Users',icon:'bi-people'},{id:'pages',label:'Pages',icon:'bi-file-earmark-text'},{id:'wiki',label:'Wiki',icon:'bi-book'},{id:'forums',label:'Forums',icon:'bi-chat-square-text'},{id:'dms',label:'Messages',icon:'bi-envelope'}],
+        get stats() { return [{label:'Total Users',value:this.users.length,icon:'bi-people',color:'text-primary'},{label:'Pages',value:this.pages.length,icon:'bi-file-earmark',color:'text-success'},{label:'Threads',value:this.threads.length,icon:'bi-chat-square-text',color:'text-warning'},{label:'Messages',value:this.dms.length,icon:'bi-envelope',color:'text-info'}]; },
+        get pageTitle() { return this.tab.charAt(0).toUpperCase() + this.tab.slice(1); },
+        get filteredUsers() { if (!this.searchUser) return this.users; const l = this.searchUser.toLowerCase(); return this.users.filter(u => (u.displayName?.toLowerCase().includes(l)) || (u.email?.toLowerCase().includes(l))); },
         get recentActivity() {
-            const acts = [
-                ...this.threads.map(t => ({ id: t.id, text: `New thread: ${t.title}`, time: t.createdAt, icon: 'bi-chat-square-text text-warning' })),
-                ...this.dms.map(d => ({ id: d.id, text: `Message in ${d.participantNames ? Object.values(d.participantNames).join(', ') : 'Conversation'}`, time: d.lastMessageTime, icon: 'bi-envelope text-info' }))
-            ];
-            return acts.sort((a, b) => {
-                const ta = a.time?.seconds || 0;
-                const tb = b.time?.seconds || 0;
-                return tb - ta;
-            }).slice(0, 5);
+            const acts = [...this.threads.map(t => ({id:t.id,text:`New thread: ${t.title}`,time:t.createdAt,icon:'bi-chat-square-text text-warning'})),...this.dms.map(d => ({id:d.id,text:`Message in ${d.participantNames?Object.values(d.participantNames).join(', '):'Conversation'}`,time:d.lastMessageTime,icon:'bi-envelope text-info'}))];
+            return acts.sort((a,b) => (b.time?.seconds||0) - (a.time?.seconds||0)).slice(0,5);
         },
-
         async init() {
-            document.addEventListener('admin-edit-msg', (e) => this.editMessage(e.detail.cid, {id: e.detail.mid, content: e.detail.content}));
-            document.addEventListener('admin-del-msg', (e) => this.deleteMessage(e.detail.cid, e.detail.mid));
-            document.addEventListener('admin-edit-comment', (e) => this.editComment(e.detail.tid, {id: e.detail.cid, content: e.detail.content}));
-            document.addEventListener('admin-del-comment', (e) => this.deleteComment(e.detail.tid, e.detail.cid));
-
-            Alpine.effect(async () => {
-                const store = Alpine.store('auth');
-                if (!store.loading) {
-                    if (store.user) {
-                        this.currentUser = store.user;
-                        this.isAdmin = store.isAdmin;
-                        if (this.isAdmin) await this.refreshAll();
-                    } else {
-                        this.isAdmin = false;
-                    }
-                    this.loading = false;
-                }
-            });
+            document.addEventListener('admin-edit-msg', e => this.editMessage(e.detail.cid, {id:e.detail.mid,content:e.detail.content}));
+            document.addEventListener('admin-del-msg', e => this.deleteMessage(e.detail.cid, e.detail.mid));
+            document.addEventListener('admin-edit-comment', e => this.editComment(e.detail.tid, {id:e.detail.cid,content:e.detail.content}));
+            document.addEventListener('admin-del-comment', e => this.deleteComment(e.detail.tid, e.detail.cid));
+            Alpine.effect(async () => { const s = Alpine.store('auth'); if (!s.loading) { if (s.user) { this.currentUser = s.user; this.isAdmin = s.isAdmin; if (this.isAdmin) await this.refreshAll(); } this.loading = false; } });
         },
-
         async refreshAll() {
-            try {
-                const [uSnap, pSnap, tSnap, dSnap, wSnap] = await Promise.all([
-                    getDocs(collection(db, COLLECTIONS.USER_PROFILES)),
-                    getDocs(collection(db, COLLECTIONS.PAGES)),
-                    getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'))),
-                    getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), orderBy('lastMessageTime', 'desc'))),
-                    getDocs(collection(db, COLLECTIONS.WIKI_PAGES))
-                ]);
-
-                this.users = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                this.pages = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                this.threads = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                this.dms = dSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                this.wikiSections = wSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-            } catch (e) {
-                console.error('Refresh failed', e);
-                Swal.fire('Error', 'Failed to load data', 'error');
-            }
+            const [u,p,t,d,w] = await Promise.all([getDocs(collection(db, COLLECTIONS.USER_PROFILES)),getDocs(collection(db, COLLECTIONS.PAGES)),getDocs(query(collection(db, COLLECTIONS.FORMS),orderBy('createdAt','desc'))),getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS),orderBy('lastMessageTime','desc'))),getDocs(collection(db, COLLECTIONS.WIKI_PAGES))]);
+            this.users = u.docs.map(x => ({id:x.id,...x.data()})); this.pages = p.docs.map(x => ({id:x.id,...x.data()})); this.threads = t.docs.map(x => ({id:x.id,...x.data()})); this.dms = d.docs.map(x => ({id:x.id,...x.data()})); this.wikiSections = w.docs.map(x => ({id:x.id,...x.data()}));
         },
-
-        getAuthorName(uid) {
-            const u = this.users.find(x => x.id === uid);
-            return u ? (u.displayName || u.email) : 'Unknown';
-        },
-
-        getDMName(dm) {
-            if (dm.name && dm.name !== 'Chat') return dm.name;
-            return dm.participants.map(uid => this.getAuthorName(uid)).join(', ');
-        },
-
+        getAuthorName(uid) { const u = this.users.find(x => x.id === uid); return u ? (u.displayName || u.email) : 'Unknown'; },
+        getDMName(dm) { return (dm.name && dm.name !== 'Chat') ? dm.name : dm.participants.map(uid => this.getAuthorName(uid)).join(', '); },
         formatDate(ts) { return formatDate(ts); },
-
         async createPage() { await Alpine.store('mgmt').createPage(() => this.refreshAll()); },
-        async editPage(page) { await Alpine.store('mgmt').editPage(page, () => this.refreshAll()); },
+        async editPage(p) { await Alpine.store('mgmt').editPage(p, () => this.refreshAll()); },
         async deletePage(id) { await Alpine.store('mgmt').deletePage(id, () => this.refreshAll()); },
-
         async createWikiSection() { await Alpine.store('mgmt').createWikiSection(() => this.refreshAll()); },
-        async editWikiSection(section) { await Alpine.store('mgmt').editWikiSection(section, () => this.refreshAll()); },
-        async manageWikiEditors(section) { await Alpine.store('mgmt').manageWikiEditors(section, this.users, () => this.refreshAll()); },
+        async editWikiSection(s) { await Alpine.store('mgmt').editWikiSection(s, () => this.refreshAll()); },
+        async manageWikiEditors(s) { await Alpine.store('mgmt').manageWikiEditors(s, this.users, () => this.refreshAll()); },
         async deleteWikiSection(id) { await Alpine.store('mgmt').deleteWikiSection(id, () => this.refreshAll()); },
 
-        async editUser(user) {
-            const isSelf = this.currentUser.uid === user.id;
-            const { value } = await Swal.fire({
-                title: 'Edit User Profile',
-                width: '800px',
-                html: `
-                    <div class="text-start admin-modal-scroll">
-                        <h6 class="text-primary mb-3">General Info</h6>
-                        <div class="row g-2 mb-3">
-                            ${[
-                                { id: 'eu-name', label: 'Display Name', value: user.displayName || '' },
-                                { id: 'eu-handle', label: 'Handle', value: user.handle || '' },
-                                { id: 'eu-email', label: 'Email', value: user.email || '' },
-                                { id: 'eu-photo', label: 'Photo URL', value: user.photoURL || '' },
-                                { id: 'eu-css', label: 'Custom CSS', value: user.customCSS || '' }
-                            ].map(f => `
-                                <div class="col-md-6">
-                                    <label class="form-label small">${f.label}</label>
-                                    <input id="${f.id}" class="form-control form-control-sm" value="${f.value}">
-                                </div>
-                            `).join('')}
-                            <div class="col-md-6">
-                                <label class="form-label small">Role</label>
-                                <select id="eu-role" class="form-select form-select-sm">
-                                    <option value="user" ${!user.admin && user.role !== 'staff' ? 'selected' : ''}>User</option>
-                                    <option value="staff" ${user.role === 'staff' ? 'selected' : ''}>Staff</option>
-                                    <option value="admin" ${user.admin ? 'selected' : ''}>Admin</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <h6 class="text-primary mb-3 border-top pt-3">Social & Links</h6>
-                        <div class="row g-2 mb-3">
-                            ${[
-                                { id: 'eu-discordId', label: 'Discord ID', value: user.discordId || '' },
-                                { id: 'eu-discordTag', label: 'Discord Tag', value: user.discordTag || '' },
-                                { id: 'eu-discordPic', label: 'Discord Pic URL', value: user.discordPic || '' },
-                                { id: 'eu-discordURL', label: 'Discord URL', value: user.discordURL || '' },
-                                { id: 'eu-githubPic', label: 'GitHub Pic URL', value: user.githubPic || '' },
-                                { id: 'eu-githubURL', label: 'GitHub URL', value: user.githubURL || '' }
-                            ].map(f => `
-                                <div class="col-md-6">
-                                    <label class="form-label small">${f.label}</label>
-                                    <input id="${f.id}" class="form-control form-control-sm" value="${f.value}">
-                                </div>
-                            `).join('')}
-                        </div>
-
-                        <h6 class="text-primary mb-3 border-top pt-3">Preferences</h6>
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-4"><label class="form-label small">Theme</label><select id="eu-theme" class="form-select form-select-sm"><option value="dark" ${user.themePreference === 'dark' ? 'selected' : ''}>Dark</option><option value="light" ${user.themePreference === 'light' ? 'selected' : ''}>Light</option></select></div>
-                            <div class="col-md-4"><label class="form-label small">Font Scaling</label><select id="eu-font" class="form-select form-select-sm"><option value="small" ${user.fontScaling === 'small' ? 'selected' : ''}>Small</option><option value="normal" ${user.fontScaling === 'normal' ? 'selected' : ''}>Normal</option><option value="large" ${user.fontScaling === 'large' ? 'selected' : ''}>Large</option></select></div>
-                            <div class="col-md-4"><label class="form-label small">Data Retention (Days)</label><input type="number" id="eu-retention" class="form-control form-control-sm" value="${user.dataRetention || 365}"></div>
-                            <div class="col-md-4"><label class="form-label small">Notif. Frequency</label><select id="eu-freq" class="form-select form-select-sm"><option value="immediate" ${user.notificationFrequency === 'immediate' ? 'selected' : ''}>Immediate</option><option value="daily" ${user.notificationFrequency === 'daily' ? 'selected' : ''}>Daily</option><option value="weekly" ${user.notificationFrequency === 'weekly' ? 'selected' : ''}>Weekly</option></select></div>
-                            <div class="col-md-4"><label class="form-label small">Shortcuts</label><select id="eu-shortcuts" class="form-select form-select-sm"><option value="enabled" ${user.keyboardShortcuts === 'enabled' ? 'selected' : ''}>Enabled</option><option value="disabled" ${user.keyboardShortcuts === 'disabled' ? 'selected' : ''}>Disabled</option></select></div>
-                        </div>
-                        <div class="row g-2 mt-2">
-                            <div class="col-md-6"><label class="form-label small">Glass Color</label><input id="eu-glassColor" class="form-control form-control-sm" value="${user.glassColor || ''}" placeholder="#000000"></div>
-                            <div class="col-md-6"><label class="form-label small">Glass Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" min="0" max="1" class="form-control form-control-sm" value="${user.glassOpacity || 0.95}"></div>
-                            <div class="col-md-6"><label class="form-label small">Glass Blur</label><input id="eu-glassBlur" type="number" class="form-control form-control-sm" value="${user.glassBlur || ''}" placeholder="px"></div>
-                            <div class="col-12"><label class="form-label small">Background Image</label><input id="eu-bgImg" class="form-control form-control-sm" value="${user.backgroundImage || ''}" placeholder="URL"></div>
-                        </div>
-
-                        <h6 class="text-primary mb-3 border-top pt-3">Flags & Settings</h6>
-                        <div class="row g-2">
-                            ${[
-                                { id: 'eu-activity', label: 'Activity Tracking', checked: user.activityTracking },
-                                { id: 'eu-debug', label: 'Debug Mode', checked: user.debugMode },
-                                { id: 'eu-discordLinked', label: 'Discord Linked', checked: user.discordLinked },
-                                { id: 'eu-discordNotif', label: 'Discord Notifs', checked: user.discordNotifications },
-                                { id: 'eu-emailNotif', label: 'Email Notifs', checked: user.emailNotifications },
-                                { id: 'eu-focus', label: 'Focus Indicators', checked: user.focusIndicators },
-                                { id: 'eu-contrast', label: 'High Contrast', checked: user.highContrast },
-                                { id: 'eu-visible', label: 'Profile Visible', checked: user.profileVisible },
-                                { id: 'eu-push', label: 'Push Notifs', checked: user.pushNotifications },
-                                { id: 'eu-motion', label: 'Reduced Motion', checked: user.reducedMotion },
-                                { id: 'eu-reader', label: 'Screen Reader', checked: user.screenReader },
-                                { id: 'eu-sharing', label: '3rd Party Sharing', checked: user.thirdPartySharing }
-                            ].map(f => `
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="${f.id}" ${f.checked ? 'checked' : ''}>
-                                        <label class="form-check-label small">${f.label}</label>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `,
+        async editUser(u) {
+            const { value: v } = await Swal.fire({
+                title: 'Edit User', width: '800px',
+                html: `<div class="text-start admin-modal-scroll"><h6 class="text-primary mb-3">General</h6><div class="row g-2 mb-3">${[{id:'eu-name',l:'Name',v:u.displayName||''},{id:'eu-handle',l:'Handle',v:u.handle||''},{id:'eu-email',l:'Email',v:u.email||''},{id:'eu-photo',l:'Photo',v:u.photoURL||''},{id:'eu-css',l:'CSS',v:u.customCSS||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${f.v}"></div>`).join('')}<div class="col-md-6"><label class="small">Role</label><select id="eu-role" class="form-select form-select-sm"><option value="user" ${!u.admin&&u.role!=='staff'?'selected':''}>User</option><option value="staff" ${u.role==='staff'?'selected':''}>Staff</option><option value="admin" ${u.admin?'selected':''}>Admin</option></select></div></div><h6 class="text-primary mb-3 border-top pt-3">Social</h6><div class="row g-2 mb-3">${[{id:'eu-discordId',l:'Discord ID',v:u.discordId||''},{id:'eu-discordTag',l:'Discord Tag',v:u.discordTag||''},{id:'eu-discordPic',l:'Discord Pic',v:u.discordPic||''},{id:'eu-discordURL',l:'Discord URL',v:u.discordURL||''},{id:'eu-githubPic',l:'GitHub Pic',v:u.githubPic||''},{id:'eu-githubURL',l:'GitHub URL',v:u.githubURL||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${f.v}"></div>`).join('')}</div><h6 class="text-primary mb-3 border-top pt-3">Preferences</h6><div class="row g-2 mb-3"><div class="col-md-4"><label class="small">Theme</label><select id="eu-theme" class="form-select form-select-sm"><option value="dark" ${u.themePreference==='dark'?'selected':''}>Dark</option><option value="light" ${u.themePreference==='light'?'selected':''}>Light</option></select></div><div class="col-md-4"><label class="small">Font</label><select id="eu-font" class="form-select form-select-sm"><option value="small" ${u.fontScaling==='small'?'selected':''}>Small</option><option value="normal" ${u.fontScaling==='normal'?'selected':''}>Normal</option><option value="large" ${u.fontScaling==='large'?'selected':''}>Large</option></select></div><div class="col-md-4"><label class="small">Retention</label><input type="number" id="eu-retention" class="form-control form-control-sm" value="${u.dataRetention||365}"></div></div><div class="row g-2 mt-2"><div class="col-md-6"><label class="small">Glass Color</label><input id="eu-glassColor" class="form-control form-control-sm" value="${u.glassColor||''}"></div><div class="col-md-6"><label class="small">Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" class="form-control form-control-sm" value="${u.glassOpacity||0.95}"></div><div class="col-md-6"><label class="small">Blur</label><input id="eu-glassBlur" type="number" class="form-control form-control-sm" value="${u.glassBlur||''}"></div><div class="col-12"><label class="small">Background</label><input id="eu-bgImg" class="form-control form-control-sm" value="${u.backgroundImage||''}"></div></div><h6 class="text-primary mb-3 border-top pt-3">Flags</h6><div class="row g-2">${[{id:'eu-activity',l:'Activity',c:u.activityTracking},{id:'eu-debug',l:'Debug',c:u.debugMode},{id:'eu-discordLinked',l:'Discord Linked',c:u.discordLinked},{id:'eu-discordNotif',l:'Discord Notifs',c:u.discordNotifications},{id:'eu-emailNotif',l:'Email Notifs',c:u.emailNotifications},{id:'eu-focus',l:'Focus',c:u.focusIndicators},{id:'eu-contrast',l:'Contrast',c:u.highContrast},{id:'eu-visible',l:'Visible',c:u.profileVisible},{id:'eu-push',l:'Push',c:u.pushNotifications},{id:'eu-motion',l:'Motion',c:u.reducedMotion},{id:'eu-reader',l:'Reader',c:u.screenReader},{id:'eu-sharing',l:'Sharing',c:u.thirdPartySharing}].map(f=>`<div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="${f.id}" ${f.c?'checked':''}> <label class="small">${f.l}</label></div></div>`).join('')}</div></div>`,
                 showCancelButton: true,
                 preConfirm: () => ({
-                    displayName: document.getElementById('eu-name').value,
-                    handle: document.getElementById('eu-handle').value,
-                    email: document.getElementById('eu-email').value,
-                    photoURL: document.getElementById('eu-photo').value,
-                    role: document.getElementById('eu-role').value,
-                    admin: document.getElementById('eu-role').value === 'admin',
-                    customCSS: document.getElementById('eu-css').value,
-                    discordId: document.getElementById('eu-discordId').value,
-                    discordTag: document.getElementById('eu-discordTag').value,
-                    discordPic: document.getElementById('eu-discordPic').value,
-                    discordURL: document.getElementById('eu-discordURL').value,
-                    githubPic: document.getElementById('eu-githubPic').value,
-                    githubURL: document.getElementById('eu-githubURL').value,
-                    themePreference: document.getElementById('eu-theme').value,
-                    fontScaling: document.getElementById('eu-font').value,
-                    dataRetention: parseInt(document.getElementById('eu-retention').value),
-                    notificationFrequency: document.getElementById('eu-freq').value,
-                    keyboardShortcuts: document.getElementById('eu-shortcuts').value,
-                    backgroundImage: document.getElementById('eu-bgImg').value,
-                    glassColor: document.getElementById('eu-glassColor').value,
-                    glassOpacity: parseFloat(document.getElementById('eu-glassOpacity').value),
-                    glassBlur: parseInt(document.getElementById('eu-glassBlur').value),
-                    activityTracking: document.getElementById('eu-activity').checked,
-                    debugMode: document.getElementById('eu-debug').checked,
-                    discordLinked: document.getElementById('eu-discordLinked').checked,
-                    discordNotifications: document.getElementById('eu-discordNotif').checked,
-                    emailNotifications: document.getElementById('eu-emailNotif').checked,
-                    focusIndicators: document.getElementById('eu-focus').checked,
-                    highContrast: document.getElementById('eu-contrast').checked,
-                    profileVisible: document.getElementById('eu-visible').checked,
-                    pushNotifications: document.getElementById('eu-push').checked,
-                    reducedMotion: document.getElementById('eu-motion').checked,
-                    screenReader: document.getElementById('eu-reader').checked,
-                    thirdPartySharing: document.getElementById('eu-sharing').checked
+                    displayName: document.getElementById('eu-name').value, handle: document.getElementById('eu-handle').value, email: document.getElementById('eu-email').value, photoURL: document.getElementById('eu-photo').value, role: document.getElementById('eu-role').value, admin: document.getElementById('eu-role').value === 'admin', customCSS: document.getElementById('eu-css').value, discordId: document.getElementById('eu-discordId').value, discordTag: document.getElementById('eu-discordTag').value, discordPic: document.getElementById('eu-discordPic').value, discordURL: document.getElementById('eu-discordURL').value, githubPic: document.getElementById('eu-githubPic').value, githubURL: document.getElementById('eu-githubURL').value, themePreference: document.getElementById('eu-theme').value, fontScaling: document.getElementById('eu-font').value, dataRetention: parseInt(document.getElementById('eu-retention').value), glassColor: document.getElementById('eu-glassColor').value, glassOpacity: parseFloat(document.getElementById('eu-glassOpacity').value), glassBlur: parseInt(document.getElementById('eu-glassBlur').value), backgroundImage: document.getElementById('eu-bgImg').value, activityTracking: document.getElementById('eu-activity').checked, debugMode: document.getElementById('eu-debug').checked, discordLinked: document.getElementById('eu-discordLinked').checked, discordNotifications: document.getElementById('eu-discordNotif').checked, emailNotifications: document.getElementById('eu-emailNotif').checked, focusIndicators: document.getElementById('eu-focus').checked, highContrast: document.getElementById('eu-contrast').checked, profileVisible: document.getElementById('eu-visible').checked, pushNotifications: document.getElementById('eu-push').checked, reducedMotion: document.getElementById('eu-motion').checked, screenReader: document.getElementById('eu-reader').checked, thirdPartySharing: document.getElementById('eu-sharing').checked, updatedAt: serverTimestamp()
                 })
             });
-            if (value) {
-                if (isSelf && !value.admin) {
-                    Swal.fire('Error', 'You cannot remove your own admin status', 'error');
-                    return;
-                }
-                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.id), value);
-                await this.refreshAll();
-                Swal.fire('Success', 'User updated', 'success');
-            }
+            if (v) { await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, u.id), v); this.refreshAll(); Swal.fire('Success', 'User updated', 'success'); }
         },
 
         async editThread(thread) {
@@ -912,83 +671,43 @@ function registerAdminDashboard() {
 
 function registerResourcesData() {
     Alpine.data('resourcesData', () => ({
-        censusHeader: [],
-        censusData: [],
-        censusLoading: true,
-        adminLoading: true,
-        adminContent: '',
-        sortBy: 'name',
-
-        async init() {
-            await this.loadCensus();
-            await this.loadAdminDoc();
-        },
-
-        parseCSV(text) {
-            const rows = [];
-            let row = [], field = '', inQuotes = false;
-            for (let i = 0; i < text.length; i++) {
-                const c = text[i], next = text[i+1];
-                if (c === '"') { if (inQuotes && next === '"') { field += '"'; i++; } else inQuotes = !inQuotes; }
-                else if (c === ',' && !inQuotes) { row.push(field.trim()); field = ''; }
-                else if ((c === '\n' || c === '\r') && !inQuotes) { if (field || row.length) { row.push(field.trim()); rows.push(row); } row = []; field = ''; if (c === '\r' && next === '\n') i++; }
-                else field += c;
+        censusHeader: [], censusData: [], censusLoading: true, adminLoading: true, adminContent: '', sortBy: 'name',
+        async init() { await this.loadCensus(); await this.loadAdminDoc(); },
+        parseCSV(t) {
+            const res = []; let r = [], f = '', q = false;
+            for (let i = 0; i < t.length; i++) {
+                const c = t[i], n = t[i+1];
+                if (c === '"') { if (q && n === '"') { f += '"'; i++; } else q = !q; }
+                else if (c === ',' && !q) { r.push(f.trim()); f = ''; }
+                else if ((c === '\n' || c === '\r') && !q) { if (f || r.length) { r.push(f.trim()); res.push(r); } r = []; f = ''; if (c === '\r' && n === '\n') i++; }
+                else f += c;
             }
-            if (field || row.length) { row.push(field.trim()); rows.push(row); }
-            return rows;
+            if (f || r.length) { r.push(f.trim()); res.push(r); } return res;
         },
-
         async loadCensus() {
             try {
-                const url = 'https://docs.google.com/spreadsheets/d/1T25WAAJekQAjrU-dhVtDFgiIqJHHlaGIOySToTWrrp8/export?format=csv&gid=1977273024';
-                const res = await fetch(url);
-                const csv = await res.text();
-                const rows = this.parseCSV(csv);
-                
-                if (rows.length < 2) throw new Error('No data');
-                
-                this.censusHeader = rows[0];
-                this.censusData = rows.slice(1).filter(r => r[0] && r[0].length > 0);
-                this.censusLoading = false;
-            } catch (e) {
-                console.error('Census error:', e);
-                this.censusLoading = false;
-            }
+                const csv = await (await fetch('https://docs.google.com/spreadsheets/d/1T25WAAJekQAjrU-dhVtDFgiIqJHHlaGIOySToTWrrp8/export?format=csv&gid=1977273024')).text();
+                const rows = this.parseCSV(csv); if (rows.length < 2) throw 0;
+                this.censusHeader = rows[0]; this.censusData = rows.slice(1).filter(r => r[0]?.length);
+            } catch (e) {} this.censusLoading = false;
         },
-
         async loadAdminDoc() {
             try {
-                const url = 'https://docs.google.com/document/d/1WvxTStjkBbQh9dp-59v1jJbaLPuofrnk_4N12mSMFo4/export?format=html';
-                const res = await fetch(url);
-                const html = await res.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                this.adminContent = doc.body.innerHTML;
-                this.adminLoading = false;
-            } catch (e) {
-                console.error('Admin doc error:', e);
-                this.adminLoading = false;
-            }
+                const html = await (await fetch('https://docs.google.com/document/d/1WvxTStjkBbQh9dp-59v1jJbaLPuofrnk_4N12mSMFo4/export?format=html')).text();
+                this.adminContent = new DOMParser().parseFromString(html, 'text/html').body.innerHTML;
+            } catch (e) {} this.adminLoading = false;
         },
-
         get filteredCensus() {
-            let data = [...this.censusData];
-            if (this.sortBy === 'name') data.sort((a,b) => a[0].localeCompare(b[0]));
-            else if (this.sortBy === 'total') data.sort((a,b) => (parseInt(b[1])||0) - (parseInt(a[1])||0));
-            return data;
+            let d = [...this.censusData];
+            if (this.sortBy === 'name') d.sort((a,b) => a[0].localeCompare(b[0]));
+            else if (this.sortBy === 'total') d.sort((a,b) => (parseInt(b[1])||0) - (parseInt(a[1])||0));
+            return d;
         }
     }));
 }
 
 function registerAll() {
-    registerAuthStore();
-    registerForumData();
-    registerMessageData();
-    registerPageWikiManagement();
-    registerWikiApp();
-    registerPagesData();
-    registerAdminDashboard();
-    registerResourcesData();
+    registerAuthStore(); registerUsersStore(); registerPageWikiManagement(); registerForumData(); registerWikiApp(); registerPagesData(); registerAdminDashboard(); registerResourcesData(); registerMessageData();
 }
 
 document.addEventListener('alpine:init', () => {
