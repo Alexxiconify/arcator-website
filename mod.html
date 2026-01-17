@@ -9,115 +9,9 @@
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        :root {
-            --sidebar-width: 280px;
-            --glass-bg: rgba(33, 37, 41, 0.85);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --navbar-height: 56px; /* Approximate Bootstrap navbar height */
-        }
-        body {
-            background-image: url('./creativespawn.png');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            min-height: 100vh;
-            overflow-x: hidden;
-            padding-top: var(--navbar-height); /* Push content down for fixed navbar */
-        }
-        .backdrop-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(10px);
-            z-index: -1;
-        }
-        .sidebar {
-            width: var(--sidebar-width);
-            height: calc(100vh - var(--navbar-height));
-            position: fixed;
-            top: var(--navbar-height);
-            left: 0;
-            background: var(--glass-bg);
-            border-right: 1px solid var(--glass-border);
-            z-index: 900; /* Below navbar (1030) */
-            transition: transform 0.3s ease;
-            overflow-y: auto;
-        }
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 2rem;
-            transition: margin-left 0.3s ease;
-        }
-        .glass-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 1rem;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }
-        .nav-link-custom {
-            color: rgba(255, 255, 255, 0.7);
-            padding: 0.8rem 1.5rem;
-            border-radius: 0.5rem;
-            margin-bottom: 0.5rem;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-        }
-        .nav-link-custom:hover, .nav-link-custom.active {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateX(5px);
-        }
-        .nav-link-custom.active {
-            background: var(--bs-primary);
-            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
-        }
-        .stat-card {
-            transition: transform 0.2s;
-        }
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        .table-hover tbody tr:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-        .avatar-sm {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        .search-input {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
-            color: #fff;
-        }
-        .search-input:focus {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            border-color: var(--bs-primary);
-            box-shadow: none;
-        }
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
-            .sidebar.show { transform: translateX(0); }
-            .main-content { margin-left: 0; }
-        }
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
-    </style>
+
 </head>
-<body>
+<body class="admin-body">
     <!-- Top Navbar Placeholder -->
     <div id="navbar-placeholder"></div>
 
@@ -157,20 +51,25 @@
 
         <!-- Main Content -->
         <main class="main-content w-100">
+            <div class="flex-grow-1">
             <!-- Loading State -->
-            <div x-show="loading" class="d-flex justify-content-center align-items-center" style="height: 80vh;">
-                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-            </div>
+            <template x-if="loading">
+                <div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+                </div>
+            </template>
 
             <!-- Access Denied -->
-            <div x-show="!loading && !isAdmin" class="d-flex justify-content-center align-items-center" style="height: 80vh;">
-                <div class="glass-card p-5 text-center">
-                    <i class="bi bi-shield-lock fs-1 text-warning mb-3"></i>
-                    <h2>Access Denied</h2>
-                    <p class="text-muted">You do not have permission to view this page.</p>
-                    <a href="./index.html" class="btn btn-primary mt-3">Go Home</a>
+            <template x-if="!loading && !isAdmin">
+                <div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
+                    <div class="glass-card p-5 text-center">
+                        <i class="bi bi-shield-lock fs-1 text-warning mb-3"></i>
+                        <h2>Access Denied</h2>
+                        <p class="text-muted">You do not have permission to view this page.</p>
+                        <a href="./index.html" class="btn btn-primary mt-3">Go Home</a>
+                    </div>
                 </div>
-            </div>
+            </template>
 
             <!-- Dashboard Content -->
             <div x-show="!loading && isAdmin" x-transition.opacity>
@@ -385,12 +284,13 @@
                 </div>
 
             </div>
+            <div id="footer-placeholder" class="mt-auto pt-4"></div>
         </main>
+        <div id="navbar-placeholder"></div>
     </div>
-
     <script type="module" src="./app.js"></script>
     <script type="module">
-        import { db, COLLECTIONS, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, limit } from './app.js';
+        import { db, COLLECTIONS, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, limit, increment } from './app.js';
         import { formatDate } from './app.js';
 
         document.addEventListener('alpine:init', () => {
@@ -435,6 +335,12 @@
                 },
 
                 async init() {
+                    // Event listeners for SweetAlert actions
+                    document.addEventListener('admin-edit-msg', (e) => this.editMessage(e.detail.cid, {id: e.detail.mid, content: e.detail.content}));
+                    document.addEventListener('admin-del-msg', (e) => this.deleteMessage(e.detail.cid, e.detail.mid));
+                    document.addEventListener('admin-edit-comment', (e) => this.editComment(e.detail.tid, {id: e.detail.cid, content: e.detail.content}));
+                    document.addEventListener('admin-del-comment', (e) => this.deleteComment(e.detail.tid, e.detail.cid));
+
                     // Wait for auth
                     Alpine.effect(async () => {
                         const store = Alpine.store('auth');
@@ -506,7 +412,12 @@
                 async editPage(page) {
                     const { value } = await Swal.fire({
                         title: 'Edit Page',
-                        html: `<input id="ep-title" class="form-control mb-2" value="${page.title}"><input id="ep-slug" class="form-control mb-2" value="${page.slug}"><textarea id="ep-content" class="form-control" rows="10">${page.content}</textarea>`,
+                        width: '800px',
+                        html: `
+                            <input id="ep-title" class="form-control mb-2" placeholder="Title" value="${page.title}">
+                            <input id="ep-slug" class="form-control mb-2" placeholder="Slug" value="${page.slug}">
+                            <textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content">${page.content}</textarea>
+                        `,
                         showCancelButton: true,
                         preConfirm: () => ({
                             title: document.getElementById('ep-title').value,
@@ -532,24 +443,167 @@
                 async editUser(user) {
                     const isSelf = this.currentUser.uid === user.id;
                     const { value } = await Swal.fire({
-                        title: 'Edit User',
+                        title: 'Edit User Profile',
+                        width: '800px',
                         html: `
-                            <input id="eu-name" class="form-control mb-2" placeholder="Display Name" value="${user.displayName || ''}">
-                            <input id="eu-handle" class="form-control mb-2" placeholder="Handle" value="${user.handle || ''}">
-                            <div class="form-check text-start">
-                                <input class="form-check-input" type="checkbox" id="eu-admin" ${user.admin ? 'checked' : ''} ${isSelf ? 'disabled' : ''}>
-                                <label class="form-check-label" for="eu-admin">Administrator</label>
+                            <div class="text-start" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+                                <h6 class="text-primary mb-3">General Info</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Display Name</label>
+                                        <input id="eu-name" class="form-control form-control-sm" value="${user.displayName || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Handle</label>
+                                        <input id="eu-handle" class="form-control form-control-sm" value="${user.handle || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Email</label>
+                                        <input id="eu-email" class="form-control form-control-sm" value="${user.email || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Photo URL</label>
+                                        <input id="eu-photo" class="form-control form-control-sm" value="${user.photoURL || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Role</label>
+                                        <select id="eu-role" class="form-select form-select-sm">
+                                            <option value="user" ${!user.admin && user.role !== 'staff' ? 'selected' : ''}>User</option>
+                                            <option value="staff" ${user.role === 'staff' ? 'selected' : ''}>Staff</option>
+                                            <option value="admin" ${user.admin ? 'selected' : ''}>Admin</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Custom CSS</label>
+                                        <input id="eu-css" class="form-control form-control-sm" value="${user.customCSS || ''}">
+                                    </div>
+                                </div>
+
+                                <h6 class="text-primary mb-3 border-top pt-3">Social & Links</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Discord ID</label>
+                                        <input id="eu-discordId" class="form-control form-control-sm" value="${user.discordId || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Discord Tag</label>
+                                        <input id="eu-discordTag" class="form-control form-control-sm" value="${user.discordTag || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Discord Pic URL</label>
+                                        <input id="eu-discordPic" class="form-control form-control-sm" value="${user.discordPic || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Discord URL</label>
+                                        <input id="eu-discordURL" class="form-control form-control-sm" value="${user.discordURL || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">GitHub Pic URL</label>
+                                        <input id="eu-githubPic" class="form-control form-control-sm" value="${user.githubPic || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">GitHub URL</label>
+                                        <input id="eu-githubURL" class="form-control form-control-sm" value="${user.githubURL || ''}">
+                                    </div>
+                                </div>
+
+                                <h6 class="text-primary mb-3 border-top pt-3">Preferences</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Theme</label>
+                                        <select id="eu-theme" class="form-select form-select-sm">
+                                            <option value="dark" ${user.themePreference === 'dark' ? 'selected' : ''}>Dark</option>
+                                            <option value="light" ${user.themePreference === 'light' ? 'selected' : ''}>Light</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Font Scaling</label>
+                                        <select id="eu-font" class="form-select form-select-sm">
+                                            <option value="small" ${user.fontScaling === 'small' ? 'selected' : ''}>Small</option>
+                                            <option value="normal" ${user.fontScaling === 'normal' ? 'selected' : ''}>Normal</option>
+                                            <option value="large" ${user.fontScaling === 'large' ? 'selected' : ''}>Large</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Data Retention (Days)</label>
+                                        <input type="number" id="eu-retention" class="form-control form-control-sm" value="${user.dataRetention || 365}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Notif. Frequency</label>
+                                        <select id="eu-freq" class="form-select form-select-sm">
+                                            <option value="immediate" ${user.notificationFrequency === 'immediate' ? 'selected' : ''}>Immediate</option>
+                                            <option value="daily" ${user.notificationFrequency === 'daily' ? 'selected' : ''}>Daily</option>
+                                            <option value="weekly" ${user.notificationFrequency === 'weekly' ? 'selected' : ''}>Weekly</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Shortcuts</label>
+                                        <select id="eu-shortcuts" class="form-select form-select-sm">
+                                            <option value="enabled" ${user.keyboardShortcuts === 'enabled' ? 'selected' : ''}>Enabled</option>
+                                            <option value="disabled" ${user.keyboardShortcuts === 'disabled' ? 'selected' : ''}>Disabled</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <h6 class="text-primary mb-3 border-top pt-3">Flags & Settings</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-activity" ${user.activityTracking ? 'checked' : ''}><label class="form-check-label small">Activity Tracking</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-debug" ${user.debugMode ? 'checked' : ''}><label class="form-check-label small">Debug Mode</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-discordLinked" ${user.discordLinked ? 'checked' : ''}><label class="form-check-label small">Discord Linked</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-discordNotif" ${user.discordNotifications ? 'checked' : ''}><label class="form-check-label small">Discord Notifs</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-emailNotif" ${user.emailNotifications ? 'checked' : ''}><label class="form-check-label small">Email Notifs</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-focus" ${user.focusIndicators ? 'checked' : ''}><label class="form-check-label small">Focus Indicators</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-contrast" ${user.highContrast ? 'checked' : ''}><label class="form-check-label small">High Contrast</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-visible" ${user.profileVisible ? 'checked' : ''}><label class="form-check-label small">Profile Visible</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-push" ${user.pushNotifications ? 'checked' : ''}><label class="form-check-label small">Push Notifs</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-motion" ${user.reducedMotion ? 'checked' : ''}><label class="form-check-label small">Reduced Motion</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-reader" ${user.screenReader ? 'checked' : ''}><label class="form-check-label small">Screen Reader</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="eu-sharing" ${user.thirdPartySharing ? 'checked' : ''}><label class="form-check-label small">3rd Party Sharing</label></div></div>
+                                </div>
                             </div>
                         `,
                         showCancelButton: true,
                         preConfirm: () => ({
                             displayName: document.getElementById('eu-name').value,
                             handle: document.getElementById('eu-handle').value,
-                            admin: document.getElementById('eu-admin').checked
+                            email: document.getElementById('eu-email').value,
+                            photoURL: document.getElementById('eu-photo').value,
+                            role: document.getElementById('eu-role').value,
+                            admin: document.getElementById('eu-role').value === 'admin',
+                            customCSS: document.getElementById('eu-css').value,
+                            
+                            discordId: document.getElementById('eu-discordId').value,
+                            discordTag: document.getElementById('eu-discordTag').value,
+                            discordPic: document.getElementById('eu-discordPic').value,
+                            discordURL: document.getElementById('eu-discordURL').value,
+                            githubPic: document.getElementById('eu-githubPic').value,
+                            githubURL: document.getElementById('eu-githubURL').value,
+                            
+                            themePreference: document.getElementById('eu-theme').value,
+                            fontScaling: document.getElementById('eu-font').value,
+                            dataRetention: parseInt(document.getElementById('eu-retention').value),
+                            notificationFrequency: document.getElementById('eu-freq').value,
+                            keyboardShortcuts: document.getElementById('eu-shortcuts').value,
+                            
+                            activityTracking: document.getElementById('eu-activity').checked,
+                            debugMode: document.getElementById('eu-debug').checked,
+                            discordLinked: document.getElementById('eu-discordLinked').checked,
+                            discordNotifications: document.getElementById('eu-discordNotif').checked,
+                            emailNotifications: document.getElementById('eu-emailNotif').checked,
+                            focusIndicators: document.getElementById('eu-focus').checked,
+                            highContrast: document.getElementById('eu-contrast').checked,
+                            profileVisible: document.getElementById('eu-visible').checked,
+                            pushNotifications: document.getElementById('eu-push').checked,
+                            reducedMotion: document.getElementById('eu-motion').checked,
+                            screenReader: document.getElementById('eu-reader').checked,
+                            thirdPartySharing: document.getElementById('eu-sharing').checked
                         })
                     });
                     if (value) {
-                        if (isSelf) delete value.admin;
+                        if (isSelf && !value.admin) {
+                            Swal.fire('Error', 'You cannot remove your own admin status', 'error');
+                            return;
+                        }
                         await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.id), value);
                         await this.refreshAll();
                         Swal.fire('Success', 'User updated', 'success');
@@ -559,12 +613,29 @@
                 async editThread(thread) {
                     const { value } = await Swal.fire({
                         title: 'Edit Thread',
-                        html: `<input id="et-title" class="form-control mb-2" value="${thread.title}"><select id="et-cat" class="form-select mb-2"><option value="General">General</option><option value="Announcements">Announcements</option><option value="Support">Support</option></select><textarea id="et-desc" class="form-control" rows="5">${thread.description}</textarea>`,
+                        html: `
+                            <input id="et-title" class="form-control mb-2" placeholder="Title" value="${thread.title}">
+                            <input id="et-tags" class="form-control mb-2" placeholder="Tags (comma separated)" value="${thread.tags || ''}">
+                            <select id="et-cat" class="form-select mb-2">
+                                <option value="General">General</option>
+                                <option value="Announcements">Announcements</option>
+                                <option value="Support">Support</option>
+                                <option value="Gaming">Gaming</option>
+                                <option value="Discussion">Discussion</option>
+                            </select>
+                            <div class="form-check text-start mb-2">
+                                <input class="form-check-input" type="checkbox" id="et-locked" ${thread.locked ? 'checked' : ''}>
+                                <label class="form-check-label" for="et-locked">Lock Thread</label>
+                            </div>
+                            <textarea id="et-desc" class="form-control" rows="5" placeholder="Description">${thread.description}</textarea>
+                        `,
                         didOpen: () => document.getElementById('et-cat').value = thread.category || 'General',
                         showCancelButton: true,
                         preConfirm: () => ({
                             title: document.getElementById('et-title').value,
+                            tags: document.getElementById('et-tags').value,
                             category: document.getElementById('et-cat').value,
+                            locked: document.getElementById('et-locked').checked,
                             description: document.getElementById('et-desc').value
                         })
                     });
@@ -589,7 +660,18 @@
                     const comments = snap.docs.map(d => {
                         const data = d.data();
                         const author = this.getAuthorName(data.authorId);
-                        return `<div class="mb-2 p-2 border rounded border-secondary"><small class="text-info">${author}</small><br>${data.content}</div>`;
+                        return `
+                            <div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25">
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-info">${author}</small>
+                                    <small class="text-muted">${this.formatDate(data.createdAt)}</small>
+                                </div>
+                                <div class="my-1">${data.content}</div>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-comment', {detail: {tid: '${thread.id}', cid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button>
+                                    <button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-comment', {detail: {tid: '${thread.id}', cid: '${d.id}'}}))">Del</button>
+                                </div>
+                            </div>`;
                     }).join('');
                     
                     Swal.fire({
@@ -604,7 +686,19 @@
                     const msgs = snap.docs.map(d => {
                         const data = d.data();
                         const author = this.getAuthorName(data.senderId);
-                        return `<div class="mb-1"><small class="text-muted">${author}:</small> ${data.content}</div>`;
+                        const isMe = this.currentUser.uid === data.senderId;
+                        return `
+                            <div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25">
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-info">${author}</small>
+                                    <small class="text-muted">${this.formatDate(data.createdAt)}</small>
+                                </div>
+                                <div class="my-1">${data.content}</div>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-msg', {detail: {cid: '${dm.id}', mid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button>
+                                    <button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-msg', {detail: {cid: '${dm.id}', mid: '${d.id}'}}))">Del</button>
+                                </div>
+                            </div>`;
                     }).join('');
 
                     Swal.fire({
@@ -619,6 +713,67 @@
                         await deleteDoc(doc(db, COLLECTIONS.CONVERSATIONS, id));
                         await this.refreshAll();
                         Swal.fire('Deleted', '', 'success');
+                    }
+                },
+
+                async deleteMessage(convId, msgId) {
+                    if ((await Swal.fire({ title: 'Delete Message?', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                        await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msgId));
+                        // Refresh the view if open
+                        const openModal = Swal.getPopup();
+                        if (openModal) {
+                            const dm = this.dms.find(d => d.id === convId);
+                            if (dm) this.viewDM(dm);
+                        }
+                    }
+                },
+
+                async editMessage(convId, msg) {
+                    const { value } = await Swal.fire({
+                        title: 'Edit Message',
+                        input: 'textarea',
+                        inputValue: msg.content,
+                        showCancelButton: true
+                    });
+                    if (value) {
+                        await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msg.id), { content: value });
+                         // Refresh the view if open
+                        const openModal = Swal.getPopup();
+                        if (openModal) {
+                            const dm = this.dms.find(d => d.id === convId);
+                            if (dm) this.viewDM(dm);
+                        }
+                    }
+                },
+
+                async deleteComment(threadId, commentId) {
+                    if ((await Swal.fire({ title: 'Delete Comment?', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                        await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), commentId));
+                        await updateDoc(doc(db, COLLECTIONS.FORMS, threadId), { commentCount: increment(-1) });
+                        // Refresh view
+                        const openModal = Swal.getPopup();
+                        if (openModal) {
+                            const t = this.threads.find(x => x.id === threadId);
+                            if (t) this.viewThread(t);
+                        }
+                    }
+                },
+
+                async editComment(threadId, comment) {
+                    const { value } = await Swal.fire({
+                        title: 'Edit Comment',
+                        input: 'textarea',
+                        inputValue: comment.content,
+                        showCancelButton: true
+                    });
+                    if (value) {
+                        await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), comment.id), { content: value });
+                        // Refresh view
+                        const openModal = Swal.getPopup();
+                        if (openModal) {
+                            const t = this.threads.find(x => x.id === threadId);
+                            if (t) this.viewThread(t);
+                        }
                     }
                 }
             }));

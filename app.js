@@ -68,7 +68,7 @@ function randomIdentity() {
 }
 
 const NAV_HTML = `
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top border-bottom border-primary">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top border-bottom border-primary">
     <div class="container-fluid px-4">
         <a class="navbar-brand fw-bold" href="./index.html">Arcator</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
@@ -123,6 +123,14 @@ function initLayout() {
 
     const footerPlaceholder = document.getElementById('footer-placeholder');
     if (footerPlaceholder) footerPlaceholder.innerHTML = FOOTER_HTML;
+
+    // Re-run user section update in case auth loaded before layout
+    if (window.Alpine) {
+        const store = Alpine.store('auth');
+        if (store && !store.loading) {
+            updateUserSection(store.user, store.profile, store.isAdmin);
+        }
+    }
 }
 
 function updateUserSection(user, profile, isAdmin = false) {
@@ -140,12 +148,15 @@ function updateUserSection(user, profile, isAdmin = false) {
         profileLink.classList.add('d-flex');
         if (avatar) avatar.src = profile?.photoURL || user.photoURL || './defaultuser.png';
         if (userName) userName.textContent = profile?.displayName || user.displayName || 'User';
-        if (adminLink) adminLink.style.display = isAdmin ? '' : 'none';
+        if (adminLink) {
+            if (isAdmin) adminLink.classList.remove('d-none');
+            else adminLink.classList.add('d-none');
+        }
     } else {
         signInBtn.classList.remove('d-none');
         profileLink.classList.add('d-none');
         profileLink.classList.remove('d-flex');
-        if (adminLink) adminLink.style.display = 'none';
+        if (adminLink) adminLink.classList.add('d-none');
     }
 }
 
@@ -538,6 +549,7 @@ function registerAll() {
 }
 
 document.addEventListener('alpine:init', registerAll);
+if (window.Alpine) registerAll();
 document.addEventListener('DOMContentLoaded', initLayout);
 
 export {
