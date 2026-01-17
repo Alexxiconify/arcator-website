@@ -67,8 +67,7 @@
 
 <script type="module" src="./app.js"></script>
 <script type="module">
-    import { db, COLLECTIONS, collection, getDocs, getDoc, doc, query, orderBy } from './firebase-init.js';
-    import { formatDate } from './helpers.js';
+    import { db, COLLECTIONS, collection, getDocs, getDoc, doc, query, orderBy, formatDate } from './app.js';
 
     document.addEventListener('alpine:init', () => {
         Alpine.data('pagesData', () => ({
