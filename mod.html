@@ -42,7 +42,7 @@
                         <div class="d-flex align-items-center gap-3">
                             <button class="btn btn-outline-light btn-sm" @click="refreshAll" title="Refresh Data"><i class="bi bi-arrow-clockwise"></i></button>
                             <div class="d-flex align-items-center gap-2 glass-card px-3 py-2 rounded-pill">
-                                <img :src="currentUser?.photoURL || './defaultuser.png'" class="avatar-sm" alt="User Avatar">
+                                <img :src="currentUser?.photoURL || './defaultuser.png'" class="avatar-md" alt="User Avatar">
                                 <span class="fw-medium" x-text="currentUser?.displayName || 'User'"></span>
                             </div>
                         </div>
@@ -88,7 +88,7 @@
                                     <tbody>
                                         <template x-for="user in filteredUsers" :key="user.id">
                                             <tr>
-                                                <td><div class="d-flex align-items-center gap-2"><img :src="user.photoURL || './defaultuser.png'" class="avatar-sm" alt="User Avatar"><span x-text="user.displayName || 'Unknown'"></span></div></td>
+                                                <td><div class="d-flex align-items-center gap-2"><img :src="user.photoURL || './defaultuser.png'" class="avatar-md" alt="User Avatar"><span x-text="user.displayName || 'Unknown'"></span></div></td>
                                                 <td x-text="user.email"></td>
                                                 <td><span class="badge" :class="user.admin ? 'bg-danger' : 'bg-secondary'" x-text="user.admin ? 'Admin' : 'User'"></span></td>
                                                 <td x-text="formatDate(user.createdAt)"></td>

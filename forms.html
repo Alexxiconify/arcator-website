@@ -115,7 +115,7 @@
                                         </div>
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center gap-2 mb-1">
-                                                <img :src="getAuthor(comment.authorId).photoURL || './defaultuser.png'" class="profile-img-sm">
+                                                <img :src="getAuthor(comment.authorId).photoURL || './defaultuser.png'" class="avatar-sm">
                                                 <strong x-text="getAuthor(comment.authorId).displayName || 'Unknown'"></strong>
                                                 <small class="text-secondary" x-text="formatDate(comment.createdAt)"></small>
                                                 <div class="d-flex gap-1 ms-2">
@@ -171,7 +171,7 @@
                                                             </div>
                                                             <div class="flex-grow-1">
                                                                 <div class="d-flex align-items-center gap-2 mb-1">
-                                                                    <img :src="getAuthor(reply.authorId).photoURL || './defaultuser.png'" class="profile-img-sm">
+                                                                    <img :src="getAuthor(reply.authorId).photoURL || './defaultuser.png'" class="avatar-sm">
                                                                     <strong x-text="getAuthor(reply.authorId).displayName || 'Unknown'"></strong>
                                                                     <small class="text-secondary" x-text="formatDate(reply.createdAt)"></small>
                                                                     <div class="d-flex gap-1 ms-2">
