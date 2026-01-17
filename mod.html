@@ -33,12 +33,9 @@
 
         <main class="container py-5">
             <div class="row g-4">
-                <!-- Users -->
                 <div class="col-lg-6">
                     <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Users</h5>
-                        </div>
+                        <div class="card-header"><h5 class="mb-0">Users</h5></div>
                         <div class="card-body">
                             <div class="list-group list-group-flush admin-list-scroll">
                                 <template x-for="user in users" :key="user.id">
@@ -55,7 +52,6 @@
                     </div>
                 </div>
 
-                <!-- Pages -->
                 <div class="col-lg-6">
                     <div class="card h-100">
                         <div class="card-header d-flex justify-content-between align-items-center">
@@ -79,7 +75,6 @@
                     </div>
                 </div>
 
-                <!-- Threads -->
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header"><h5 class="mb-0">Forum Threads</h5></div>
@@ -110,7 +105,6 @@
                     </div>
                 </div>
 
-                <!-- DMs -->
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header"><h5 class="mb-0">Direct Messages</h5></div>
@@ -147,313 +141,6 @@
 <div id="footer-placeholder"></div>
 
 <script type="module" src="./app.js"></script>
-<script type="module">
-    import { db, COLLECTIONS, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, limit, formatDate } from './app.js';
-
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('adminData', () => ({
-            users: [],
-            pages: [],
-            threads: [],
-            posts: [],
-            dms: [],
-            loading: true,
-            isAdmin: false,
-
-            async init() {
-                Alpine.effect(async () => {
-                    const store = Alpine.store('auth');
-                    if (!store.loading) {
-                        if (store.user) {
-                            this.isAdmin = store.isAdmin;
-                            if (this.isAdmin) await this.refreshAll();
-                        } else {
-                            this.isAdmin = false;
-                        }
-                        this.loading = false;
-                    }
-                });
-            },
-
-            async refreshAll() {
-                try {
-                    const results = await Promise.allSettled([
-                        getDocs(collection(db, COLLECTIONS.USER_PROFILES)),
-                        getDocs(collection(db, COLLECTIONS.PAGES)),
-                        getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'))),
-                        getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), orderBy('lastMessageTime', 'desc')))
-                    ]);
-
-                    // Users
-                    if (results[0].status === 'fulfilled') {
-                        this.users = results[0].value.docs.map(d => ({ id: d.id, ...d.data() }));
-                    } else {
-                        console.error('Failed to fetch users:', results[0].reason);
-                    }
-
-                    // Pages
-                    if (results[1].status === 'fulfilled') {
-                        this.pages = results[1].value.docs.map(d => ({ id: d.id, ...d.data() }));
-                    } else {
-                        console.error('Failed to fetch pages:', results[1].reason);
-                    }
-
-                    if (results[2].status === 'fulfilled') {
-                        this.threads = results[2].value.docs.map(d => ({ id: d.id, ...d.data() }));
-                    } else {
-                        console.error('Failed to fetch threads:', results[2].reason);
-                        try {
-                            const snap = await getDocs(collection(db, COLLECTIONS.FORMS));
-                            this.threads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                        } catch (e) { console.error('Fallback threads failed:', e); }
-                    }
-
-                    if (results[3].status === 'fulfilled') {
-                        this.dms = results[3].value.docs.map(d => ({ id: d.id, ...d.data() }));
-                    } else {
-                        console.error('Failed to fetch DMs:', results[3].reason);
-                        try {
-                            const snap = await getDocs(collection(db, COLLECTIONS.CONVERSATIONS));
-                            this.dms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                        } catch (e) { console.error('Fallback DMs failed:', e); }
-                    }
-                } catch (e) {
-                    console.error('Error refreshing admin data:', e);
-                }
-            },
-
-            getAuthorName(uid) {
-                const user = this.users.find(u => u.id === uid);
-                return user ? (user.displayName || user.email) : 'Unknown';
-            },
-
-            getDMName(dm) {
-                if (dm.name && dm.name !== 'Chat') return dm.name;
-                const names = dm.participants.map(uid => this.getAuthorName(uid)).join(', ');
-                return names || 'Chat';
-            },
-
-            formatDate(ts) { return formatDate(ts); },
-
-            async createPage() {
-                const { value } = await Swal.fire({
-                    title: 'Create Page',
-                    html: '<input id="new-page-title" class="form-control mb-2" placeholder="Title"><input id="new-page-slug" class="form-control mb-2" placeholder="Slug"><textarea id="new-page-content" class="form-control" rows="10" placeholder="Content"></textarea>',
-                    showCancelButton: true,
-                    preConfirm: () => ({
-                        title: document.getElementById('new-page-title').value,
-                        slug: document.getElementById('new-page-slug').value,
-                        content: document.getElementById('new-page-content').value,
-                        createdAt: new Date()
-                    })
-                });
-                if (value) {
-                    await addDoc(collection(db, COLLECTIONS.PAGES), value);
-                    await this.refreshAll();
-                    Swal.fire('Created', '', 'success');
-                }
-            },
-
-            async editPage(page) {
-                const { value } = await Swal.fire({
-                    title: 'Edit Page',
-                    html: `<input id="ed-page-title" class="form-control mb-2" placeholder="Title" value="${page.title || ''}"><input id="ed-page-slug" class="form-control mb-2" placeholder="Slug" value="${page.slug || ''}"><textarea id="ed-page-content" class="form-control" rows="10">${page.content || ''}</textarea>`,
-                    showCancelButton: true,
-                    preConfirm: () => ({
-                        title: document.getElementById('ed-page-title').value,
-                        slug: document.getElementById('ed-page-slug').value,
-                        content: document.getElementById('ed-page-content').value
-                    })
-                });
-                if (value) {
-                    await updateDoc(doc(db, COLLECTIONS.PAGES, page.id), value);
-                    await this.refreshAll();
-                    Swal.fire('Updated', '', 'success');
-                }
-            },
-
-            async deletePage(id) {
-                if (confirm('Delete this page?')) {
-                    await deleteDoc(doc(db, COLLECTIONS.PAGES, id));
-                    await this.refreshAll();
-                }
-            },
-
-            async editThread(thread) {
-                const { value } = await Swal.fire({
-                    title: 'Edit Thread',
-                    html: `<input id="ed-thread-title" class="form-control mb-2" value="${thread.title || ''}"><select id="ed-thread-category" class="form-select mb-2"><option value="General" ${thread.category === 'General' ? 'selected' : ''}>General</option><option value="Announcements" ${thread.category === 'Announcements' ? 'selected' : ''}>Announcements</option><option value="Support" ${thread.category === 'Support' ? 'selected' : ''}>Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10">${thread.description || ''}</textarea>`,
-                    showCancelButton: true,
-                    preConfirm: () => ({
-                        title: document.getElementById('ed-thread-title').value,
-                        category: document.getElementById('ed-thread-category').value,
-                        description: document.getElementById('ed-thread-content').value
-                    })
-                });
-                if (value) {
-                    await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), value);
-                    await this.refreshAll();
-                    Swal.fire('Updated', '', 'success');
-                }
-            },
-
-            async deleteThread(id) {
-                if (confirm('Delete this thread?')) {
-                    await deleteDoc(doc(db, COLLECTIONS.FORMS, id));
-                    await this.refreshAll();
-                }
-            },
-
-            async viewThread(thread) {
-                const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc')));
-                const comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                window.currentThreadComments = comments;
-                
-                const commentsHtml = comments.map(c => `
-                    <div class="mb-2 border-bottom pb-1">
-                        <div class="d-flex justify-content-between">
-                            <small class="text-muted">${this.getAuthorName(c.authorId)} (${formatDate(c.createdAt)}):</small>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-link btn-sm p-0 text-primary me-2" onclick="window.editThreadComment('${thread.id}', '${c.id}')">Edit</button>
-                                <button class="btn btn-link btn-sm p-0 text-warning me-2" onclick="window.censorThreadComment('${thread.id}', '${c.id}')">Redact</button>
-                                <button class="btn btn-link btn-sm p-0 text-danger" onclick="window.deleteThreadComment('${thread.id}', '${c.id}')">Delete</button>
-                            </div>
-                        </div>
-                        <div>${c.content}</div>
-                        ${c.censored ? '<div class="text-warning small">[Redacted by Staff]</div>' : ''}
-                    </div>
-                `).join('');
-
-                window.deleteThreadComment = async (threadId, commentId) => {
-                    if(confirm('Delete comment?')) {
-                        await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), commentId));
-                        Swal.close();
-                        this.viewThread(thread); // Refresh
-                    }
-                };
-                
-                window.censorThreadComment = async (threadId, commentId) => {
-                    const comment = window.currentThreadComments.find(c => c.id === commentId);
-                    if(!comment) return;
-
-                    const { value } = await Swal.fire({
-                        title: 'Redact Comment',
-                        input: 'textarea',
-                        inputValue: comment.content.replace(/<[^>]*>?/gm, ''),
-                        inputLabel: 'Modify text (e.g. replace with [Redacted by Staff])',
-                        showCancelButton: true
-                    });
-
-                    if (value !== undefined) {
-                        await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), commentId), { 
-                            content: value, 
-                            censored: true 
-                        });
-                        Swal.close();
-                        this.viewThread(thread);
-                    }
-                };
-                
-                window.editThreadComment = async (threadId, commentId) => {
-                    const comment = window.currentThreadComments.find(c => c.id === commentId);
-                    if(!comment) return;
-                    const { value } = await Swal.fire({
-                        title: 'Edit Comment',
-                        input: 'textarea',
-                        inputValue: comment.content.replace(/<[^>]*>?/gm, ''),
-                        showCancelButton: true
-                    });
-                    if (value) {
-                        await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), commentId), { content: value });
-                        Swal.close();
-                        this.viewThread(thread);
-                    }
-                };
-
-                Swal.fire({
-                    title: thread.title,
-                    html: `<div class="text-start mb-3 p-2 bg-dark rounded">${thread.description}</div>
-                           <h6 class="text-start">Comments</h6>
-                           <div style="max-height: 400px; overflow-y: auto; text-align: left;">${commentsHtml || 'No comments'}</div>`,
-                    width: 800
-                });
-            },
-            
-            async viewDM(dm) {
-                const msgsSnap = await getDocs(query(collection(db, COLLECTIONS.CONV_MESSAGES(dm.id)), orderBy('createdAt', 'asc')));
-                const msgs = msgsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                
-                const msgHtml = msgs.map(m => `
-                    <div class="mb-2 border-bottom pb-1">
-                        <small class="text-muted">${this.getAuthorName(m.senderId)} (${formatDate(m.createdAt)}):</small>
-                        <div>${m.content}</div>
-                        <button class="btn btn-link btn-sm p-0 text-danger" onclick="window.deleteDMMessage('${dm.id}', '${m.id}')">Delete</button>
-                    </div>
-                `).join('');
-                window.deleteDMMessage = async (convId, msgId) => {
-                    if(confirm('Delete message?')) {
-                        await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msgId));
-                        Swal.close();
-                        this.viewDM(dm);
-                    }
-                };
-
-                Swal.fire({
-                    title: 'Conversation',
-                    html: `<div style="max-height: 400px; overflow-y: auto; text-align: left;">${msgHtml || 'No messages'}</div>`,
-                    width: 600
-                });
-            },
-            
-            async deleteDM(id) {
-                 if (confirm('Delete this conversation?')) {
-                    await deleteDoc(doc(db, COLLECTIONS.CONVERSATIONS, id));
-                    await this.refreshAll();
-                }
-            },
-
-            async editUser(user) {
-                const currentUser = Alpine.store('auth').user;
-                const isSelf = currentUser && currentUser.uid === user.id;
-                const { value } = await Swal.fire({
-                    title: 'Edit User',
-                    html: `
-                        <input id="ed-displayName" class="form-control mb-2" placeholder="Display Name" value="${user.displayName || ''}">
-                        <input id="ed-handle" class="form-control mb-2" placeholder="Handle" value="${user.handle || ''}">
-                        <input id="ed-email" class="form-control mb-2" placeholder="Email" value="${user.email || ''}">
-                        <input id="ed-photoURL" class="form-control mb-2" placeholder="Photo URL" value="${user.photoURL || ''}">
-                        <textarea id="ed-customCSS" class="form-control mb-2" placeholder="Custom CSS">${user.customCSS || ''}</textarea>
-                        <div class="form-check text-start">
-                            <input class="form-check-input" type="checkbox" id="ed-activity" ${user.activityTracking ? 'checked' : ''}>
-                            <label class="form-check-label" for="ed-activity">Activity Tracking</label>
-                        </div>
-                        <div class="form-check text-start">
-                            <input class="form-check-input" type="checkbox" id="ed-admin" ${user.admin ? 'checked' : ''} ${isSelf ? 'disabled' : ''}>
-                            <label class="form-check-label" for="ed-admin">Administrator Access ${isSelf ? '(Cannot change own status)' : ''}</label>
-                        </div>
-                    `,
-                    width: 600,
-                    showCancelButton: true,
-                    preConfirm: () => ({
-                        displayName: document.getElementById('ed-displayName').value,
-                        handle: document.getElementById('ed-handle').value,
-                        email: document.getElementById('ed-email').value,
-                        photoURL: document.getElementById('ed-photoURL').value,
-                        customCSS: document.getElementById('ed-customCSS').value,
-                        activityTracking: document.getElementById('ed-activity').checked,
-                        admin: document.getElementById('ed-admin').checked
-                    })
-                });
-                if (value) {
-                    if (isSelf) delete value.admin;
-                    await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, user.id), value);
-                    await this.refreshAll();
-                    Swal.fire('Updated', '', 'success');
-                }
-            }
-        }));
-    });
-</script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
 </body>
 </html>
