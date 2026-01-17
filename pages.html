@@ -6,124 +6,186 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Pages - Arcator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
-<div id="navbar-placeholder"></div>
+    <div id="navbar-placeholder"></div>
 
-<section class="hero-section">
-    <img src="./creativespawn.png" alt="Hero" loading="lazy">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-        <h1 class="display-4 fw-bold mb-3" x-data x-text="new URL(location.href).searchParams.get('id') ? 'Page' : 'Pages'">Pages</h1>
-        <p class="lead" x-data x-show="!new URL(location.href).searchParams.get('id')">Custom community pages</p>
-    </div>
-</section>
+    <div x-data="pagesData" class="d-flex w-100">
+        <!-- Mobile Sidebar Toggle -->
+        <button class="btn btn-primary d-md-none position-fixed bottom-0 end-0 m-3 z-3 rounded-circle p-3 shadow" 
+                @click="showSidebar = !showSidebar">
+            <i class="bi" :class="showSidebar ? 'bi-x-lg' : 'bi-list'"></i>
+        </button>
 
-<main class="container py-5" x-data="pagesData">
-    <!-- List View -->
-    <div x-show="!currentPageId">
-        <div x-show="loading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
-        <div x-show="!loading && pages.length === 0" class="text-center py-5 text-secondary">No pages found</div>
-        
-        <div class="row g-4">
-            <template x-for="page in pages" :key="page.id">
-                <div class="col-md-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title" x-text="page.title || 'Untitled'"></h5>
-                            <p class="card-text text-secondary" x-text="page.description || 'No description'"></p>
+        <!-- Sidebar -->
+        <div class="sidebar p-3" :class="showSidebar ? 'show' : ''">
+            <div>
+                <h4 class="text-light mb-4 px-2 d-flex align-items-center gap-2">
+                    <i class="bi bi-book"></i> Pages
+                </h4>
+                <div class="nav flex-column nav-pills gap-2">
+                    <template x-for="page in pages" :key="page.id">
+                        <a :href="'?id=' + page.id" 
+                           class="nav-link nav-link-custom" 
+                           :class="currentPageId === page.id ? 'active' : ''"
+                           @click="showSidebar = false">
+                            <i class="bi bi-file-text"></i>
+                            <span x-text="page.title || 'Untitled'"></span>
+                        </a>
+                    </template>
+                    <div x-show="!loading && pages.length === 0" class="text-muted small px-2">No pages found</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content w-100">
+            <template x-if="loading">
+                <div class="d-flex justify-content-center align-items-center h-100">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+            </template>
+
+            <template x-if="!loading && !currentPageId">
+                <div class="d-flex flex-column justify-content-center align-items-center h-100 text-muted" style="min-height: 60vh;">
+                    <i class="bi bi-file-text display-1 mb-3 opacity-50"></i>
+                    <h3>Select a page to view</h3>
+                    <p>Choose a document from the sidebar to get started.</p>
+                </div>
+            </template>
+
+            <template x-if="!loading && currentPageId && !currentPage">
+                <div class="d-flex flex-column justify-content-center align-items-center h-100 text-danger" style="min-height: 60vh;">
+                    <i class="bi bi-exclamation-circle display-1 mb-3"></i>
+                    <h3>Page not found</h3>
+                    <a href="./pages.html" class="btn btn-outline-light mt-3">Return to Index</a>
+                </div>
+            </template>
+
+            <template x-if="!loading && currentPage">
+                <div class="container-fluid">
+                <div class="glass-card p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h1 class="display-5 fw-bold mb-1" x-text="currentPage?.title"></h1>
+                            <div class="text-muted small d-flex align-items-center gap-2">
+                                <span x-text="formatDate(currentPage?.createdAt)"></span>
+                                <span>•</span>
+                                <span>By <span x-text="authorName"></span></span>
+                            </div>
                         </div>
-                        <div class="card-footer d-flex justify-content-between align-items-center">
-                            <small class="text-secondary" x-text="formatDate(page.createdAt)"></small>
-                            <a :href="'./pages.html?id=' + page.id" class="btn btn-primary btn-sm">View</a>
-                        </div>
+                        <span class="badge bg-secondary font-monospace" x-text="currentPage?.slug ? '/' + currentPage.slug : ''"></span>
+                    </div>
+                    
+                    <p class="lead text-secondary" x-text="currentPage?.description"></p>
+                    
+                    <hr class="border-secondary opacity-25 my-4">
+                    
+                    <div class="page-content" x-html="renderContent(currentPage?.content)"></div>
+                    
+                    <div class="mt-5 pt-3 border-top border-secondary border-opacity-25 text-muted small">
+                        Last updated: <span x-text="formatDate(currentPage?.updatedAt)"></span>
                     </div>
                 </div>
+            </div>
             </template>
         </div>
     </div>
 
-    <!-- Single Page View -->
-    <div x-show="currentPageId">
-        <div x-show="loading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
-        <div x-show="!loading && !currentPage" class="text-center py-5 text-danger">Page not found</div>
-        
-        <div x-show="!loading && currentPage">
-            <div class="card">
-                <div class="card-body" x-html="renderContent(currentPage?.content)"></div>
-            </div>
-            <a href="./pages.html" class="btn btn-secondary mt-3">← Back to Pages</a>
-        </div>
-    </div>
-</main>
+    <div id="footer-placeholder"></div>
 
-<div id="footer-placeholder"></div>
+    <script type="module" src="./app.js"></script>
+    <script type="module">
+        import { db, COLLECTIONS, collection, getDocs, getDoc, doc, query, orderBy, formatDate } from './app.js';
 
-<script type="module" src="./app.js"></script>
-<script type="module">
-    import { db, COLLECTIONS, collection, getDocs, getDoc, doc, query, orderBy, formatDate } from './app.js';
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('pagesData', () => ({
+                pages: [],
+                currentPage: null,
+                currentPageId: new URL(location.href).searchParams.get('id'),
+                loading: true,
+                authorName: 'Unknown',
+                showSidebar: false,
 
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('pagesData', () => ({
-            pages: [],
-            currentPage: null,
-            currentPageId: new URL(location.href).searchParams.get('id'),
-            loading: true,
-
-            async init() {
-                if (this.currentPageId) {
-                    await this.loadSinglePage(this.currentPageId);
-                } else {
+                async init() {
                     await this.loadPagesList();
-                }
-            },
-
-            async loadPagesList() {
-                try {
-                    const q = query(collection(db, COLLECTIONS.PAGES), orderBy('createdAt', 'desc'));
-                    const snap = await getDocs(q);
-                    this.pages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                } catch (e) {
-                    console.error(e);
-                } finally {
-                    this.loading = false;
-                }
-            },
-
-            async loadSinglePage(id) {
-                try {
-                    const snap = await getDoc(doc(db, COLLECTIONS.PAGES, id));
-                    if (snap.exists()) {
-                        this.currentPage = { id: snap.id, ...snap.data() };
-                        document.title = `${this.currentPage.title || 'Page'} - Arcator`;
+                    if (this.currentPageId) {
+                        await this.loadSinglePage(this.currentPageId);
                     }
-                } catch (e) {
-                    console.error(e);
-                } finally {
-                    this.loading = false;
+                },
+
+                async loadPagesList() {
+                    try {
+                        const q = query(collection(db, COLLECTIONS.PAGES), orderBy('createdAt', 'desc'));
+                        const snap = await getDocs(q);
+                        this.pages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        if (!this.currentPageId) this.loading = false;
+                    }
+                },
+
+                async loadSinglePage(id) {
+                    try {
+                        const snap = await getDoc(doc(db, COLLECTIONS.PAGES, id));
+                        if (snap.exists()) {
+                            this.currentPage = { id: snap.id, ...snap.data() };
+                            document.title = `${this.currentPage.title || 'Page'} - Arcator`;
+                            await this.loadAuthor(this.currentPage.createdBy || this.currentPage.authorId);
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadAuthor(uid) {
+                    if (!uid) return;
+                    // If it's a simple string name (like 'moderator'), just use it
+                    if (uid.length < 20 && !uid.includes(' ')) { 
+                         // It might be a name, but let's try to fetch if it looks like a UID. 
+                         // Actually, the example showed "moderator" which is likely a name or a special ID.
+                         // We'll try to fetch, if fail, use as name.
+                    }
+                    
+                    try {
+                        const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
+                        if (snap.exists()) {
+                            this.authorName = snap.data().displayName || snap.data().email || 'Unknown';
+                        } else {
+                            this.authorName = uid; // Fallback to the ID/String itself if not found
+                        }
+                    } catch (e) {
+                        this.authorName = uid;
+                    }
+                },
+
+                formatDate(ts) {
+                    if (!ts) return '';
+                    const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+                    return dayjs(d).format('MMMM D, YYYY [at] h:mm A');
+                },
+
+                renderContent(content) {
+                    if (!content) return '';
+                    // If content has Quill classes, it's HTML.
+                    // If it's markdown, parse it.
+                    // Simple check: does it contain HTML tags?
+                    const isHtml = /<[a-z][\s\S]*>/i.test(content);
+                    return DOMPurify.sanitize(isHtml ? content : marked.parse(content));
                 }
-            },
-
-            formatDate(ts) {
-                if (!ts) return 'Unknown';
-                const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
-                return dayjs(d).format('MMM D, YYYY');
-            },
-
-            renderContent(content) {
-                if (!content) return '';
-                const isHtml = content.trim().startsWith('<');
-                return DOMPurify.sanitize(isHtml ? content : marked.parse(content));
-            }
-        }));
-    });
-</script>
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+            }));
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
 </body>
 </html>
