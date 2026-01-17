@@ -442,76 +442,24 @@ function registerPageWikiManagement() {
 
 function registerWikiApp() {
     Alpine.data('wikiApp', () => ({
-        tab: 'home',
-        showSidebar: false,
-        loading: true,
-        tabs: [
-            {id: 'home', label: 'Welcome', icon: 'bi-house'},
-            {id: 'servers', label: 'Servers', icon: 'bi-hdd-network'},
-            {id: 'software', label: 'Software', icon: 'bi-code-square'},
-            {id: 'sysadmin', label: 'Sysadmin', icon: 'bi-terminal'},
-            {id: 'machines', label: 'Machines', icon: 'bi-pc-display'},
-            {id: 'staff', label: 'Staff', icon: 'bi-people'},
-            {id: 'mcadmin', label: 'MCAdmin', icon: 'bi-shield-lock'},
-            {id: 'growth', label: 'Growth Plans', icon: 'bi-graph-up'}
-        ],
-        tabContent: {},
-        tabMeta: {},
-        
+        tab: 'home', showSidebar: false, loading: true, tabs: [{id:'home',label:'Welcome',icon:'bi-house'},{id:'servers',label:'Servers',icon:'bi-hdd-network'},{id:'software',label:'Software',icon:'bi-code-square'},{id:'sysadmin',label:'Sysadmin',icon:'bi-terminal'},{id:'machines',label:'Machines',icon:'bi-pc-display'},{id:'staff',label:'Staff',icon:'bi-people'},{id:'mcadmin',label:'MCAdmin',icon:'bi-shield-lock'},{id:'growth',label:'Growth Plans',icon:'bi-graph-up'}], tabContent: {}, tabMeta: {},
         get currentUser() { return Alpine.store('auth')?.user; },
         get isAdmin() { return Alpine.store('auth')?.isAdmin; },
-        get canEdit() {
-            if (!this.currentUser) return false;
-            if (this.isAdmin) return true;
-            const meta = this.tabMeta[this.tab];
-            return meta?.allowedEditors?.includes(this.currentUser.uid);
-        },
-        
+        get canEdit() { if (!this.currentUser) return false; if (this.isAdmin) return true; return this.tabMeta[this.tab]?.allowedEditors?.includes(this.currentUser.uid); },
         async init() {
             await firebaseReadyPromise;
             const snap = await getDocs(collection(db, COLLECTIONS.WIKI_PAGES));
-            snap.forEach(d => {
-                const data = d.data();
-                this.tabContent[d.id] = data.content;
-                this.tabMeta[d.id] = { allowedEditors: data.allowedEditors || [], updatedAt: data.updatedAt };
-            });
-            this.loading = false;
-            this.$nextTick(() => this.renderTab(this.tab));
+            snap.forEach(d => { const data = d.data(); this.tabContent[d.id] = data.content; this.tabMeta[d.id] = { allowedEditors: data.allowedEditors || [], updatedAt: data.updatedAt }; });
+            this.loading = false; this.$nextTick(() => this.renderTab(this.tab));
         },
-        
-        renderTab(tabId) {
-            const container = document.querySelector(`.wiki-content[data-tab="${tabId}"]`);
-            if (!container || !this.tabContent[tabId]) return;
-            container.innerHTML = this.tabContent[tabId];
-            container.querySelectorAll('[x-data]').forEach(el => Alpine.initTree(el));
-        },
-        
-        selectTab(tabId) {
-            this.tab = tabId;
-            this.showSidebar = false;
-            this.$nextTick(() => this.renderTab(tabId));
-        },
-        
+        renderTab(id) { const el = document.querySelector(`.wiki-content[data-tab="${id}"]`); if (el && this.tabContent[id]) { el.innerHTML = this.tabContent[id]; el.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); } },
+        selectTab(id) { this.tab = id; this.showSidebar = false; this.$nextTick(() => this.renderTab(id)); },
         async editCurrentTab() {
             const content = this.tabContent[this.tab] || '';
-            const { value } = await Swal.fire({
-                title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`,
-                width: '900px',
-                html: `<textarea id="wiki-edit" class="form-control font-monospace" rows="20">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>`,
-                showCancelButton: true,
-                didOpen: () => { document.getElementById('wiki-edit').value = content; },
-                preConfirm: () => document.getElementById('wiki-edit').value
-            });
+            const { value } = await Swal.fire({ title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`, width: '900px', html: `<textarea id="wiki-edit" class="form-control font-monospace" rows="20">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('wiki-edit').value = content; }, preConfirm: () => document.getElementById('wiki-edit').value });
             if (value !== undefined) {
-                try {
-                    await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, this.tab), { content: value, updatedAt: serverTimestamp() });
-                    this.tabContent[this.tab] = value;
-                    this.renderTab(this.tab);
-                    Swal.fire('Saved', 'Wiki section updated', 'success');
-                } catch (e) {
-                    console.error(e);
-                    Swal.fire('Error', 'Failed to save changes', 'error');
-                }
+                await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, this.tab), { content: value, updatedAt: serverTimestamp() });
+                this.tabContent[this.tab] = value; this.renderTab(this.tab); Swal.fire('Saved', 'Wiki section updated', 'success');
             }
         }
     }));
@@ -519,81 +467,23 @@ function registerWikiApp() {
 
 function registerPagesData() {
     Alpine.data('pagesData', () => ({
-        pages: [],
-        currentPage: null,
-        currentPageId: new URL(location.href).searchParams.get('id'),
-        loading: true,
-        authorName: 'Unknown',
-        showSidebar: false,
+        pages: [], currentPage: null, currentPageId: new URL(location.href).searchParams.get('id'), loading: true, authorName: 'Unknown', showSidebar: false,
         get currentUser() { return Alpine.store('auth')?.user; },
         get isAdmin() { return Alpine.store('auth')?.isAdmin; },
-        get canEdit() {
-            if (!this.currentUser || !this.currentPage) return false;
-            if (this.isAdmin) return true;
-            if (this.currentPage.authorId === this.currentUser.uid) return true;
-            return false;
-        },
-
-        async init() {
-            await firebaseReadyPromise;
-            await this.loadPagesList();
-            if (this.currentPageId) {
-                await this.loadSinglePage(this.currentPageId);
-            }
-        },
-
-        async loadPagesList() {
-            try {
-                const q = query(collection(db, COLLECTIONS.PAGES), orderBy('createdAt', 'desc'));
-                const snap = await getDocs(q);
-                this.pages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            } catch (e) {
-                console.error(e);
-            } finally {
-                if (!this.currentPageId) this.loading = false;
-            }
-        },
-
+        get canEdit() { return this.currentUser && (this.isAdmin || this.currentPage?.authorId === this.currentUser.uid); },
+        async init() { await firebaseReadyPromise; await this.loadPagesList(); if (this.currentPageId) await this.loadSinglePage(this.currentPageId); },
+        async loadPagesList() { const snap = await getDocs(query(collection(db, COLLECTIONS.PAGES), orderBy('createdAt', 'desc'))); this.pages = snap.docs.map(d => ({ id: d.id, ...d.data() })); if (!this.currentPageId) this.loading = false; },
         async loadSinglePage(id) {
-            try {
-                const snap = await getDoc(doc(db, COLLECTIONS.PAGES, id));
-                if (snap.exists()) {
-                    this.currentPage = { id: snap.id, ...snap.data() };
-                    document.title = `${this.currentPage.title || 'Page'} - Arcator`;
-                    await this.loadAuthor(this.currentPage.createdBy || this.currentPage.authorId);
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                this.loading = false;
-            }
+            const snap = await getDoc(doc(db, COLLECTIONS.PAGES, id));
+            if (snap.exists()) { this.currentPage = { id: snap.id, ...snap.data() }; document.title = `${this.currentPage.title || 'Page'} - Arcator`; await this.loadAuthor(this.currentPage.createdBy || this.currentPage.authorId); }
+            this.loading = false;
         },
-
-        async loadAuthor(uid) {
-            if (!uid) return;
-            try {
-                const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
-                if (snap.exists()) {
-                    this.authorName = snap.data().displayName || snap.data().email || 'Unknown';
-                } else {
-                    this.authorName = uid;
-                }
-            } catch (e) {
-                this.authorName = uid;
-            }
-        },
-
+        async loadAuthor(uid) { if (!uid) return; const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid)); this.authorName = snap.exists() ? (snap.data().displayName || snap.data().email || 'Unknown') : uid; },
         formatDate(ts) { return formatDate(ts); },
-
-        renderContent(content) {
-            if (!content) return '';
-            const isHtml = /<[a-z][\s\S]*>/i.test(content);
-            return DOMPurify.sanitize(isHtml ? content : marked.parse(content));
-        },
-
+        renderContent(c) { return c ? DOMPurify.sanitize(/<[a-z][\s\S]*>/i.test(c) ? c : marked.parse(c)) : ''; },
         async createPage() { await Alpine.store('mgmt').createPage(() => this.loadPagesList()); },
         async editPage() { if (this.currentPage) await Alpine.store('mgmt').editPage(this.currentPage, () => this.loadSinglePage(this.currentPage.id)); },
-        async deletePage() { if (this.currentPage) await Alpine.store('mgmt').deletePage(this.currentPage.id, () => window.location.href = 'pages.html'); },
+        async deletePage() { if (this.currentPage) await Alpine.store('mgmt').deletePage(this.currentPage.id, () => window.location.href = 'pages.html'); }
     }));
 }
 
