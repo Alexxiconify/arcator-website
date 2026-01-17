@@ -168,16 +168,45 @@ function cacheUser(user, profile) {
         displayName: profile?.displayName || user.displayName,
         photoURL: profile?.photoURL || user.photoURL,
         themePreference: profile?.themePreference || 'dark',
-        fontScaling: profile?.fontScaling || 'normal'
+        fontScaling: profile?.fontScaling || 'normal',
+        backgroundImage: profile?.backgroundImage,
+        glassColor: profile?.glassColor,
+        glassOpacity: profile?.glassOpacity,
+        glassBlur: profile?.glassBlur
     }));
 }
 
-function updateTheme(theme = 'dark', fontSize = 'normal', customCSS = '') {
+function updateTheme(theme = 'dark', fontSize = 'normal', customCSS = '', bgImg = '', glassColor = '', glassOpacity = 0.95, glassBlur = '') {
     document.documentElement.setAttribute('data-bs-theme', theme);
     document.documentElement.setAttribute('data-font-size', fontSize);
+    
+    // Background Image
+    if (bgImg) document.body.style.backgroundImage = `url('${bgImg}')`;
+    else document.body.style.backgroundImage = ''; 
+
+    // Glass Theme
+    const root = document.documentElement;
+    if (glassColor && glassOpacity !== '') {
+        const hexToRgb = (hex) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
+        };
+        const rgb = hexToRgb(glassColor);
+        if (rgb) {
+            root.style.setProperty('--glass-bg', `rgba(${rgb}, ${glassOpacity})`);
+        }
+    } else {
+        root.style.removeProperty('--glass-bg');
+    }
+
     let style = document.getElementById('custom-css-style');
     if (!style) { style = document.createElement('style'); style.id = 'custom-css-style'; document.head.appendChild(style); }
-    style.textContent = customCSS || '';
+    
+    let css = customCSS || '';
+    if (glassBlur) {
+        css += ` .glass-card, .card { backdrop-filter: blur(${glassBlur}px) !important; } body::before { backdrop-filter: blur(${Math.max(0, glassBlur - 5)}px) !important; }`;
+    }
+    style.textContent = css;
 }
 
 const userCache = {};
@@ -216,7 +245,7 @@ function registerAuthStore() {
                     const data = JSON.parse(cached);
                     this.user = { uid: data.uid, ...data };
                     this.profile = data;
-                    updateTheme(data.themePreference, data.fontScaling, data.customCSS);
+                    updateTheme(data.themePreference, data.fontScaling, data.customCSS, data.backgroundImage, data.glassColor, data.glassOpacity, data.glassBlur);
                     updateUserSection(this.user, this.profile, false);
                 } catch (e) {}
             }
@@ -229,7 +258,7 @@ function registerAuthStore() {
                         if (snap.exists()) {
                             this.profile = snap.data();
                             cacheUser(u, this.profile);
-                            updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
+                            updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS, this.profile.backgroundImage, this.profile.glassColor, this.profile.glassOpacity, this.profile.glassBlur);
                             this.isAdmin = this.profile.admin === true || this.profile.staff === true || this.profile.role === 'staff';
                             if (!this.isAdmin) console.log("Not admin? Run this in console: Alpine.store('auth').makeMeAdmin()");
                         }
