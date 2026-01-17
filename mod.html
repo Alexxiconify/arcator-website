@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Admin Dashboard - Arcator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>[x-cloak] { display: none !important; }</style>
 
 </head>
 <body>
@@ -54,14 +56,14 @@
             <div class="flex-grow-1">
             <!-- Loading State -->
             <template x-if="loading">
-                <div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
+                <div class="d-flex justify-content-center align-items-center vh-80">
                     <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
                 </div>
             </template>
 
             <!-- Access Denied -->
             <template x-if="!loading && !isAdmin">
-                <div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
+                <div class="d-flex justify-content-center align-items-center vh-80">
                     <div class="glass-card p-5 text-center">
                         <i class="bi bi-shield-lock fs-1 text-warning mb-3"></i>
                         <h2>Access Denied</h2>
@@ -159,7 +161,7 @@
                             <span class="badge bg-primary rounded-pill" x-text="filteredUsers.length + ' Users'"></span>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
+                            <table class="table table-dark table-hover align-middle mb-0">
                                 <thead>
                                     <tr>
                                         <th>User</th>
@@ -427,124 +429,16 @@
 
                 // --- Actions ---
 
-                async createPage() {
-                    const { value } = await Swal.fire({
-                        title: 'Create Page',
-                        html: '<input id="np-title" class="form-control mb-2" placeholder="Title"><input id="np-slug" class="form-control mb-2" placeholder="Slug"><textarea id="np-content" class="form-control" rows="10" placeholder="HTML Content"></textarea>',
-                        showCancelButton: true,
-                        preConfirm: () => ({
-                            title: document.getElementById('np-title').value,
-                            slug: document.getElementById('np-slug').value,
-                            content: document.getElementById('np-content').value,
-                            createdAt: new Date()
-                        })
-                    });
-                    if (value) {
-                        await addDoc(collection(db, COLLECTIONS.PAGES), value);
-                        await this.refreshAll();
-                        Swal.fire('Success', 'Page created', 'success');
-                    }
-                },
-
-                async editPage(page) {
-                    const { value } = await Swal.fire({
-                        title: 'Edit Page',
-                        width: '800px',
-                        html: `
-                            <input id="ep-title" class="form-control mb-2" placeholder="Title" value="${page.title}">
-                            <input id="ep-slug" class="form-control mb-2" placeholder="Slug" value="${page.slug}">
-                            <textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content">${page.content}</textarea>
-                        `,
-                        showCancelButton: true,
-                        preConfirm: () => ({
-                            title: document.getElementById('ep-title').value,
-                            slug: document.getElementById('ep-slug').value,
-                            content: document.getElementById('ep-content').value
-                        })
-                    });
-                    if (value) {
-                        await updateDoc(doc(db, COLLECTIONS.PAGES, page.id), value);
-                        await this.refreshAll();
-                        Swal.fire('Success', 'Page updated', 'success');
-                    }
-                },
-
-                async deletePage(id) {
-                    if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) {
-                        await deleteDoc(doc(db, COLLECTIONS.PAGES, id));
-                        await this.refreshAll();
-                        Swal.fire('Deleted', 'Page has been deleted.', 'success');
-                    }
-                },
+                // Page Management
+                async createPage() { await Alpine.store('mgmt').createPage(() => this.refreshAll()); },
+                async editPage(page) { await Alpine.store('mgmt').editPage(page, () => this.refreshAll()); },
+                async deletePage(id) { await Alpine.store('mgmt').deletePage(id, () => this.refreshAll()); },
 
                 // Wiki Section Management
-                async createWikiSection() {
-                    const { value } = await Swal.fire({
-                        title: 'Create Wiki Section',
-                        html: `
-                            <input id="nw-id" class="form-control mb-2" placeholder="Section ID (e.g. servers, software)">
-                            <textarea id="nw-content" class="form-control font-monospace" rows="12" placeholder="HTML Content"></textarea>
-                        `,
-                        showCancelButton: true,
-                        preConfirm: () => ({
-                            id: document.getElementById('nw-id').value.toLowerCase().replace(/\s+/g, '-'),
-                            content: document.getElementById('nw-content').value
-                        })
-                    });
-                    if (value && value.id) {
-                        await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, value.id), {
-                            content: value.content,
-                            allowedEditors: [],
-                            updatedAt: serverTimestamp()
-                        });
-                        await this.refreshAll();
-                        Swal.fire('Success', 'Wiki section created', 'success');
-                    }
-                },
-
-                async editWikiSection(section) {
-                    const { value } = await Swal.fire({
-                        title: `Edit: ${section.id}`,
-                        width: '900px',
-                        html: `<textarea id="ew-content" class="form-control font-monospace" rows="20">${section.content || ''}</textarea>`,
-                        showCancelButton: true,
-                        preConfirm: () => document.getElementById('ew-content').value
-                    });
-                    if (value !== undefined) {
-                        await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, section.id), { content: value, updatedAt: serverTimestamp() });
-                        await this.refreshAll();
-                        Swal.fire('Success', 'Wiki section updated', 'success');
-                    }
-                },
-
-                async manageWikiEditors(section) {
-                    const currentEditors = section.allowedEditors || [];
-                    const editorNames = currentEditors.map(uid => this.getAuthorName(uid)).join(', ') || 'None';
-                    const userOpts = this.users.map(u => `<option value="${u.id}" ${currentEditors.includes(u.id) ? 'selected' : ''}>${u.displayName || u.email}</option>`).join('');
-                    
-                    const { value } = await Swal.fire({
-                        title: `Allowed Editors: ${section.id}`,
-                        html: `
-                            <p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p>
-                            <select id="ew-editors" class="form-select" multiple size="10">${userOpts}</select>
-                        `,
-                        showCancelButton: true,
-                        preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value)
-                    });
-                    if (value !== undefined) {
-                        await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, section.id), { allowedEditors: value, updatedAt: serverTimestamp() });
-                        await this.refreshAll();
-                        Swal.fire('Success', 'Editors updated', 'success');
-                    }
-                },
-
-                async deleteWikiSection(id) {
-                    if ((await Swal.fire({ title: 'Delete Wiki Section?', text: 'This cannot be undone!', icon: 'warning', showCancelButton: true })).isConfirmed) {
-                        await deleteDoc(doc(db, COLLECTIONS.WIKI_PAGES, id));
-                        await this.refreshAll();
-                        Swal.fire('Deleted', 'Section removed.', 'success');
-                    }
-                },
+                async createWikiSection() { await Alpine.store('mgmt').createWikiSection(() => this.refreshAll()); },
+                async editWikiSection(section) { await Alpine.store('mgmt').editWikiSection(section, () => this.refreshAll()); },
+                async manageWikiEditors(section) { await Alpine.store('mgmt').manageWikiEditors(section, this.users, () => this.refreshAll()); },
+                async deleteWikiSection(id) { await Alpine.store('mgmt').deleteWikiSection(id, () => this.refreshAll()); },
 
                 async editUser(user) {
                     const isSelf = this.currentUser.uid === user.id;
@@ -552,7 +446,7 @@
                         title: 'Edit User Profile',
                         width: '800px',
                         html: `
-                            <div class="text-start" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+                            <div class="text-start admin-modal-scroll">
                                 <h6 class="text-primary mb-3">General Info</h6>
                                 <div class="row g-2 mb-3">
                                     <div class="col-md-6">
@@ -794,7 +688,7 @@
                     
                     Swal.fire({
                         title: thread.title,
-                        html: `<div class="text-start">${thread.description}</div><hr><div class="text-start" style="max-height:300px;overflow-y:auto">${comments || 'No comments'}</div>`,
+                        html: `<div class="text-start">${thread.description}</div><hr><div class="text-start admin-list-scroll">${comments || 'No comments'}</div>`,
                         width: 800
                     });
                 },

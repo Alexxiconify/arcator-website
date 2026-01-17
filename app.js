@@ -588,10 +588,82 @@ function registerMessageData() {
     }));
 }
 
+function registerPageWikiManagement() {
+    Alpine.store('mgmt', {
+        async createPage(callback) {
+            const { value } = await Swal.fire({
+                title: 'Create Page',
+                html: '<input id="np-title" class="form-control mb-2" placeholder="Title"><input id="np-slug" class="form-control mb-2" placeholder="Slug"><textarea id="np-content" class="form-control" rows="10" placeholder="HTML Content"></textarea>',
+                showCancelButton: true,
+                preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, createdAt: serverTimestamp() })
+            });
+            if (value) { await addDoc(collection(db, COLLECTIONS.PAGES), value); if (callback) callback(); Swal.fire('Success', 'Page created', 'success'); }
+        },
+        async editPage(page, callback) {
+            const { value } = await Swal.fire({
+                title: 'Edit Page', width: '800px',
+                html: `<input id="ep-title" class="form-control mb-2" placeholder="Title" value="${page.title}"><input id="ep-slug" class="form-control mb-2" placeholder="Slug" value="${page.slug}"><textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content">${page.content}</textarea>`,
+                showCancelButton: true,
+                preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() })
+            });
+            if (value) { await updateDoc(doc(db, COLLECTIONS.PAGES, page.id), value); if (callback) callback(); Swal.fire('Success', 'Page updated', 'success'); }
+        },
+        async deletePage(id, callback) {
+            if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) {
+                await deleteDoc(doc(db, COLLECTIONS.PAGES, id)); if (callback) callback(); Swal.fire('Deleted', 'Page has been deleted.', 'success');
+            }
+        },
+        async createWikiSection(callback) {
+            const { value } = await Swal.fire({
+                title: 'Create Wiki Section',
+                html: '<input id="nw-id" class="form-control mb-2" placeholder="Section ID (e.g. servers)"><textarea id="nw-content" class="form-control font-monospace" rows="12" placeholder="HTML Content"></textarea>',
+                showCancelButton: true,
+                preConfirm: () => ({ id: document.getElementById('nw-id').value.toLowerCase().replace(/\s+/g, '-'), content: document.getElementById('nw-content').value })
+            });
+            if (value && value.id) {
+                await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, value.id), { content: value.content, allowedEditors: [], updatedAt: serverTimestamp() });
+                if (callback) callback(); Swal.fire('Success', 'Wiki section created', 'success');
+            }
+        },
+        async editWikiSection(section, callback) {
+            const { value } = await Swal.fire({
+                title: `Edit: ${section.id}`, width: '900px',
+                html: `<textarea id="ew-content" class="form-control font-monospace" rows="20">${section.content || ''}</textarea>`,
+                showCancelButton: true,
+                preConfirm: () => document.getElementById('ew-content').value
+            });
+            if (value !== undefined) {
+                await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, section.id), { content: value, updatedAt: serverTimestamp() });
+                if (callback) callback(); Swal.fire('Success', 'Wiki section updated', 'success');
+            }
+        },
+        async manageWikiEditors(section, users, callback) {
+            const currentEditors = section.allowedEditors || [];
+            const userOpts = users.map(u => `<option value="${u.id}" ${currentEditors.includes(u.id) ? 'selected' : ''}>${u.displayName || u.email}</option>`).join('');
+            const { value } = await Swal.fire({
+                title: `Allowed Editors: ${section.id}`,
+                html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" class="form-select" multiple size="10">${userOpts}</select>`,
+                showCancelButton: true,
+                preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value)
+            });
+            if (value !== undefined) {
+                await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, section.id), { allowedEditors: value, updatedAt: serverTimestamp() });
+                if (callback) callback(); Swal.fire('Success', 'Editors updated', 'success');
+            }
+        },
+        async deleteWikiSection(id, callback) {
+            if ((await Swal.fire({ title: 'Delete Wiki Section?', text: 'This cannot be undone!', icon: 'warning', showCancelButton: true })).isConfirmed) {
+                await deleteDoc(doc(db, COLLECTIONS.WIKI_PAGES, id)); if (callback) callback(); Swal.fire('Deleted', 'Section removed.', 'success');
+            }
+        }
+    });
+}
+
 function registerAll() {
     registerAuthStore();
     registerForumData();
     registerMessageData();
+    registerPageWikiManagement();
 }
 
 document.addEventListener('alpine:init', registerAll);

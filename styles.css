@@ -20,7 +20,8 @@ body {
 body::before {
     content: ""; position: fixed; inset: 0;
     background: rgba(0, 0, 0, 0.92);
-    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
     z-index: -1; pointer-events: none;
 }
 main { flex: 1; position: relative; z-index: 1; }
@@ -109,7 +110,9 @@ footer, #footer-placeholder footer { position: relative; z-index: 1000; }
 }
 .glass-card, .card, .dropdown-menu {
     background: var(--glass-bg); border: 1px solid var(--glass-border);
-    border-radius: 1rem; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: 1rem;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
 }
 .card { box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
 
@@ -126,6 +129,10 @@ footer, #footer-placeholder footer { position: relative; z-index: 1000; }
 /* Forms & Inputs */
 .search-input, .form-control, .form-select {
     background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: #fff;
+}
+.form-select option {
+    background: #111;
+    color: #fff;
 }
 .search-input:focus, .form-control:focus, .form-select:focus {
     background: rgba(255, 255, 255, 0.1); color: #fff; border-color: var(--bs-primary);
@@ -204,6 +211,12 @@ footer, #footer-placeholder footer { position: relative; z-index: 1000; }
 
 .top-70 { top: 70px; }
 .mw-200 { max-width: 200px; }
+
+/* Admin Dashboard Utilities */
+.vh-80 { height: 80vh; }
+.admin-modal-scroll { max-height: 60vh; overflow-y: auto; padding-right: 10px; }
+.admin-list-scroll { max-height: 300px; overflow-y: auto; }
+
 
 footer, #footer-placeholder footer {
     position: relative;
