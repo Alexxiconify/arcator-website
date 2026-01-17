@@ -198,24 +198,20 @@
                         console.error('Failed to fetch pages:', results[1].reason);
                     }
 
-                    // Threads
                     if (results[2].status === 'fulfilled') {
                         this.threads = results[2].value.docs.map(d => ({ id: d.id, ...d.data() }));
                     } else {
                         console.error('Failed to fetch threads:', results[2].reason);
-                        // Fallback
                         try {
                             const snap = await getDocs(collection(db, COLLECTIONS.FORMS));
                             this.threads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                         } catch (e) { console.error('Fallback threads failed:', e); }
                     }
 
-                    // DMs
                     if (results[3].status === 'fulfilled') {
                         this.dms = results[3].value.docs.map(d => ({ id: d.id, ...d.data() }));
                     } else {
                         console.error('Failed to fetch DMs:', results[3].reason);
-                        // Fallback
                         try {
                             const snap = await getDocs(collection(db, COLLECTIONS.CONVERSATIONS));
                             this.dms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -394,13 +390,11 @@
                         <button class="btn btn-link btn-sm p-0 text-danger" onclick="window.deleteDMMessage('${dm.id}', '${m.id}')">Delete</button>
                     </div>
                 `).join('');
-                
-                // Hack to handle delete from Swal
                 window.deleteDMMessage = async (convId, msgId) => {
                     if(confirm('Delete message?')) {
                         await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msgId));
                         Swal.close();
-                        this.viewDM(dm); // Refresh
+                        this.viewDM(dm);
                     }
                 };
 

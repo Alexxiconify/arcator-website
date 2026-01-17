@@ -91,7 +91,7 @@ const NAV_HTML = `
                 <li class="nav-item"><a class="nav-link" href="./resources.html">Resources</a></li>
                 <li class="nav-item"><a class="nav-link" href="./about.html">About</a></li>
                 <li class="nav-item"><a class="nav-link" href="./privacy.html">Legal</a></li>
-                <li class="nav-item" id="admin-link" style="display:none"><a class="nav-link" href="./mod.html">Admin</a></li>
+                <li class="nav-item d-none" id="admin-link"><a class="nav-link" href="./mod.html">Admin</a></li>
             </ul>
             <div id="user-section" class="d-flex align-items-center">
                 <a href="./users.html" class="btn btn-primary btn-sm" id="sign-in-btn">Sign In</a>
