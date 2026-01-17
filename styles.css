@@ -18,7 +18,7 @@ body {
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
-    padding-top: 56px; /* Navbar height */
+    padding-top: 56px;
 }
 body::before {
     content: "";

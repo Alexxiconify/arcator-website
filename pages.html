@@ -20,16 +20,21 @@
     <div x-data="pagesData" class="d-flex w-100">
         <!-- Mobile Sidebar Toggle -->
         <button class="btn btn-primary d-md-none position-fixed bottom-0 end-0 m-3 z-3 rounded-circle p-3 shadow" 
-                @click="showSidebar = !showSidebar">
+                @click="showSidebar = !showSidebar" title="Toggle Sidebar" aria-label="Toggle Sidebar">
             <i class="bi" :class="showSidebar ? 'bi-x-lg' : 'bi-list'"></i>
         </button>
 
         <!-- Sidebar -->
         <div class="sidebar p-3" :class="showSidebar ? 'show' : ''">
             <div>
-                <h4 class="text-light mb-4 px-2 d-flex align-items-center gap-2">
-                    <i class="bi bi-book"></i> Pages
-                </h4>
+                <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+                    <h4 class="text-light m-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-book"></i> Pages
+                    </h4>
+                    <button class="btn btn-sm btn-outline-light" @click="createPage" x-show="currentUser" title="New Page">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
                 <div class="nav flex-column nav-pills gap-2">
                     <template x-for="page in pages" :key="page.id">
                         <a :href="'?id=' + page.id" 
@@ -81,7 +86,12 @@
                                 <span>By <span x-text="authorName"></span></span>
                             </div>
                         </div>
-                        <span class="badge bg-secondary font-monospace" x-text="currentPage?.slug ? '/' + currentPage.slug : ''"></span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-secondary font-monospace" x-text="currentPage?.slug ? '/' + currentPage.slug : ''"></span>
+                            <button class="btn btn-outline-light btn-sm" @click="editPage" x-show="canEdit" title="Edit Page">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
                     </div>
                     
                     <p class="lead text-secondary" x-text="currentPage?.description"></p>
@@ -103,7 +113,7 @@
 
     <script type="module" src="./app.js"></script>
     <script type="module">
-        import { db, COLLECTIONS, collection, getDocs, getDoc, doc, query, orderBy, formatDate } from './app.js';
+        import { db, COLLECTIONS, collection, getDocs, getDoc, doc, query, orderBy, formatDate, addDoc, updateDoc, serverTimestamp, deleteDoc } from './app.js';
 
         document.addEventListener('alpine:init', () => {
             Alpine.data('pagesData', () => ({
@@ -113,6 +123,14 @@
                 loading: true,
                 authorName: 'Unknown',
                 showSidebar: false,
+                get currentUser() { return Alpine.store('auth').user; },
+                get canEdit() {
+                    if (!this.currentUser || !this.currentPage) return false;
+                    if (this.currentUser.admin) return true;
+                    if (this.currentPage.authorId === this.currentUser.uid) return true;
+                    // Check if user is in permitted editors list (if implemented)
+                    return false;
+                },
 
                 async init() {
                     await this.loadPagesList();
@@ -150,19 +168,12 @@
 
                 async loadAuthor(uid) {
                     if (!uid) return;
-                    // If it's a simple string name (like 'moderator'), just use it
-                    if (uid.length < 20 && !uid.includes(' ')) { 
-                         // It might be a name, but let's try to fetch if it looks like a UID. 
-                         // Actually, the example showed "moderator" which is likely a name or a special ID.
-                         // We'll try to fetch, if fail, use as name.
-                    }
-                    
                     try {
                         const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
                         if (snap.exists()) {
                             this.authorName = snap.data().displayName || snap.data().email || 'Unknown';
                         } else {
-                            this.authorName = uid; // Fallback to the ID/String itself if not found
+                            this.authorName = uid;
                         }
                     } catch (e) {
                         this.authorName = uid;
@@ -177,15 +188,102 @@
 
                 renderContent(content) {
                     if (!content) return '';
-                    // If content has Quill classes, it's HTML.
-                    // If it's markdown, parse it.
-                    // Simple check: does it contain HTML tags?
                     const isHtml = /<[a-z][\s\S]*>/i.test(content);
                     return DOMPurify.sanitize(isHtml ? content : marked.parse(content));
+                },
+
+                async createPage() {
+                    if (!this.currentUser) return Swal.fire('Error', 'You must be logged in.', 'error');
+                    
+                    const { value } = await Swal.fire({
+                        title: 'New Page',
+                        width: '800px',
+                        html: `
+                            <input id="np-title" class="form-control mb-2" placeholder="Title">
+                            <input id="np-slug" class="form-control mb-2" placeholder="Slug (optional)">
+                            <input id="np-desc" class="form-control mb-2" placeholder="Description">
+                            <input id="np-tags" class="form-control mb-2" placeholder="Tags (comma separated, e.g. wiki, help)">
+                            <div id="editor-container" style="height: 300px; background: white; color: black;"></div>
+                        `,
+                        didOpen: () => {
+                            this.quill = new Quill('#editor-container', { theme: 'snow' });
+                        },
+                        showCancelButton: true,
+                        preConfirm: () => ({
+                            title: document.getElementById('np-title').value,
+                            slug: document.getElementById('np-slug').value,
+                            description: document.getElementById('np-desc').value,
+                            tags: document.getElementById('np-tags').value.split(',').map(t => t.trim()).filter(t => t),
+                            content: this.quill.root.innerHTML
+                        })
+                    });
+
+                    if (value) {
+                        if (!value.title) return Swal.fire('Error', 'Title is required', 'error');
+                        try {
+                            const docRef = await addDoc(collection(db, COLLECTIONS.PAGES), {
+                                ...value,
+                                authorId: this.currentUser.uid,
+                                createdBy: this.currentUser.uid,
+                                createdAt: serverTimestamp(),
+                                updatedAt: serverTimestamp()
+                            });
+                            await this.loadPagesList();
+                            window.location.href = `?id=${docRef.id}`;
+                        } catch (e) {
+                            console.error(e);
+                            Swal.fire('Error', 'Failed to create page', 'error');
+                        }
+                    }
+                },
+
+                async editPage() {
+                    if (!this.currentPage) return;
+                    
+                    const { value } = await Swal.fire({
+                        title: 'Edit Page',
+                        width: '800px',
+                        html: `
+                            <input id="ep-title" class="form-control mb-2" placeholder="Title" value="${this.currentPage.title || ''}">
+                            <input id="ep-slug" class="form-control mb-2" placeholder="Slug" value="${this.currentPage.slug || ''}">
+                            <input id="ep-desc" class="form-control mb-2" placeholder="Description" value="${this.currentPage.description || ''}">
+                            <input id="ep-tags" class="form-control mb-2" placeholder="Tags" value="${(this.currentPage.tags || []).join(', ')}">
+                            <div id="editor-container" style="height: 300px; background: white; color: black;"></div>
+                        `,
+                        didOpen: () => {
+                            this.quill = new Quill('#editor-container', { theme: 'snow' });
+                            this.quill.root.innerHTML = this.currentPage.content || '';
+                        },
+                        showCancelButton: true,
+                        preConfirm: () => ({
+                            title: document.getElementById('ep-title').value,
+                            slug: document.getElementById('ep-slug').value,
+                            description: document.getElementById('ep-desc').value,
+                            tags: document.getElementById('ep-tags').value.split(',').map(t => t.trim()).filter(t => t),
+                            content: this.quill.root.innerHTML
+                        })
+                    });
+
+                    if (value) {
+                        try {
+                            await updateDoc(doc(db, COLLECTIONS.PAGES, this.currentPage.id), {
+                                ...value,
+                                updatedAt: serverTimestamp()
+                            });
+                            await this.loadSinglePage(this.currentPage.id);
+                            await this.loadPagesList(); // Refresh sidebar title if changed
+                            Swal.fire('Success', 'Page updated', 'success');
+                        } catch (e) {
+                            console.error(e);
+                            Swal.fire('Error', 'Failed to update page', 'error');
+                        }
+                    }
                 }
             }));
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 </body>
 </html>
