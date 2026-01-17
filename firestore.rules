@@ -1,87 +1,18 @@
-rules_version = '2';
+rules_version='2'
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    function isAdmin() {
-      return isSignedIn() && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    
-    // User profiles at root level
-    match /user_profiles/{userId} {
-      allow read: if true;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow delete: if isAdmin();
-    }
-    
-    // Conversations at root level
-    match /conversations/{convId} {
-      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
-      allow delete: if isAdmin();
-      
-      match /messages/{msgId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
-        allow update: if isSignedIn() && (resource.data.senderId == request.auth.uid || isAdmin());
-        allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || isAdmin());
-      }
-    }
-    
-    // Root-level collections (formerly artifacts)
-    match /forms/{docId} {
-      allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin() ||
-                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'votes', 'viewCount']));
-      allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
-      
-      match /submissions/{commentId} {
-        allow read: if true;
-        allow create: if isSignedIn();
-        allow update: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin() ||
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
-        allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
-      }
-    }
-    
-    match /wiki_pages/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    match /custom_themes/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    match /temp_pages/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    match /wiki_config/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    // Admins collection
-    match /admins/{uid} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-    
-    // Secrets - server only (Admin SDK bypasses rules)
-    match /secrets/{docId} {
-      allow read, write: if false;
+    match /{document=**} {
+      // This rule allows anyone with your database reference to view, edit,
+      // and delete all data in your database. It is useful for getting
+      // started, but it is configured to expire after 30 days because it
+      // leaves your app open to attackers. At that time, all client
+      // requests to your database will be denied.
+      //
+      // Make sure to write security rules for your app before that time, or
+      // else all client requests to your database will be denied until you
+      // update your rules.
+      allow read, write: if request.time < timestamp.date(2026, 2, 16);
     }
   }
 }

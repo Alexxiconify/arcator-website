@@ -8,3 +8,7 @@ dist
 codeql-custom-queries-javascript/
 *.ql
 /.vscode/
+/.firebaserc
+firebase.json
+firestore.indexes.json
+firestore.rules
