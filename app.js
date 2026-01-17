@@ -147,7 +147,6 @@ function registerAuthStore() {
             await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, this.user.uid), { admin: true });
             this.isAdmin = true;
             this.profile.admin = true;
-            console.log("You are now an admin!");
             location.reload();
         },
 
