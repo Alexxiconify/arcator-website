@@ -67,7 +67,7 @@
             <div x-spinner="loading"></div>
             <div x-show="!loading && threads.length === 0" class="text-center py-5 text-secondary">No threads yet</div>
             <template x-for="thread in threads" :key="thread.id">
-                <div class="card mb-2 forum-thread-card">
+                <div class="card mb-2 list-item-card">
                     <div class="card-body py-2">
                         <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                             <div class="d-flex align-items-center gap-2">
@@ -106,7 +106,7 @@
                         <div x-spinner:sm="thread.loadingComments"></div>
                         <div class="comments-list mb-2">
                             <template x-for="comment in thread.comments.filter(c => !c.parentCommentId)" :key="comment.id">
-                                <div class="comment mb-2 ms-0">
+                                <div class="border-accent mb-2 ms-0">
                                     <div class="d-flex">
                                         <div class="d-flex flex-column align-items-center me-2">
                                             <button class="btn btn-link btn-sm p-0 text-secondary text-decoration-none" @click="vote(thread.id, comment, 'up')" :class="hasVoted(comment, 'up') ? 'text-primary' : ''">▲</button>

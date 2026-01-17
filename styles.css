@@ -21,18 +21,15 @@ main { flex: 1; position: relative; z-index: 1; }
 .vh-60 { min-height: 60vh; }
 .vh-80 { height: 80vh; }
 .cursor-pointer { cursor: pointer; }
-.rotate-90 { transform: rotate(90deg); }
-.toggle-icon { transition: transform 0.3s ease; display: inline-block; font-size: 0.75em; }
 .top-nav { top: var(--navbar-height); }
 .mw-200 { max-width: 200px; }
-/* Profile Images */
-.profile-img { width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; border: 2px solid var(--bs-primary); }
+/* Avatars */
 .avatar-sm { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
 .avatar-md { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
 .avatar-lg { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
 /* Cards */
-.feature-card, .stat-card { transition: transform .2s, box-shadow .2s; }
-.feature-card:hover, .stat-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(37,99,235,.15); }
+.hover-card { transition: transform .2s, box-shadow .2s; }
+.hover-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(37,99,235,.15); }
 .glass-card, .card, .dropdown-menu { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 1rem; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .card { box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
 /* Loading */
@@ -46,19 +43,13 @@ main { flex: 1; position: relative; z-index: 1; }
 .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.8)); }
 .hero-content { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; color: #fff; }
 .hero-content h1 { text-shadow: 2px 2px 4px rgba(0,0,0,.5); }
-/* Forum */
-.forum-thread-card { transition: background-color .2s; }
-.forum-thread-card:hover { background-color: var(--bs-tertiary-bg); }
-.forum-thread-card .card-body { border-bottom: 1px solid var(--bs-border-color); }
-.forum-thread-card .card-footer { background: transparent; border-top: none; }
-.comment { border-left: 2px solid var(--bs-primary); padding-left: 0.5rem; }
-.conv-container { min-height: 400px; }
+/* List Items */
+.list-item-card { transition: background-color .2s; }
+.list-item-card:hover { background-color: var(--bs-tertiary-bg); }
+.list-item-card .card-body { border-bottom: 1px solid var(--bs-border-color); }
+.list-item-card .card-footer { background: transparent; border-top: none; }
+.border-accent { border-left: 2px solid var(--bs-primary); padding-left: 0.5rem; }
 .message-bubble { max-width: 70%; }
-.vote-buttons { min-width: 28px; }
-.vote-count { font-size: 0.85rem; font-weight: bold; }
-.replies-container:empty { display: none; }
-.comment-actions .btn-link, .view-comments-btn { text-decoration: none; font-size: 0.8rem; font-weight: 500; }
-.view-comments-btn:hover { text-decoration: underline; }
 /* SweetAlert2 Theme */
 .swal2-popup { background: #050505 !important; color: #e0e0e0 !important; border: 1px solid var(--bs-border-color); }
 .swal2-title { color: #fff !important; }
@@ -138,8 +129,6 @@ main { flex: 1; position: relative; z-index: 1; }
 .arc-footer, footer, #footer-placeholder footer { background-color: #000 !important; border-top: 1px solid var(--bs-primary); padding: 1.5rem 0; margin-top: auto; position: relative; z-index: 1000; }
 .arc-nav { position: fixed; top: 0; right: 0; left: 0; z-index: 1030; padding: 0.5rem 0; background-color: #000 !important; border-bottom: 1px solid var(--bs-primary) !important; }
 .arc-nav .container-fluid { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.arc-flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-.arc-gap-2 { gap: 1rem; }
 /* Responsive */
 @media (min-width: 992px) { .arc-nav .container-fluid { flex-wrap: nowrap; } .arc-nav .navbar-nav { flex-direction: row; display: flex; gap: 2rem; } .arc-nav .navbar-collapse { display: flex !important; flex-basis: auto; align-items: center; width: 100%; } .arc-nav .navbar-toggler { display: none; } }
 @media (max-width: 768px) { .sidebar { transform: translateX(-100%); width: 100%; z-index: 1050; } .sidebar.show { transform: translateX(0); } .main-content { margin-left: 0; padding: 1rem; } }
