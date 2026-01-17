@@ -371,6 +371,29 @@ function registerAuthStore() {
     });
 }
 
+// Helper for SweetAlert + Quill
+async function promptEditor(title, html = '', initialContent = '', placeholder = '') {
+    let q = null;
+    const { value } = await Swal.fire({
+        title,
+        html: html || `<div id="swal-editor" style="height:150px;background:#222;color:#fff"></div>`,
+        showCancelButton: true,
+        didOpen: () => {
+            if (!html) {
+                q = new Quill('#swal-editor', { theme: 'snow', placeholder });
+                if (initialContent) q.root.innerHTML = initialContent;
+            }
+        },
+        preConfirm: () => {
+            if (html) return true; // Custom HTML form case
+            const c = q.root.innerHTML;
+            if (!c || c === '<p><br></p>') { Swal.showValidationMessage('Content required'); return false; }
+            return c;
+        }
+    });
+    return value;
+}
+
 function registerForumData() {
     Alpine.data('forumData', () => ({
         threads: [], loading: true, showCreateModal: false,
@@ -382,12 +405,10 @@ function registerForumData() {
         },
 
         async loadThreads() {
-            const q = query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'));
-            const snap = await getDocs(q);
+            const snap = await getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc')));
             const threads = await Promise.all(snap.docs.map(async d => {
                 const data = { id: d.id, ...d.data(), expanded: true, comments: [], loadingComments: false, quill: null };
-                const cq = query(collection(db, COLLECTIONS.SUBMISSIONS(d.id)), orderBy('createdAt', 'asc'));
-                const cSnap = await getDocs(cq);
+                const cSnap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(d.id)), orderBy('createdAt', 'asc')));
                 data.comments = cSnap.docs.map(cd => ({ id: cd.id, ...cd.data() }));
                 return data;
             }));
@@ -396,8 +417,6 @@ function registerForumData() {
             this.threads = threads;
             this.loading = false;
         },
-
-        getAuthor, fetchAuthor, formatDate(ts) { return formatDate(ts); },
 
         getThreadMeta(thread) {
             let name = 'System', pic = '';
@@ -417,8 +436,7 @@ function registerForumData() {
             thread.expanded = !thread.expanded;
             if (thread.expanded && thread.comments.length === 0) {
                 thread.loadingComments = true;
-                const q = query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc'));
-                const snap = await getDocs(q);
+                const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc')));
                 thread.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 await Promise.all([...new Set(thread.comments.map(c => c.authorId).filter(Boolean))].map(fetchAuthor));
                 thread.loadingComments = false;
@@ -460,11 +478,10 @@ function registerForumData() {
         getReactions(comment) { if (!comment.reactions) return {}; const c = {}; Object.keys(comment.reactions).forEach(k => { const e = k.split('_')[0]; if (e !== 'up' && e !== 'down') c[e] = (c[e] || 0) + 1; }); return c; },
 
         async replyTo(thread, parent) {
-            let q = null;
-            const { value } = await Swal.fire({ title: 'Reply', html: '<div id="swal-reply-editor" style="height:150px;background:#222;color:#fff"></div>', showCancelButton: true, didOpen: () => { q = new Quill('#swal-reply-editor', { theme: 'snow', placeholder: 'Write reply...' }); }, preConfirm: () => { const c = q.root.innerHTML; if (!c || c === '<p><br></p>') Swal.showValidationMessage('Enter reply'); return c; } });
-            if (value) {
+            const content = await promptEditor('Reply', '', '', 'Write reply...');
+            if (content) {
                 const user = Alpine.store('auth').user;
-                await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), { content: value, authorId: user.uid, createdAt: serverTimestamp(), parentCommentId: parent.parentCommentId || parent.id });
+                await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), { content, authorId: user.uid, createdAt: serverTimestamp(), parentCommentId: parent.parentCommentId || parent.id });
                 await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), { commentCount: increment(1) });
                 thread.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
             }
@@ -479,20 +496,22 @@ function registerForumData() {
         },
 
         async editThread(thread) {
-            const { value } = await Swal.fire({ title: 'Edit', html: `<input id="s1" class="swal2-input" value="${thread.title}"><input id="s2" class="swal2-input" value="${thread.tags||''}"><select id="s3" class="swal2-input"><option value="announcements"${thread.category==='announcements'?' selected':''}>Announcements</option><option value="gaming"${thread.category==='gaming'?' selected':''}>Gaming</option><option value="discussion"${thread.category==='discussion'?' selected':''}>Discussion</option><option value="support"${thread.category==='support'?' selected':''}>Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10">${thread.description || ''}</textarea>`, preConfirm: () => [document.getElementById('s1').value, document.getElementById('s2').value, document.getElementById('s3').value] });
-            if (value) { await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), { title: value[0], tags: value[1], category: value[2], updatedAt: serverTimestamp() }); Object.assign(thread, { title: value[0], tags: value[1], category: value[2] }); }
+            const html = `<input id="s1" class="swal2-input" value="${thread.title}"><input id="s2" class="swal2-input" value="${thread.tags||''}"><select id="s3" class="swal2-input"><option value="announcements"${thread.category==='announcements'?' selected':''}>Announcements</option><option value="gaming"${thread.category==='gaming'?' selected':''}>Gaming</option><option value="discussion"${thread.category==='discussion'?' selected':''}>Discussion</option><option value="support"${thread.category==='support'?' selected':''}>Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10">${thread.description || ''}</textarea>`;
+            const { value } = await Swal.fire({ title: 'Edit', html, preConfirm: () => [document.getElementById('s1').value, document.getElementById('s2').value, document.getElementById('s3').value, document.getElementById('ed-thread-content').value] });
+            if (value) {
+                await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), { title: value[0], tags: value[1], category: value[2], description: value[3], updatedAt: serverTimestamp() });
+                Object.assign(thread, { title: value[0], tags: value[1], category: value[2], description: value[3] });
+            }
         },
 
         async editComment(forumId, comment) {
-            let q = null;
-            const { value } = await Swal.fire({ title: 'Edit', html: '<div id="swal-edit" style="height:150px;background:#222;color:#fff"></div>', showCancelButton: true, didOpen: () => { q = new Quill('#swal-edit', { theme: 'snow' }); q.root.innerHTML = comment.content; }, preConfirm: () => q.root.innerHTML });
-            if (value) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { content: value }); comment.content = value; }
+            const content = await promptEditor('Edit', '', comment.content);
+            if (content) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { content }); comment.content = content; }
         },
 
         async censorComment(forumId, comment) {
-            let q = null;
-            const { value } = await Swal.fire({ title: 'Redact', html: '<div id="swal-censor" style="height:150px;background:#222;color:#fff"></div>', showCancelButton: true, didOpen: () => { q = new Quill('#swal-censor', { theme: 'snow' }); q.root.innerHTML = comment.content; }, preConfirm: () => q.root.innerHTML });
-            if (value !== undefined) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { content: value, censored: true }); comment.content = value; comment.censored = true; }
+            const content = await promptEditor('Redact', '', comment.content);
+            if (content) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { content, censored: true }); comment.content = content; comment.censored = true; }
         }
     }));
 }
@@ -508,15 +527,12 @@ function registerMessageData() {
 
         async loadConversations() {
             const user = Alpine.store('auth').user; if (!user) return;
-            const q = query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', user.uid));
-            const snap = await getDocs(q);
+            const snap = await getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', user.uid)));
             const convs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             const allParticipants = [...new Set(convs.flatMap(c => c.participants))];
             await Promise.all(allParticipants.map(fetchAuthor));
             this.conversations = convs;
         },
-
-        getAuthor, fetchAuthor, formatDate(ts) { return formatDate(ts); },
 
         getConvName(conv) {
             const user = Alpine.store('auth').user;
@@ -529,8 +545,7 @@ function registerMessageData() {
         async selectConv(conv) {
             this.selectedConv = conv;
             if (this.unsubscribe) this.unsubscribe();
-            const q = query(collection(db, COLLECTIONS.CONV_MESSAGES(conv.id)), orderBy('createdAt', 'asc'));
-            this.unsubscribe = onSnapshot(q, snap => {
+            this.unsubscribe = onSnapshot(query(collection(db, COLLECTIONS.CONV_MESSAGES(conv.id)), orderBy('createdAt', 'asc')), snap => {
                 this.messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.$nextTick(() => { const el = document.getElementById('msg-list'); if (el) el.scrollTop = el.scrollHeight; });
             });
@@ -547,9 +562,8 @@ function registerMessageData() {
         async deleteMessage(msgId) { if (confirm('Delete?')) await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), msgId)); },
 
         async editMessage(msg) {
-            let q = null;
-            const { value } = await Swal.fire({ title: 'Edit', html: '<div id="swal-msg" style="height:150px;background:#222;color:#fff"></div>', showCancelButton: true, didOpen: () => { q = new Quill('#swal-msg', { theme: 'snow' }); q.root.innerHTML = msg.content; }, preConfirm: () => q.root.innerHTML });
-            if (value) await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), msg.id), { content: value });
+            const content = await promptEditor('Edit', '', msg.content);
+            if (content) await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), msg.id), { content });
         },
 
         async createConversation() {
