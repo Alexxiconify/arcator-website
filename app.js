@@ -524,51 +524,10 @@ function registerAdminDashboard() {
         async deleteDM(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.CONVERSATIONS, id)); this.refreshAll(); } },
         async deleteMessage(cid, mid) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(cid), mid)); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
 
-        async editMessage(convId, msg) {
-            const { value } = await Swal.fire({
-                title: 'Edit Message',
-                input: 'textarea',
-                inputValue: msg.content,
-                showCancelButton: true
-            });
-            if (value) {
-                await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(convId), msg.id), { content: value });
-                const openModal = Swal.getPopup();
-                if (openModal) {
-                    const dm = this.dms.find(d => d.id === convId);
-                    if (dm) this.viewDM(dm);
-                }
-            }
-        },
+        async editMessage(cid, m) { const res = await promptEditor('Edit', '', m.content); if (res) { await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(cid), m.id), { content: res }); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
 
-        async deleteComment(threadId, commentId) {
-            if ((await Swal.fire({ title: 'Delete Comment?', icon: 'warning', showCancelButton: true })).isConfirmed) {
-                await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), commentId));
-                await updateDoc(doc(db, COLLECTIONS.FORMS, threadId), { commentCount: increment(-1) });
-                const openModal = Swal.getPopup();
-                if (openModal) {
-                    const t = this.threads.find(x => x.id === threadId);
-                    if (t) this.viewThread(t);
-                }
-            }
-        },
-
-        async editComment(threadId, comment) {
-            const { value } = await Swal.fire({
-                title: 'Edit Comment',
-                input: 'textarea',
-                inputValue: comment.content,
-                showCancelButton: true
-            });
-            if (value) {
-                await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(threadId), comment.id), { content: value });
-                const openModal = Swal.getPopup();
-                if (openModal) {
-                    const t = this.threads.find(x => x.id === threadId);
-                    if (t) this.viewThread(t);
-                }
-            }
-        }
+        async deleteComment(tid, cid) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(tid), cid)); await updateDoc(doc(db, COLLECTIONS.FORMS, tid), { commentCount: increment(-1) }); const t = this.threads.find(x => x.id === tid); if (t) this.viewThread(t); } },
+        async editComment(tid, c) { const res = await promptEditor('Edit', '', c.content); if (res) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(tid), c.id), { content: res }); const t = this.threads.find(x => x.id === tid); if (t) this.viewThread(t); } }
     }));
 }
 
