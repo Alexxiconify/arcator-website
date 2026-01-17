@@ -14,11 +14,7 @@
 <body x-data="wikiApp">
 <div id="navbar-placeholder"></div>
 <div class="d-flex w-100">
-    <button class="btn btn-primary d-md-none position-fixed bottom-0 end-0 m-3 z-3 rounded-circle p-3 shadow" 
-            @click="showSidebar = !showSidebar" aria-label="Toggle Sidebar">
-        <i class="bi" :class="showSidebar ? 'bi-x-lg' : 'bi-list'"></i>
-    </button>
-    <div class="sidebar p-3" :class="showSidebar ? 'show' : ''">
+    <div class="sidebar p-2">
         <div>
             <div class="mb-4 px-2">
                 <h4 class="text-light m-0 d-flex align-items-center gap-2">
@@ -36,7 +32,7 @@
         </div>
     </div>
     <div class="main-content w-100">
-        <div class="container-fluid">
+        <div class="container-fluid px-2">
             <div class="glass-card p-4 mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3" x-show="!loading">
                     <h5 class="mb-0" x-text="tabs.find(t => t.id === tab)?.label || 'Wiki'"></h5>

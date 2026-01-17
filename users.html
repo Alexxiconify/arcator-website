@@ -54,7 +54,7 @@
     <div x-show="user">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
                 <div class="d-flex align-items-center gap-3">
-                    <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary" style="width:48px;height:48px;object-fit:cover" alt="Profile">
+                    <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary avatar-profile" alt="Profile">
                     <div>
                         <h4 class="fw-bold m-0" x-text="profile.displayName || 'User'"></h4>
                         <p class="text-muted small m-0" x-text="'@' + (profile.handle || 'handle')"></p>

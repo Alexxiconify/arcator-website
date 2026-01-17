@@ -14,12 +14,11 @@
 <body x-data="adminDashboard">
     <div id="navbar-placeholder"></div>
     <div class="d-flex w-100">
-        <button class="btn btn-dark position-fixed start-0 m-3 d-md-none z-3 top-nav" @click="mobileMenu = !mobileMenu" title="Toggle Menu" aria-label="Toggle Menu"><i class="bi bi-list fs-4"></i></button>
-        <aside class="sidebar d-flex flex-column p-3" :class="{ 'show': mobileMenu }">
+        <aside class="sidebar d-flex flex-column p-2">
             <div class="mb-4 px-2 d-flex align-items-center gap-2"><h5 class="m-0 fw-bold text-white">Admin Tools</h5></div>
             <nav class="nav flex-column flex-grow-1">
                 <template x-for="item in navItems" :key="item.id">
-                    <a href="#" class="nav-link-custom" :class="{ 'active': tab === item.id }" @click.prevent="tab = item.id; mobileMenu = false"><i :class="item.icon"></i> <span x-text="item.label"></span></a>
+                    <a href="#" class="nav-link-custom" :class="{ 'active': tab === item.id }" @click.prevent="tab = item.id"><i :class="item.icon"></i> <span x-text="item.label"></span></a>
                 </template>
             </nav>
         </aside>

@@ -15,16 +15,8 @@
 </head>
 <body x-data="pagesData">
     <div id="navbar-placeholder"></div>
-
     <div class="d-flex w-100">
-        <!-- Mobile Sidebar Toggle -->
-        <button class="btn btn-primary d-md-none position-fixed bottom-0 end-0 m-3 z-3 rounded-circle p-3 shadow" 
-                @click="showSidebar = !showSidebar" title="Toggle Sidebar" aria-label="Toggle Sidebar">
-            <i class="bi" :class="showSidebar ? 'bi-x-lg' : 'bi-list'"></i>
-        </button>
-
-        <!-- Sidebar -->
-        <div class="sidebar p-3" :class="showSidebar ? 'show' : ''">
+        <div class="sidebar p-2">
             <div>
                 <div class="d-flex justify-content-between align-items-center mb-4 px-2">
                     <h4 class="text-light m-0 d-flex align-items-center gap-2">
@@ -38,8 +30,7 @@
                     <template x-for="page in pages" :key="page.id">
                         <a :href="'?id=' + page.id" 
                            class="nav-link nav-link-custom" 
-                           :class="currentPageId === page.id ? 'active' : ''"
-                           @click="showSidebar = false">
+                           :class="currentPageId === page.id ? 'active' : ''">
                             <i class="bi bi-file-text"></i>
                             <span x-text="page.title || 'Untitled'"></span>
                         </a>
@@ -70,7 +61,7 @@
             </template>
 
             <template x-if="!loading && currentPage">
-                <div class="container-fluid">
+                <div class="container-fluid px-2">
                 <div class="glass-card p-4 mb-4">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>

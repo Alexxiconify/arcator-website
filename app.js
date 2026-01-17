@@ -38,8 +38,8 @@ const randomIdentity = () => {
     const a = adj[Math.floor(Math.random() * adj.length)], n = noun[Math.floor(Math.random() * noun.length)];
     return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` };
 };
-const NAV_HTML = `<nav class="arc-nav"><div class="container-fluid px-4"><a class="navbar-brand fw-bold" href="./index.html">Arcator</a><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="./wiki.html">Wiki</a></li><li class="nav-item"><a class="nav-link" href="./forms.html">Forums</a></li><li class="nav-item"><a class="nav-link" href="./pages.html">Pages</a></li><li class="nav-item"><a class="nav-link" href="./resources.html">Resources</a></li><li class="nav-item d-none" id="admin-link"><a class="nav-link" href="./mod.html">Admin</a></li></ul><div class="arc-user-section"><a href="./users.html" class="btn btn-primary btn-sm" id="sign-in-btn">Sign In</a><a href="./users.html" class="d-none arc-profile-link" id="user-profile-link"><img src="./defaultuser.png" class="arc-profile-img" alt="Profile" id="user-avatar"><span class="text-light" id="user-name">User</span></a></div></div></div></nav>`;
-const FOOTER_HTML = `<footer class="arc-footer"><div class="container-fluid px-4"><div class="arc-flex-between"><div class="d-flex gap-3"><a href="https://ssmp.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a><a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a></div><div class="text-secondary">© 2025 Arcator</div></div></div></footer>`;
+const NAV_HTML = `<nav class="arc-nav"><div class="container-fluid px-4 arc-nav-inner"><a class="navbar-brand fw-bold" href="./index.html">Arcator</a><ul class="arc-nav-links"><li><a class="nav-link" href="./wiki.html">Wiki</a></li><li><a class="nav-link" href="./forms.html">Forums</a></li><li><a class="nav-link" href="./pages.html">Pages</a></li><li><a class="nav-link" href="./resources.html">Resources</a></li><li class="d-none" id="admin-link"><a class="nav-link" href="./mod.html">Admin</a></li></ul><div class="arc-user-section"><a href="./users.html" class="btn btn-primary btn-sm" id="sign-in-btn">Sign In</a><a href="./users.html" class="d-none arc-profile-link" id="user-profile-link"><img src="./defaultuser.png" class="avatar-sm" alt="Profile" id="user-avatar"></a></div></div></nav>`;
+const FOOTER_HTML = `<footer class="arc-footer"><div class="container-fluid px-4 arc-footer-inner"><div class="d-flex gap-3"><a href="https://ssmp.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a><a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a></div><span class="text-secondary">© 2025 Arcator</span></div></footer>`;
 function initLayout() {
     const nav = document.getElementById('navbar-placeholder'), foot = document.getElementById('footer-placeholder');
     if (nav) {
@@ -51,12 +51,11 @@ function initLayout() {
     if (window.Alpine) { const s = Alpine.store('auth'); s && !s.loading && updateUserSection(s.user, s.profile, s.isAdmin); }
 }
 function updateUserSection(u, p, isAdmin = false) {
-    const btn = document.getElementById('sign-in-btn'), link = document.getElementById('user-profile-link'), av = document.getElementById('user-avatar'), name = document.getElementById('user-name'), adm = document.getElementById('admin-link');
+    const btn = document.getElementById('sign-in-btn'), link = document.getElementById('user-profile-link'), av = document.getElementById('user-avatar'), adm = document.getElementById('admin-link');
     if (!btn || !link) return;
     if (u) {
         btn.classList.add('d-none'); link.classList.replace('d-none', 'd-flex');
         if (av) av.src = p?.photoURL || u.photoURL || './defaultuser.png';
-        if (name) name.textContent = p?.displayName || u.displayName || 'User';
         if (adm) adm.classList.toggle('d-none', !isAdmin);
     } else {
         btn.classList.remove('d-none'); link.classList.replace('d-flex', 'd-none');
@@ -415,7 +414,7 @@ function registerPageWikiManagement() {
 
 function registerWikiApp() {
     Alpine.data('wikiApp', () => ({
-        tab: 'home', showSidebar: false, loading: true, tabs: [{id:'home',label:'Welcome',icon:'bi-house'},{id:'servers',label:'Servers',icon:'bi-hdd-network'},{id:'software',label:'Software',icon:'bi-code-square'},{id:'sysadmin',label:'Sysadmin',icon:'bi-terminal'},{id:'machines',label:'Machines',icon:'bi-pc-display'},{id:'staff',label:'Staff',icon:'bi-people'},{id:'mcadmin',label:'MCAdmin',icon:'bi-shield-lock'},{id:'growth',label:'Growth Plans',icon:'bi-graph-up'}], tabContent: {}, tabMeta: {},
+        tab: 'home', loading: true, tabs: [{id:'home',label:'Welcome',icon:'bi-house'},{id:'servers',label:'Servers',icon:'bi-hdd-network'},{id:'software',label:'Software',icon:'bi-code-square'},{id:'sysadmin',label:'Sysadmin',icon:'bi-terminal'},{id:'machines',label:'Machines',icon:'bi-pc-display'},{id:'staff',label:'Staff',icon:'bi-people'},{id:'mcadmin',label:'MCAdmin',icon:'bi-shield-lock'},{id:'growth',label:'Growth Plans',icon:'bi-graph-up'}], tabContent: {}, tabMeta: {},
         get currentUser() { return Alpine.store('auth')?.user; },
         get isAdmin() { return Alpine.store('auth')?.isAdmin; },
         get canEdit() { if (!this.currentUser) return false; if (this.isAdmin) return true; return this.tabMeta[this.tab]?.allowedEditors?.includes(this.currentUser.uid); },
@@ -426,7 +425,7 @@ function registerWikiApp() {
             this.loading = false; this.$nextTick(() => this.renderTab(this.tab));
         },
         renderTab(id) { const el = document.querySelector(`.wiki-content[data-tab="${id}"]`); if (el && this.tabContent[id]) { el.innerHTML = this.tabContent[id]; el.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); } },
-        selectTab(id) { this.tab = id; this.showSidebar = false; this.$nextTick(() => this.renderTab(id)); },
+        selectTab(id) { this.tab = id; this.$nextTick(() => this.renderTab(id)); },
         async editCurrentTab() {
             const content = this.tabContent[this.tab] || '';
             const { value } = await Swal.fire({ title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`, width: '900px', html: `<textarea id="wiki-edit" class="form-control font-monospace" rows="20">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('wiki-edit').value = content; }, preConfirm: () => document.getElementById('wiki-edit').value });
@@ -440,7 +439,7 @@ function registerWikiApp() {
 
 function registerPagesData() {
     Alpine.data('pagesData', () => ({
-        pages: [], currentPage: null, currentPageId: new URL(location.href).searchParams.get('id'), loading: true, authorName: 'Unknown', showSidebar: false,
+        pages: [], currentPage: null, currentPageId: new URL(location.href).searchParams.get('id'), loading: true, authorName: 'Unknown',
         get currentUser() { return Alpine.store('auth')?.user; },
         get isAdmin() { return Alpine.store('auth')?.isAdmin; },
         get canEdit() { return this.currentUser && (this.isAdmin || this.currentPage?.authorId === this.currentUser.uid); },
@@ -462,7 +461,7 @@ function registerPagesData() {
 
 function registerAdminDashboard() {
     Alpine.data('adminDashboard', () => ({
-        tab: 'dashboard', mobileMenu: false, loading: true, isAdmin: false, currentUser: null, users: [], pages: [], threads: [], dms: [], wikiSections: [], searchUser: '',
+        tab: 'dashboard', loading: true, isAdmin: false, currentUser: null, users: [], pages: [], threads: [], dms: [], wikiSections: [], searchUser: '',
         navItems: [{id:'dashboard',label:'Dashboard',icon:'bi-speedometer2'},{id:'users',label:'Users',icon:'bi-people'},{id:'pages',label:'Pages',icon:'bi-file-earmark-text'},{id:'wiki',label:'Wiki',icon:'bi-book'},{id:'forums',label:'Forums',icon:'bi-chat-square-text'},{id:'dms',label:'Messages',icon:'bi-envelope'}],
         get stats() { return [{label:'Total Users',value:this.users.length,icon:'bi-people',color:'text-primary'},{label:'Pages',value:this.pages.length,icon:'bi-file-earmark',color:'text-success'},{label:'Threads',value:this.threads.length,icon:'bi-chat-square-text',color:'text-warning'},{label:'Messages',value:this.dms.length,icon:'bi-envelope',color:'text-info'}]; },
         get pageTitle() { return this.tab.charAt(0).toUpperCase() + this.tab.slice(1); },
