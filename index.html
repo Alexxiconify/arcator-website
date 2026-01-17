@@ -7,53 +7,201 @@
     <meta name="description" content="Arcator - Your hub for community, creativity, and connection.">
     <title>Arcator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
 </head>
 <body>
 <div id="navbar-placeholder"></div>
 
-<section class="hero-section">
-    <img src="./creativespawn.png" alt="Hero" loading="lazy">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-        <h1 class="display-4 fw-bold mb-3">Welcome to Arcator</h1>
-        <p class="lead">Your hub for community, creativity, and connection.</p>
-    </div>
-</section>
+<div x-data="{ tab: 'home', showSidebar: false }" class="d-flex w-100">
+    <!-- Mobile Toggle -->
+    <button class="btn btn-primary d-md-none position-fixed bottom-0 end-0 m-3 z-3 rounded-circle p-3 shadow" 
+            @click="showSidebar = !showSidebar" aria-label="Toggle Sidebar">
+        <i class="bi" :class="showSidebar ? 'bi-x-lg' : 'bi-list'"></i>
+    </button>
 
-<main class="container py-5">
-    <section class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="card h-100 feature-card"><div class="card-body">
-                <h5 class="card-title">Dynamic Themes</h5>
-                <p class="card-text text-secondary">Personalize your experience with a variety of themes.</p>
-            </div></div>
+    <!-- Sidebar -->
+    <div class="sidebar p-3" :class="showSidebar ? 'show' : ''">
+        <div>
+            <div class="mb-4 px-2">
+                <h4 class="text-light m-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-house-heart"></i> Welcome to Arcator
+                </h4>
+                <p class="text-muted small mt-2 mb-0">Your hub for community, creativity, and connection.</p>
+            </div>
+            <div class="nav flex-column nav-pills gap-2">
+                <a href="#" class="nav-link nav-link-custom" :class="tab === 'home' ? 'active' : ''" @click.prevent="tab = 'home'; showSidebar = false">
+                    <i class="bi bi-stars"></i> Home
+                </a>
+                <a href="#" class="nav-link nav-link-custom" :class="tab === 'about' ? 'active' : ''" @click.prevent="tab = 'about'; showSidebar = false">
+                    <i class="bi bi-info-circle"></i> About
+                </a>
+                <a href="#" class="nav-link nav-link-custom" :class="tab === 'games' ? 'active' : ''" @click.prevent="tab = 'games'; showSidebar = false">
+                    <i class="bi bi-controller"></i> Games
+                </a>
+                <a href="#" class="nav-link nav-link-custom" :class="tab === 'legal' ? 'active' : ''" @click.prevent="tab = 'legal'; showSidebar = false">
+                    <i class="bi bi-shield-check"></i> Legal
+                </a>
+            </div>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100 feature-card"><div class="card-body">
-                <h5 class="card-title">User Management</h5>
-                <p class="card-text text-secondary">Admins can easily manage user profiles and settings.</p>
-            </div></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content w-100">
+        <div class="container-fluid">
+            <!-- Home Tab -->
+            <div x-show="tab === 'home'" class="fade-in">
+                <div class="glass-card p-4 mb-4">
+                    <h2 class="fw-bold mb-4"><i class="bi bi-stars me-2"></i>Welcome</h2>
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-4">
+                            <div class="card h-100 feature-card"><div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-palette me-2"></i>Dynamic Themes</h5>
+                                <p class="card-text text-secondary">Personalize your experience with a variety of themes.</p>
+                            </div></div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100 feature-card"><div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-people me-2"></i>User Management</h5>
+                                <p class="card-text text-secondary">Admins can easily manage user profiles and settings.</p>
+                            </div></div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100 feature-card"><div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-chat-dots me-2"></i>Interactive Forums</h5>
+                                <p class="card-text text-secondary">Create discussions and connect with the community.</p>
+                            </div></div>
+                        </div>
+                    </div>
+                    <div class="text-center py-4">
+                        <h3 class="fw-bold mb-3">Join Our Community</h3>
+                        <p class="text-secondary mb-4">Sign up today to start connecting with others!</p>
+                        <a href="./users.html" class="btn btn-primary btn-lg">Get Started</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Tab -->
+            <div x-show="tab === 'about'" class="fade-in">
+                <div class="glass-card p-4 mb-4">
+                    <h2 class="fw-bold mb-4"><i class="bi bi-book me-2"></i>Our Story</h2>
+                    <p>Arcator is a community-driven platform designed to bring people together through gaming, creativity, and meaningful connections.</p>
+                    <p class="text-secondary">We started as a small group of friends who loved playing games together. Over time, we grew into a thriving community where everyone is welcome to join, share, and create memories.</p>
+                </div>
+            </div>
+
+            <!-- Games Tab -->
+            <div x-show="tab === 'games'" class="fade-in">
+                <div class="glass-card p-4 mb-4">
+                    <h2 class="fw-bold mb-4"><i class="bi bi-controller me-2"></i>Games We Play</h2>
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="row g-0">
+                                    <div class="col-md-4">
+                                        <img src="https://cdn.cloudflare.steamstatic.com/store/home/store_home_share.jpg" class="img-fluid rounded-start h-100 object-fit-cover" alt="Steam">
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="card-body">
+                                            <h4 class="card-title">Steam Games</h4>
+                                            <p class="card-text text-secondary">Discover thousands of games on Steam, from indie gems to AAA titles.</p>
+                                            <a href="https://store.steampowered.com" class="btn btn-primary" target="_blank" rel="noopener">Browse Steam</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/1672970/header.jpg" class="card-img-top" alt="Minecraft">
+                                <div class="card-body">
+                                    <h5 class="card-title">Minecraft</h5>
+                                    <p class="card-text text-secondary">Create, explore, and survive in an infinite blocky world.</p>
+                                    <a href="https://www.minecraft.net" class="btn btn-primary" target="_blank" rel="noopener">Play</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/105600/header.jpg" class="card-img-top" alt="Terraria">
+                                <div class="card-body">
+                                    <h5 class="card-title">Terraria</h5>
+                                    <p class="card-text text-secondary">Dig, fight, explore, and build in this 2D adventure!</p>
+                                    <a href="https://store.steampowered.com/app/105600/Terraria/" class="btn btn-primary" target="_blank" rel="noopener">Play</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/945360/header.jpg" class="card-img-top" alt="Among Us">
+                                <div class="card-body">
+                                    <h5 class="card-title">Among Us</h5>
+                                    <p class="card-text text-secondary">Work together or deceive everyone as an impostor.</p>
+                                    <a href="https://store.steampowered.com/app/945360/Among_Us/" class="btn btn-primary" target="_blank" rel="noopener">Play</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legal Tab -->
+            <div x-show="tab === 'legal'" class="fade-in">
+                <div class="glass-card p-4 mb-4">
+                    <h2 class="fw-bold mb-4"><i class="bi bi-shield-check me-2"></i>Legal Information</h2>
+                    <ul class="nav nav-pills mb-4">
+                        <li class="nav-item"><a class="nav-link active" href="#privacy" data-bs-toggle="pill">Privacy Policy</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#terms" data-bs-toggle="pill">Terms of Service</a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="privacy">
+                            <h4>Privacy Policy</h4>
+                            <p class="text-secondary">Last updated: December 2024</p>
+                            <h5>Information We Collect</h5>
+                            <p>We collect information you provide directly to us, such as when you create an account, contact us, or participate in our community features.</p>
+                            <h5>How We Use Your Information</h5>
+                            <ul><li>To provide and maintain our services</li><li>To communicate with you about updates</li><li>To ensure security and integrity</li><li>To improve our services</li></ul>
+                            <h5>Information Sharing</h5>
+                            <p>We do not sell, trade, or otherwise transfer your personal information to third parties without your consent.</p>
+                            <h5>Data Security</h5>
+                            <p>We implement appropriate security measures to protect your personal information.</p>
+                            <h5>Your Rights</h5>
+                            <p>You have the right to access, update, or delete your personal information through your profile page.</p>
+                            <h5>Contact Us</h5>
+                            <p>If you have questions about this Privacy Policy, please contact us through our Discord server.</p>
+                        </div>
+                        <div class="tab-pane fade" id="terms">
+                            <h4>Terms of Service</h4>
+                            <p class="text-secondary">Last updated: December 2024</p>
+                            <h5>Acceptance of Terms</h5>
+                            <p>By accessing and using Arcator.co.uk, you accept and agree to be bound by these terms.</p>
+                            <h5>Use License</h5>
+                            <p>Permission is granted to temporarily access the materials for personal, non-commercial viewing only.</p>
+                            <h5>User Conduct</h5>
+                            <ul><li>Respect other users</li><li>Follow server rules</li><li>Do not engage in harassment</li><li>Maintain appropriate language</li></ul>
+                            <h5>Account Responsibilities</h5>
+                            <p>You are responsible for maintaining the confidentiality of your account and password.</p>
+                            <h5>Prohibited Activities</h5>
+                            <ul><li>Violating any applicable laws</li><li>Attempting unauthorized access</li><li>Interfering with services</li><li>Sharing malicious content</li></ul>
+                            <h5>Termination</h5>
+                            <p>We may terminate or suspend your account at any time, with or without cause.</p>
+                            <h5>Limitation of Liability</h5>
+                            <p>Arcator.co.uk shall not be liable for any indirect, incidental, or consequential damages.</p>
+                            <h5>Contact Information</h5>
+                            <p>For questions about these Terms, please contact us through our Discord server.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100 feature-card"><div class="card-body">
-                <h5 class="card-title">Interactive Forums</h5>
-                <p class="card-text text-secondary">Create and manage custom forms for various purposes.</p>
-            </div></div>
-        </div>
-    </section>
-    <section class="text-center py-5">
-        <h2 class="display-6 fw-bold mb-3">Join Our Community</h2>
-        <p class="lead text-secondary mb-4">Sign up today to start connecting with others!</p>
-        <a href="./users.html" class="btn btn-primary btn-lg">Get Started</a>
-    </section>
-</main>
+    </div>
+</div>
 
 <div id="footer-placeholder"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script type="module" src="./app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>

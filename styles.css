@@ -212,9 +212,18 @@ main { flex: 1; position: relative; z-index: 1; }
 .dropdown-item:hover { background-color: rgba(255, 255, 255, 0.1); color: #fff; }
 
 @media (max-width: 768px) {
-    .sidebar { transform: translateX(-100%); }
-    .sidebar.show { transform: translateX(0); }
-    .main-content { margin-left: 0; }
+    .sidebar { 
+        transform: translateX(-100%); 
+        width: 100%;
+        z-index: 1050;
+    }
+    .sidebar.show { 
+        transform: translateX(0); 
+    }
+    .main-content { 
+        margin-left: 0; 
+        padding: 1rem;
+    }
 }
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
@@ -230,3 +239,9 @@ main { flex: 1; position: relative; z-index: 1; }
 
 .top-70 { top: 70px; }
 .mw-200 { max-width: 200px; }
+
+/* Footer above sidebar */
+footer, #footer-placeholder footer {
+    position: relative;
+    z-index: 1000;
+}

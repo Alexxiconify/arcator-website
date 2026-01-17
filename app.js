@@ -77,13 +77,10 @@ const NAV_HTML = `
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item"><a class="nav-link" href="./index.html">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="./games.html">Games</a></li>
                 <li class="nav-item"><a class="nav-link" href="./wiki.html">Wiki</a></li>
                 <li class="nav-item"><a class="nav-link" href="./forms.html">Forums</a></li>
                 <li class="nav-item"><a class="nav-link" href="./pages.html">Pages</a></li>
                 <li class="nav-item"><a class="nav-link" href="./resources.html">Resources</a></li>
-                <li class="nav-item"><a class="nav-link" href="./about.html">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="./privacy.html">Legal</a></li>
                 <li class="nav-item d-none" id="admin-link"><a class="nav-link" href="./mod.html">Admin</a></li>
             </ul>
             <div id="user-section" class="d-flex align-items-center">

@@ -14,36 +14,21 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <style>
-        .ql-editor{min-height:60px;background:#1a1a1a;color:#fff !important}
-        .ql-toolbar{background:#222;border-color:#333!important}
-        .ql-container{border-color:#333!important}
-        .swal2-popup .ql-toolbar { background: #333; border-color: #444; }
-        .swal2-popup .ql-container { border-color: #444; background: #222; }
-        .forum-thread-card { transition: transform 0.2s; }
-        .forum-thread-card:hover { transform: translateY(-2px); }
-        .profile-img-sm { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
-        .message-bubble { max-width: 80%; }
-    </style>
 </head>
 <body>
 <div id="navbar-placeholder"></div>
-
-<section class="hero-section">
-    <img src="./creativespawn.png" alt="Hero" loading="lazy">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-        <h1 class="display-4 fw-bold mb-3">Forums & Messages</h1>
-        <p class="lead">Community discussions and conversations</p>
-    </div>
-</section>
-
-<main class="container py-5" x-data="{ tab: 'forums' }">
-    <ul class="nav nav-tabs mb-4">
-        <li class="nav-item"><button class="nav-link" :class="{ 'active': tab === 'forums' }" @click="tab = 'forums'">Forums</button></li>
-        <li class="nav-item"><button class="nav-link" :class="{ 'active': tab === 'messages' }" @click="tab = 'messages'">Messages</button></li>
-    </ul>
+<main class="container py-4" x-data="{ tab: 'forums' }">
+    <div class="glass-card p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <div>
+                <h2 class="fw-bold m-0"><i class="bi bi-chat-square-text me-2"></i>Forums & Messages</h2>
+                <p class="text-muted small m-0">Community discussions and conversations</p>
+            </div>
+            <ul class="nav nav-pills">
+                <li class="nav-item"><button class="nav-link" :class="{ 'active': tab === 'forums' }" @click="tab = 'forums'"><i class="bi bi-chat-dots me-1"></i>Forums</button></li>
+                <li class="nav-item"><button class="nav-link" :class="{ 'active': tab === 'messages' }" @click="tab = 'messages'"><i class="bi bi-envelope me-1"></i>Messages</button></li>
+            </ul>
+        </div>
     <div class="tab-content">
         <div x-show="tab === 'forums'" x-data="forumData">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -332,6 +317,7 @@
                 </div>
             </template>
         </div>
+    </div>
     </div>
 </main>
 
