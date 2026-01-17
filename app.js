@@ -22,6 +22,10 @@ const formatDate = ts => {
     const d = ts.seconds ? dayjs(ts.seconds * 1000) : dayjs(ts);
     return d.isSame(dayjs(), 'day') ? d.format('HH:mm') : d.format('DD/MM/YY');
 };
+const escapeHtml = str => {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+};
 const generateProfilePic = name => {
     const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'], canvas = document.createElement('canvas');
     canvas.width = canvas.height = 200;
@@ -332,8 +336,32 @@ function registerForumData() {
             const t = this.threads.find(t => t.id === fid); if (t) t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(fid)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
         },
         async editThread(t) {
-            const html = `<input id="s1" class="swal2-input" value="${t.title}"><input id="s2" class="swal2-input" value="${t.tags||''}"><select id="s3" class="swal2-input"><option value="announcements"${t.category==='announcements'?' selected':''}>Announcements</option><option value="gaming"${t.category==='gaming'?' selected':''}>Gaming</option><option value="discussion"${t.category==='discussion'?' selected':''}>Discussion</option><option value="support"${t.category==='support'?' selected':''}>Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10">${t.description || ''}</textarea>`;
-            const { value: v } = await Swal.fire({ title: 'Edit', html, preConfirm: () => [document.getElementById('s1').value, document.getElementById('s2').value, document.getElementById('s3').value, document.getElementById('ed-thread-content').value] });
+            const { value: v } = await Swal.fire({
+                title: 'Edit',
+                html: `
+                    <input id="s1" class="swal2-input" placeholder="Title">
+                    <input id="s2" class="swal2-input" placeholder="Tags">
+                    <select id="s3" class="swal2-input">
+                        <option value="announcements">Announcements</option>
+                        <option value="gaming">Gaming</option>
+                        <option value="discussion">Discussion</option>
+                        <option value="support">Support</option>
+                    </select>
+                    <textarea id="ed-thread-content" class="form-control" rows="10"></textarea>
+                `,
+                didOpen: () => {
+                    document.getElementById('s1').value = t.title;
+                    document.getElementById('s2').value = t.tags || '';
+                    document.getElementById('s3').value = t.category || 'discussion';
+                    document.getElementById('ed-thread-content').value = t.description || '';
+                },
+                preConfirm: () => [
+                    document.getElementById('s1').value,
+                    document.getElementById('s2').value,
+                    document.getElementById('s3').value,
+                    document.getElementById('ed-thread-content').value
+                ]
+            });
             if (v) { await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), { title: v[0], tags: v[1], category: v[2], description: v[3], updatedAt: serverTimestamp() }); Object.assign(t, { title: v[0], tags: v[1], category: v[2], description: v[3] }); }
         },
         async editComment(fid, c) { const res = await promptEditor('Edit', '', c.content); if (res) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(fid), c.id), { content: res }); c.content = res; } },
@@ -388,7 +416,27 @@ function registerPageWikiManagement() {
             if (v) { await addDoc(collection(db, COLLECTIONS.PAGES), v); if (cb) cb(); Swal.fire('Success', 'Page created', 'success'); }
         },
         async editPage(p, cb) {
-            const { value: v } = await Swal.fire({ title: 'Edit Page', width: '800px', html: `<input id="ep-title" class="form-control mb-2" placeholder="Title" value="${p.title}"><input id="ep-slug" class="form-control mb-2" placeholder="Slug" value="${p.slug}"><textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content">${p.content}</textarea>`, showCancelButton: true, preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() }) });
+            const { value: v } = await Swal.fire({
+                title: 'Edit Page',
+                width: '800px',
+                html: `
+                    <input id="ep-title" class="form-control mb-2" placeholder="Title">
+                    <input id="ep-slug" class="form-control mb-2" placeholder="Slug">
+                    <textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content"></textarea>
+                `,
+                showCancelButton: true,
+                didOpen: () => {
+                    document.getElementById('ep-title').value = p.title;
+                    document.getElementById('ep-slug').value = p.slug;
+                    document.getElementById('ep-content').value = p.content;
+                },
+                preConfirm: () => ({
+                    title: document.getElementById('ep-title').value,
+                    slug: document.getElementById('ep-slug').value,
+                    content: document.getElementById('ep-content').value,
+                    updatedAt: serverTimestamp()
+                })
+            });
             if (v) { await updateDoc(doc(db, COLLECTIONS.PAGES, p.id), v); if (cb) cb(); Swal.fire('Success', 'Page updated', 'success'); }
         },
         async deletePage(id, cb) {
@@ -399,12 +447,22 @@ function registerPageWikiManagement() {
             if (v?.id) { await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, v.id), { content: v.content, allowedEditors: [], updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Wiki section created', 'success'); }
         },
         async editWikiSection(s, cb) {
-            const { value: v } = await Swal.fire({ title: `Edit: ${s.id}`, width: '900px', html: `<textarea id="ew-content" class="form-control font-monospace" rows="20">${s.content || ''}</textarea>`, showCancelButton: true, preConfirm: () => document.getElementById('ew-content').value });
+            const { value: v } = await Swal.fire({
+                title: `Edit: ${escapeHtml(s.id)}`,
+                width: '900px',
+                html: `<textarea id="ew-content" class="form-control font-monospace" rows="20"></textarea>`,
+                showCancelButton: true,
+                didOpen: () => {
+                    document.getElementById('ew-content').value = s.content || '';
+                },
+                preConfirm: () => document.getElementById('ew-content').value
+            });
             if (v !== undefined) { await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, s.id), { content: v, updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Wiki section updated', 'success'); }
         },
         async manageWikiEditors(s, users, cb) {
-            const cur = s.allowedEditors || [], opts = users.map(u => `<option value="${u.id}" ${cur.includes(u.id) ? 'selected' : ''}>${u.displayName || u.email}</option>`).join('');
-            const { value: v } = await Swal.fire({ title: `Allowed Editors: ${s.id}`, html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" class="form-select" multiple size="10">${opts}</select>`, showCancelButton: true, preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value) });
+            const cur = s.allowedEditors || [];
+            const opts = users.map(u => `<option value="${escapeHtml(u.id)}" ${cur.includes(u.id) ? 'selected' : ''}>${escapeHtml(u.displayName || u.email)}</option>`).join('');
+            const { value: v } = await Swal.fire({ title: `Allowed Editors: ${escapeHtml(s.id)}`, html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" class="form-select" multiple size="10">${opts}</select>`, showCancelButton: true, preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value) });
             if (v !== undefined) { await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, s.id), { allowedEditors: v, updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Editors updated', 'success'); }
         },
         async deleteWikiSection(id, cb) {
@@ -429,7 +487,14 @@ function registerWikiApp() {
         selectTab(id) { this.tab = id; this.$nextTick(() => this.renderTab(id)); },
         async editCurrentTab() {
             const content = this.tabContent[this.tab] || '';
-            const { value } = await Swal.fire({ title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`, width: '900px', html: `<textarea id="wiki-edit" class="form-control font-monospace" rows="20">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('wiki-edit').value = content; }, preConfirm: () => document.getElementById('wiki-edit').value });
+            const { value } = await Swal.fire({
+                title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`,
+                width: '900px',
+                html: `<textarea id="wiki-edit" class="form-control font-monospace" rows="20"></textarea>`,
+                showCancelButton: true,
+                didOpen: () => { document.getElementById('wiki-edit').value = content; },
+                preConfirm: () => document.getElementById('wiki-edit').value
+            });
             if (value !== undefined) {
                 await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, this.tab), { content: value, updatedAt: serverTimestamp() });
                 this.tabContent[this.tab] = value; this.renderTab(this.tab); Swal.fire('Saved', 'Wiki section updated', 'success');
@@ -499,7 +564,7 @@ function registerAdminDashboard() {
             if (!this.isAdmin) return Swal.fire('Error', 'Unauthorized', 'error');
             const { value: v } = await Swal.fire({
                 title: 'Edit User', width: '800px',
-                html: `<div class="text-start admin-modal-scroll"><h6 class="text-primary mb-3">General</h6><div class="row g-2 mb-3">${[{id:'eu-name',l:'Name',v:u.displayName||''},{id:'eu-handle',l:'Handle',v:u.handle||''},{id:'eu-email',l:'Email',v:u.email||''},{id:'eu-photo',l:'Photo',v:u.photoURL||''},{id:'eu-css',l:'CSS',v:u.customCSS||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${f.v}"></div>`).join('')}<div class="col-md-6"><label class="small">Role</label><select id="eu-role" class="form-select form-select-sm"><option value="user" ${!u.admin&&u.role!=='staff'?'selected':''}>User</option><option value="staff" ${u.role==='staff'?'selected':''}>Staff</option><option value="admin" ${u.admin?'selected':''}>Admin</option></select></div></div><h6 class="text-primary mb-3 border-top pt-3">Social</h6><div class="row g-2 mb-3">${[{id:'eu-discordId',l:'Discord ID',v:u.discordId||''},{id:'eu-discordTag',l:'Discord Tag',v:u.discordTag||''},{id:'eu-discordPic',l:'Discord Pic',v:u.discordPic||''},{id:'eu-discordURL',l:'Discord URL',v:u.discordURL||''},{id:'eu-githubPic',l:'GitHub Pic',v:u.githubPic||''},{id:'eu-githubURL',l:'GitHub URL',v:u.githubURL||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${f.v}"></div>`).join('')}</div><h6 class="text-primary mb-3 border-top pt-3">Preferences</h6><div class="row g-2 mb-3"><div class="col-md-4"><label class="small">Theme</label><select id="eu-theme" class="form-select form-select-sm"><option value="dark" ${u.themePreference==='dark'?'selected':''}>Dark</option><option value="light" ${u.themePreference==='light'?'selected':''}>Light</option></select></div><div class="col-md-4"><label class="small">Font</label><select id="eu-font" class="form-select form-select-sm"><option value="small" ${u.fontScaling==='small'?'selected':''}>Small</option><option value="normal" ${u.fontScaling==='normal'?'selected':''}>Normal</option><option value="large" ${u.fontScaling==='large'?'selected':''}>Large</option></select></div><div class="col-md-4"><label class="small">Retention</label><input type="number" id="eu-retention" class="form-control form-control-sm" value="${u.dataRetention||365}"></div></div><div class="row g-2 mt-2"><div class="col-md-6"><label class="small">Glass Color</label><input id="eu-glassColor" class="form-control form-control-sm" value="${u.glassColor||''}"></div><div class="col-md-6"><label class="small">Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" class="form-control form-control-sm" value="${u.glassOpacity||0.95}"></div><div class="col-md-6"><label class="small">Blur</label><input id="eu-glassBlur" type="number" class="form-control form-control-sm" value="${u.glassBlur||''}"></div><div class="col-12"><label class="small">Background</label><input id="eu-bgImg" class="form-control form-control-sm" value="${u.backgroundImage||''}"></div></div><h6 class="text-primary mb-3 border-top pt-3">Flags</h6><div class="row g-2">${[{id:'eu-activity',l:'Activity',c:u.activityTracking},{id:'eu-debug',l:'Debug',c:u.debugMode},{id:'eu-discordLinked',l:'Discord Linked',c:u.discordLinked},{id:'eu-discordNotif',l:'Discord Notifs',c:u.discordNotifications},{id:'eu-emailNotif',l:'Email Notifs',c:u.emailNotifications},{id:'eu-focus',l:'Focus',c:u.focusIndicators},{id:'eu-contrast',l:'Contrast',c:u.highContrast},{id:'eu-visible',l:'Visible',c:u.profileVisible},{id:'eu-push',l:'Push',c:u.pushNotifications},{id:'eu-motion',l:'Motion',c:u.reducedMotion},{id:'eu-reader',l:'Reader',c:u.screenReader},{id:'eu-sharing',l:'Sharing',c:u.thirdPartySharing}].map(f=>`<div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="${f.id}" ${f.c?'checked':''}> <label class="small">${f.l}</label></div></div>`).join('')}</div></div>`,
+                html: `<div class="text-start admin-modal-scroll"><h6 class="text-primary mb-3">General</h6><div class="row g-2 mb-3">${[{id:'eu-name',l:'Name',v:u.displayName||''},{id:'eu-handle',l:'Handle',v:u.handle||''},{id:'eu-email',l:'Email',v:u.email||''},{id:'eu-photo',l:'Photo',v:u.photoURL||''},{id:'eu-css',l:'CSS',v:u.customCSS||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${escapeHtml(f.v)}"></div>`).join('')}<div class="col-md-6"><label class="small">Role</label><select id="eu-role" class="form-select form-select-sm"><option value="user" ${!u.admin&&u.role!=='staff'?'selected':''}>User</option><option value="staff" ${u.role==='staff'?'selected':''}>Staff</option><option value="admin" ${u.admin?'selected':''}>Admin</option></select></div></div><h6 class="text-primary mb-3 border-top pt-3">Social</h6><div class="row g-2 mb-3">${[{id:'eu-discordId',l:'Discord ID',v:u.discordId||''},{id:'eu-discordTag',l:'Discord Tag',v:u.discordTag||''},{id:'eu-discordPic',l:'Discord Pic',v:u.discordPic||''},{id:'eu-discordURL',l:'Discord URL',v:u.discordURL||''},{id:'eu-githubPic',l:'GitHub Pic',v:u.githubPic||''},{id:'eu-githubURL',l:'GitHub URL',v:u.githubURL||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${escapeHtml(f.v)}"></div>`).join('')}</div><h6 class="text-primary mb-3 border-top pt-3">Preferences</h6><div class="row g-2 mb-3"><div class="col-md-4"><label class="small">Theme</label><select id="eu-theme" class="form-select form-select-sm"><option value="dark" ${u.themePreference==='dark'?'selected':''}>Dark</option><option value="light" ${u.themePreference==='light'?'selected':''}>Light</option></select></div><div class="col-md-4"><label class="small">Font</label><select id="eu-font" class="form-select form-select-sm"><option value="small" ${u.fontScaling==='small'?'selected':''}>Small</option><option value="normal" ${u.fontScaling==='normal'?'selected':''}>Normal</option><option value="large" ${u.fontScaling==='large'?'selected':''}>Large</option></select></div><div class="col-md-4"><label class="small">Retention</label><input type="number" id="eu-retention" class="form-control form-control-sm" value="${u.dataRetention||365}"></div></div><div class="row g-2 mt-2"><div class="col-md-6"><label class="small">Glass Color</label><input id="eu-glassColor" class="form-control form-control-sm" value="${escapeHtml(u.glassColor||'')}"></div><div class="col-md-6"><label class="small">Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" class="form-control form-control-sm" value="${u.glassOpacity||0.95}"></div><div class="col-md-6"><label class="small">Blur</label><input id="eu-glassBlur" type="number" class="form-control form-control-sm" value="${u.glassBlur||''}"></div><div class="col-12"><label class="small">Background</label><input id="eu-bgImg" class="form-control form-control-sm" value="${escapeHtml(u.backgroundImage||'')}"></div></div><h6 class="text-primary mb-3 border-top pt-3">Flags</h6><div class="row g-2">${[{id:'eu-activity',l:'Activity',c:u.activityTracking},{id:'eu-debug',l:'Debug',c:u.debugMode},{id:'eu-discordLinked',l:'Discord Linked',c:u.discordLinked},{id:'eu-discordNotif',l:'Discord Notifs',c:u.discordNotifications},{id:'eu-emailNotif',l:'Email Notifs',c:u.emailNotifications},{id:'eu-focus',l:'Focus',c:u.focusIndicators},{id:'eu-contrast',l:'Contrast',c:u.highContrast},{id:'eu-visible',l:'Visible',c:u.profileVisible},{id:'eu-push',l:'Push',c:u.pushNotifications},{id:'eu-motion',l:'Motion',c:u.reducedMotion},{id:'eu-reader',l:'Reader',c:u.screenReader},{id:'eu-sharing',l:'Sharing',c:u.thirdPartySharing}].map(f=>`<div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="${f.id}" ${f.c?'checked':''}> <label class="small">${f.l}</label></div></div>`).join('')}</div></div>`,
                 showCancelButton: true,
                 preConfirm: () => ({
                     displayName: document.getElementById('eu-name').value, handle: document.getElementById('eu-handle').value, email: document.getElementById('eu-email').value, photoURL: document.getElementById('eu-photo').value, role: document.getElementById('eu-role').value, admin: document.getElementById('eu-role').value === 'admin', customCSS: document.getElementById('eu-css').value, discordId: document.getElementById('eu-discordId').value, discordTag: document.getElementById('eu-discordTag').value, discordPic: document.getElementById('eu-discordPic').value, discordURL: document.getElementById('eu-discordURL').value, githubPic: document.getElementById('eu-githubPic').value, githubURL: document.getElementById('eu-githubURL').value, themePreference: document.getElementById('eu-theme').value, fontScaling: document.getElementById('eu-font').value, dataRetention: parseInt(document.getElementById('eu-retention').value), glassColor: document.getElementById('eu-glassColor').value, glassOpacity: parseFloat(document.getElementById('eu-glassOpacity').value), glassBlur: parseInt(document.getElementById('eu-glassBlur').value), backgroundImage: document.getElementById('eu-bgImg').value, activityTracking: document.getElementById('eu-activity').checked, debugMode: document.getElementById('eu-debug').checked, discordLinked: document.getElementById('eu-discordLinked').checked, discordNotifications: document.getElementById('eu-discordNotif').checked, emailNotifications: document.getElementById('eu-emailNotif').checked, focusIndicators: document.getElementById('eu-focus').checked, highContrast: document.getElementById('eu-contrast').checked, profileVisible: document.getElementById('eu-visible').checked, pushNotifications: document.getElementById('eu-push').checked, reducedMotion: document.getElementById('eu-motion').checked, screenReader: document.getElementById('eu-reader').checked, thirdPartySharing: document.getElementById('eu-sharing').checked, updatedAt: serverTimestamp()
@@ -518,20 +583,116 @@ function registerAdminDashboard() {
         },
 
         async editThread(t) {
-            const { value: v } = await Swal.fire({ title: 'Edit Thread', html: `<input id="et-title" class="form-control mb-2" value="${t.title}"><input id="et-tags" class="form-control mb-2" value="${t.tags||''}"><select id="et-cat" class="form-select mb-2"><option value="General">General</option><option value="Announcements">Announcements</option><option value="Support">Support</option><option value="Gaming">Gaming</option><option value="Discussion">Discussion</option></select><div class="form-check text-start mb-2"><input class="form-check-input" type="checkbox" id="et-locked" ${t.locked?'checked':''}> <label class="form-check-label">Lock</label></div><textarea id="et-desc" class="form-control" rows="5">${t.description}</textarea>`, didOpen: () => document.getElementById('et-cat').value = t.category || 'General', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('et-title').value, tags: document.getElementById('et-tags').value, category: document.getElementById('et-cat').value, locked: document.getElementById('et-locked').checked, description: document.getElementById('et-desc').value }) });
+            const { value: v } = await Swal.fire({
+                title: 'Edit Thread',
+                html: `
+                    <input id="et-title" class="form-control mb-2" placeholder="Title">
+                    <input id="et-tags" class="form-control mb-2" placeholder="Tags">
+                    <select id="et-cat" class="form-select mb-2">
+                        <option value="General">General</option>
+                        <option value="Announcements">Announcements</option>
+                        <option value="Support">Support</option>
+                        <option value="Gaming">Gaming</option>
+                        <option value="Discussion">Discussion</option>
+                    </select>
+                    <div class="form-check text-start mb-2">
+                        <input class="form-check-input" type="checkbox" id="et-locked">
+                        <label class="form-check-label">Lock</label>
+                    </div>
+                    <textarea id="et-desc" class="form-control" rows="5"></textarea>
+                `,
+                didOpen: () => {
+                    document.getElementById('et-title').value = t.title;
+                    document.getElementById('et-tags').value = t.tags || '';
+                    document.getElementById('et-cat').value = t.category || 'General';
+                    document.getElementById('et-locked').checked = t.locked || false;
+                    document.getElementById('et-desc').value = t.description;
+                },
+                showCancelButton: true,
+                preConfirm: () => ({
+                    title: document.getElementById('et-title').value,
+                    tags: document.getElementById('et-tags').value,
+                    category: document.getElementById('et-cat').value,
+                    locked: document.getElementById('et-locked').checked,
+                    description: document.getElementById('et-desc').value
+                })
+            });
             if (v) { await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), v); this.refreshAll(); }
         },
         async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.FORMS, id)); this.refreshAll(); } },
         async viewThread(t) {
             const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), orderBy('createdAt', 'asc')));
-            const html = snap.docs.map(d => { const data = d.data(); return `<div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25"><div class="d-flex justify-content-between"><small class="text-info">${this.getAuthorName(data.authorId)}</small><small class="text-muted">${this.formatDate(data.createdAt)}</small></div><div class="my-1">${data.content}</div><div class="d-flex gap-2 justify-content-end"><button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-comment', {detail: {tid: '${t.id}', cid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button><button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-comment', {detail: {tid: '${t.id}', cid: '${d.id}'}}))">Del</button></div></div>`; }).join('');
-            Swal.fire({ title: t.title, html: `<div class="text-start">${t.description}</div><hr><div class="text-start admin-list-scroll">${html || 'No comments'}</div>`, width: 800 });
+            const html = snap.docs.map(d => {
+                const data = d.data();
+                return `
+                    <div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-info">${escapeHtml(this.getAuthorName(data.authorId))}</small>
+                            <small class="text-muted">${this.formatDate(data.createdAt)}</small>
+                        </div>
+                        <div class="my-1">${DOMPurify.sanitize(data.content)}</div>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button class="btn btn-sm btn-outline-secondary py-0 edit-comment-btn" data-tid="${t.id}" data-cid="${d.id}">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger py-0 del-comment-btn" data-tid="${t.id}" data-cid="${d.id}">Del</button>
+                        </div>
+                    </div>`;
+            }).join('');
+            
+            Swal.fire({
+                title: escapeHtml(t.title),
+                html: `<div class="text-start">${DOMPurify.sanitize(t.description)}</div><hr><div class="text-start admin-list-scroll">${html || 'No comments'}</div>`,
+                width: 800,
+                didOpen: () => {
+                    const c = Swal.getHtmlContainer();
+                    c.querySelectorAll('.edit-comment-btn').forEach(b => {
+                        b.onclick = async () => {
+                            const d = snap.docs.find(x => x.id === b.dataset.cid);
+                            if (d) document.dispatchEvent(new CustomEvent('admin-edit-comment', { detail: { tid: t.id, cid: d.id, content: d.data().content } }));
+                        };
+                    });
+                    c.querySelectorAll('.del-comment-btn').forEach(b => {
+                        b.onclick = () => document.dispatchEvent(new CustomEvent('admin-del-comment', { detail: { tid: t.id, cid: b.dataset.cid } }));
+                    });
+                }
+            });
         },
 
         async viewDM(dm) {
             const snap = await getDocs(query(collection(db, COLLECTIONS.CONV_MESSAGES(dm.id)), orderBy('createdAt', 'asc')));
-            const html = snap.docs.map(d => { const data = d.data(); return `<div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25"><div class="d-flex justify-content-between"><small class="text-info">${dm.participantNames ? dm.participantNames[data.senderId] : this.getAuthorName(data.senderId)}</small><small class="text-muted">${this.formatDate(data.createdAt)}</small></div><div class="my-1">${data.content}</div><div class="d-flex gap-2 justify-content-end"><button class="btn btn-sm btn-outline-secondary py-0" onclick="document.dispatchEvent(new CustomEvent('admin-edit-msg', {detail: {cid: '${dm.id}', mid: '${d.id}', content: '${data.content.replace(/'/g, "\\'")}'}}))">Edit</button><button class="btn btn-sm btn-outline-danger py-0" onclick="document.dispatchEvent(new CustomEvent('admin-del-msg', {detail: {cid: '${dm.id}', mid: '${d.id}'}}))">Del</button></div></div>`; }).join('');
-            Swal.fire({ title: 'Conversation Log', html: `<div class="text-start" style="max-height:400px;overflow-y:auto">${html || 'No messages'}</div>`, width: 600 });
+            const html = snap.docs.map(d => {
+                const data = d.data();
+                const senderName = dm.participantNames ? dm.participantNames[data.senderId] : this.getAuthorName(data.senderId);
+                return `
+                    <div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-info">${escapeHtml(senderName)}</small>
+                            <small class="text-muted">${this.formatDate(data.createdAt)}</small>
+                        </div>
+                        <div class="my-1">${DOMPurify.sanitize(data.content)}</div>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button class="btn btn-sm btn-outline-secondary py-0 edit-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger py-0 del-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Del</button>
+                        </div>
+                    </div>`;
+            }).join('');
+            
+            Swal.fire({
+                title: 'Conversation Log',
+                html: `<div class="text-start" style="max-height:400px;overflow-y:auto">${html || 'No messages'}</div>`,
+                width: 600,
+                didOpen: () => {
+                    const c = Swal.getHtmlContainer();
+                    c.querySelectorAll('.edit-msg-btn').forEach(b => {
+                        b.onclick = async () => {
+                            const d = snap.docs.find(x => x.id === b.dataset.mid);
+                            if (d) document.dispatchEvent(new CustomEvent('admin-edit-msg', { detail: { cid: dm.id, mid: d.id, content: d.data().content } }));
+                        };
+                    });
+                    c.querySelectorAll('.del-msg-btn').forEach(b => {
+                        b.onclick = () => document.dispatchEvent(new CustomEvent('admin-del-msg', { detail: { cid: dm.id, mid: b.dataset.mid } }));
+                    });
+                }
+            });
         },
         async deleteDM(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.CONVERSATIONS, id)); this.refreshAll(); } },
         async deleteMessage(cid, mid) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(cid), mid)); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
