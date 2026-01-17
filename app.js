@@ -1,3 +1,4 @@
+import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1/+esm';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
 import {createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, onAuthStateChanged, onIdTokenChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, signOut, updateProfile} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 import {addDoc, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
@@ -17,165 +18,64 @@ const COLLECTIONS = {USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FOR
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
 
-function formatDate(ts) {
+const formatDate = ts => {
     if (!ts) return '';
-    const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
-    const now = new Date();
-    const isToday = d.toDateString() === now.toDateString();
-    const pad = n => String(n).padStart(2, '0');
-    if (isToday) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)}`;
-}
-
-function generateProfilePic(name) {
-    const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'];
-    const hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0);
-    const canvas = document.createElement('canvas');
+    const d = ts.seconds ? dayjs(ts.seconds * 1000) : dayjs(ts);
+    return d.isSame(dayjs(), 'day') ? d.format('HH:mm') : d.format('DD/MM/YY');
+};
+const generateProfilePic = name => {
+    const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'], canvas = document.createElement('canvas');
     canvas.width = canvas.height = 200;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d'), hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0);
     ctx.fillStyle = colors[Math.abs(hash) % colors.length];
     ctx.fillRect(0, 0, 200, 200);
-    ctx.fillStyle = '#FFF';
-    ctx.font = 'bold 80px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), 100, 100);
     return canvas.toDataURL('image/png');
-}
-
-function randomIdentity() {
-    const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'];
-    const noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl'];
-    const a = adj[Math.floor(Math.random() * adj.length)];
-    const n = noun[Math.floor(Math.random() * noun.length)];
+};
+const randomIdentity = () => {
+    const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'], noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl'];
+    const a = adj[Math.floor(Math.random() * adj.length)], n = noun[Math.floor(Math.random() * noun.length)];
     return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` };
-}
-
-const NAV_HTML = `
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top border-bottom border-primary">
-    <div class="container-fluid px-4">
-        <a class="navbar-brand fw-bold" href="./index.html">Arcator</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="./index.html">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="./wiki.html">Wiki</a></li>
-                <li class="nav-item"><a class="nav-link" href="./forms.html">Forums</a></li>
-                <li class="nav-item"><a class="nav-link" href="./pages.html">Pages</a></li>
-                <li class="nav-item"><a class="nav-link" href="./resources.html">Resources</a></li>
-                <li class="nav-item d-none" id="admin-link"><a class="nav-link" href="./mod.html">Admin</a></li>
-            </ul>
-            <div id="user-section" class="d-flex align-items-center">
-                <a href="./users.html" class="btn btn-primary btn-sm" id="sign-in-btn">Sign In</a>
-                <a href="./users.html" class="d-none align-items-center text-decoration-none gap-2" id="user-profile-link">
-                    <img src="./defaultuser.png" class="profile-img" alt="Profile" id="user-avatar">
-                    <span class="text-light" id="user-name">User</span>
-                </a>
-            </div>
-        </div>
-    </div>
-</nav>`;
-
-const FOOTER_HTML = `
-<footer class="mt-auto py-4 bg-dark border-top border-primary">
-    <div class="container-fluid px-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap">
-            <div class="d-flex gap-3">
-                <a href="https://ssmp.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a>
-                <a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a>
-            </div>
-            <div class="text-secondary">© 2025 Arcator</div>
-        </div>
-    </div>
-</footer>`;
-
+};
+const NAV_HTML = `<nav class="arc-nav"><div class="container-fluid px-4"><a class="navbar-brand fw-bold" href="./index.html">Arcator</a><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="./wiki.html">Wiki</a></li><li class="nav-item"><a class="nav-link" href="./forms.html">Forums</a></li><li class="nav-item"><a class="nav-link" href="./pages.html">Pages</a></li><li class="nav-item"><a class="nav-link" href="./resources.html">Resources</a></li><li class="nav-item d-none" id="admin-link"><a class="nav-link" href="./mod.html">Admin</a></li></ul><div class="arc-user-section"><a href="./users.html" class="btn btn-primary btn-sm" id="sign-in-btn">Sign In</a><a href="./users.html" class="d-none arc-profile-link" id="user-profile-link"><img src="./defaultuser.png" class="arc-profile-img" alt="Profile" id="user-avatar"><span class="text-light" id="user-name">User</span></a></div></div></div></nav>`;
+const FOOTER_HTML = `<footer class="arc-footer"><div class="container-fluid px-4"><div class="arc-flex-between"><div class="d-flex gap-3"><a href="https://ssmp.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a><a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a></div><div class="text-secondary">© 2025 Arcator</div></div></div></footer>`;
 function initLayout() {
-    const navPlaceholder = document.getElementById('navbar-placeholder');
-    if (navPlaceholder) {
-        navPlaceholder.innerHTML = NAV_HTML;
-        const current = location.pathname.split('/').pop() || 'index.html';
-        const links = navPlaceholder.querySelectorAll('.nav-link');
-        links.forEach(l => {
-            if (l.getAttribute('href') === `./${current}` || (current === 'index.html' && l.getAttribute('href') === './index.html')) {
-                l.classList.add('active');
-            }
-        });
+    const nav = document.getElementById('navbar-placeholder'), foot = document.getElementById('footer-placeholder');
+    if (nav) {
+        nav.innerHTML = NAV_HTML;
+        const cur = location.pathname.split('/').pop() || 'index.html';
+        nav.querySelectorAll('.nav-link').forEach(l => (l.getAttribute('href') === `./${cur}` || (cur === 'index.html' && l.getAttribute('href') === './index.html')) && l.classList.add('active'));
     }
-
-    const footerPlaceholder = document.getElementById('footer-placeholder');
-    if (footerPlaceholder) footerPlaceholder.innerHTML = FOOTER_HTML;
-
-    if (window.Alpine) {
-        const store = Alpine.store('auth');
-        if (store && !store.loading) updateUserSection(store.user, store.profile, store.isAdmin);
-    }
+    if (foot) foot.innerHTML = FOOTER_HTML;
+    if (window.Alpine) { const s = Alpine.store('auth'); s && !s.loading && updateUserSection(s.user, s.profile, s.isAdmin); }
 }
-
-function updateUserSection(user, profile, isAdmin = false) {
-    const signInBtn = document.getElementById('sign-in-btn');
-    const profileLink = document.getElementById('user-profile-link');
-    const avatar = document.getElementById('user-avatar');
-    const userName = document.getElementById('user-name');
-    const adminLink = document.getElementById('admin-link');
-    
-    if (!signInBtn || !profileLink) return;
-    
-    if (user) {
-        signInBtn.classList.add('d-none');
-        profileLink.classList.remove('d-none');
-        profileLink.classList.add('d-flex');
-        if (avatar) avatar.src = profile?.photoURL || user.photoURL || './defaultuser.png';
-        if (userName) userName.textContent = profile?.displayName || user.displayName || 'User';
-        if (adminLink) {
-            if (isAdmin) adminLink.classList.remove('d-none');
-            else adminLink.classList.add('d-none');
-        }
+function updateUserSection(u, p, isAdmin = false) {
+    const btn = document.getElementById('sign-in-btn'), link = document.getElementById('user-profile-link'), av = document.getElementById('user-avatar'), name = document.getElementById('user-name'), adm = document.getElementById('admin-link');
+    if (!btn || !link) return;
+    if (u) {
+        btn.classList.add('d-none'); link.classList.replace('d-none', 'd-flex');
+        if (av) av.src = p?.photoURL || u.photoURL || './defaultuser.png';
+        if (name) name.textContent = p?.displayName || u.displayName || 'User';
+        if (adm) adm.classList.toggle('d-none', !isAdmin);
     } else {
-        signInBtn.classList.remove('d-none');
-        profileLink.classList.add('d-none');
-        profileLink.classList.remove('d-flex');
-        if (adminLink) adminLink.classList.add('d-none');
+        btn.classList.remove('d-none'); link.classList.replace('d-flex', 'd-none');
+        if (adm) adm.classList.add('d-none');
     }
 }
-
-const DEFAULT_THEME = 'dark';
-
-function cacheUser(user, profile) {
-    localStorage.setItem('arcator_user_cache', JSON.stringify({uid: user.uid, displayName: profile?.displayName || user.displayName, photoURL: profile?.photoURL || user.photoURL, themePreference: profile?.themePreference || 'dark', fontScaling: profile?.fontScaling || 'normal', backgroundImage: profile?.backgroundImage, glassColor: profile?.glassColor, glassOpacity: profile?.glassOpacity, glassBlur: profile?.glassBlur}));
-}
-
-function updateTheme(theme = 'dark', fontSize = 'normal', customCSS = '', bgImg = '', glassColor = '', glassOpacity = 0.95, glassBlur = '') {
-    document.documentElement.setAttribute('data-bs-theme', theme);
-    document.documentElement.setAttribute('data-font-size', fontSize);
-    
-    // Background Image
-    if (bgImg) document.body.style.backgroundImage = `url('${bgImg}')`;
-    else document.body.style.backgroundImage = ''; 
-
-    // Glass Theme
-    const root = document.documentElement;
-    if (glassColor && glassOpacity !== '') {
-        const hexToRgb = (hex) => {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
-        };
-        const rgb = hexToRgb(glassColor);
-        if (rgb) {
-            root.style.setProperty('--glass-bg', `rgba(${rgb}, ${glassOpacity})`);
-        }
-    } else {
-        root.style.removeProperty('--glass-bg');
-    }
-
-    let style = document.getElementById('custom-css-style');
-    if (!style) { style = document.createElement('style'); style.id = 'custom-css-style'; document.head.appendChild(style); }
-    
-    let css = customCSS || '';
-    if (glassBlur) {
-        css += ` .glass-card, .card { backdrop-filter: blur(${glassBlur}px) !important; } body::before { backdrop-filter: blur(${Math.max(0, glassBlur - 5)}px) !important; }`;
-    }
-    style.textContent = css;
-}
+const cacheUser = (u, p) => localStorage.setItem('arcator_user_cache', JSON.stringify({uid: u.uid, displayName: p?.displayName || u.displayName, photoURL: p?.photoURL || u.photoURL, themePreference: p?.themePreference || 'dark', fontScaling: p?.fontScaling || 'normal', backgroundImage: p?.backgroundImage, glassColor: p?.glassColor, glassOpacity: p?.glassOpacity, glassBlur: p?.glassBlur}));
+const updateTheme = (t = 'dark', f = 'normal', css = '', bg = '', gc = '', go = 0.95, gb = '') => {
+    const r = document.documentElement;
+    r.setAttribute('data-bs-theme', t); r.setAttribute('data-font-size', f);
+    document.body.style.backgroundImage = bg ? `url('${bg}')` : '';
+    if (gc && go !== '') {
+        const rgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(gc);
+        if (rgb) r.style.setProperty('--glass-bg', `rgba(${parseInt(rgb[1], 16)}, ${parseInt(rgb[2], 16)}, ${parseInt(rgb[3], 16)}, ${go})`);
+    } else r.style.removeProperty('--glass-bg');
+    let s = document.getElementById('custom-css-style');
+    if (!s) { s = document.createElement('style'); s.id = 'custom-css-style'; document.head.appendChild(s); }
+    s.textContent = (css || '') + (gb ? ` .glass-card, .card { backdrop-filter: blur(${gb}px) !important; } body::before { backdrop-filter: blur(${Math.max(0, gb - 5)}px) !important; }` : '');
+};
 
 const userCache = {};
 
@@ -360,125 +260,81 @@ async function promptEditor(title, html = '', initialContent = '', placeholder =
 
 function registerForumData() {
     Alpine.data('forumData', () => ({
-        threads: [], loading: true, showCreateModal: false,
-        newThread: { title: '', category: '', tags: '' }, quill: null,
-
-        async init() {
-            this.loadThreads();
-            this.$watch('showCreateModal', v => { if (v && !this.quill) this.$nextTick(() => { this.quill = new Quill(this.$refs.createEditor, { theme: 'snow', placeholder: 'Describe your thread...' }); }); });
-        },
-
+        threads: [], loading: true, showCreateModal: false, newThread: { title: '', category: '', tags: '' }, quill: null,
+        async init() { this.loadThreads(); this.$watch('showCreateModal', v => { if (v && !this.quill) this.$nextTick(() => { this.quill = new Quill(this.$refs.createEditor, { theme: 'snow', placeholder: 'Describe your thread...' }); }); }); },
         async loadThreads() {
             const snap = await getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc')));
-            const threads = await Promise.all(snap.docs.map(async d => {
+            this.threads = await Promise.all(snap.docs.map(async d => {
                 const data = { id: d.id, ...d.data(), expanded: true, comments: [], loadingComments: false, quill: null };
                 const cSnap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(d.id)), orderBy('createdAt', 'asc')));
                 data.comments = cSnap.docs.map(cd => ({ id: cd.id, ...cd.data() }));
                 return data;
             }));
-            const allIds = [...new Set([...threads.map(t => t.authorId), ...threads.flatMap(t => t.comments.map(c => c.authorId))].filter(Boolean))];
-            await Promise.all(allIds.map(fetchAuthor));
-            this.threads = threads;
-            this.loading = false;
+            const ids = [...new Set([...this.threads.map(t => t.authorId), ...this.threads.flatMap(t => t.comments.map(c => c.authorId))].filter(Boolean))];
+            await Promise.all(ids.map(fetchAuthor)); this.loading = false;
         },
-
         getAuthor, fetchAuthor, formatDate,
-
-        getThreadMeta(thread) {
-            let name = 'System', pic = '';
-            if (thread.authorId) { const a = getAuthor(thread.authorId); name = a.displayName || 'Unknown'; pic = `<img src="${a.photoURL || './defaultuser.png'}" class="profile-img-sm me-1" alt="">`; }
-            const cat = thread.category ? thread.category[0].toUpperCase() + thread.category.slice(1) : 'General';
-            return `${thread.tags ? `<span class="badge bg-secondary me-1">${thread.tags}</span>` : ''} ${pic} ${name} • ${cat} • ${formatDate(thread.createdAt)} • ${thread.commentCount || 0} comments`;
+        getThreadMeta(t) {
+            let n = 'System', p = '';
+            if (t.authorId) { const a = getAuthor(t.authorId); n = a.displayName || 'Unknown'; p = `<img src="${a.photoURL || './defaultuser.png'}" class="profile-img-sm me-1" alt="">`; }
+            return `${t.tags ? `<span class="badge bg-secondary me-1">${t.tags}</span>` : ''} ${p} ${n} • ${t.category ? t.category[0].toUpperCase() + t.category.slice(1) : 'General'} • ${formatDate(t.createdAt)} • ${t.commentCount || 0} comments`;
         },
-
         async createThread() {
-            if (!this.quill) return;
-            const user = Alpine.store('auth').user; if (!user) return;
-            await addDoc(collection(db, COLLECTIONS.FORMS), { ...this.newThread, description: this.quill.root.innerHTML, authorId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), commentCount: 0, votes: 0 });
+            if (!this.quill) return; const u = Alpine.store('auth').user; if (!u) return;
+            await addDoc(collection(db, COLLECTIONS.FORMS), { ...this.newThread, description: this.quill.root.innerHTML, authorId: u.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), commentCount: 0, votes: 0 });
             this.showCreateModal = false; this.newThread = { title: '', category: '', tags: '' }; this.quill.root.innerHTML = ''; this.loadThreads();
         },
-
-        async toggleThread(thread) {
-            thread.expanded = !thread.expanded;
-            if (thread.expanded && thread.comments.length === 0) {
-                thread.loadingComments = true;
-                const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc')));
-                thread.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                await Promise.all([...new Set(thread.comments.map(c => c.authorId).filter(Boolean))].map(fetchAuthor));
-                thread.loadingComments = false;
+        async toggleThread(t) {
+            t.expanded = !t.expanded;
+            if (t.expanded && !t.comments.length) {
+                t.loadingComments = true;
+                const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), orderBy('createdAt', 'asc')));
+                t.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                await Promise.all([...new Set(t.comments.map(c => c.authorId).filter(Boolean))].map(fetchAuthor));
+                t.loadingComments = false;
             }
         },
-
-        getReplies(thread, parentId) { return thread.comments.filter(c => c.parentCommentId === parentId); },
-
-        async softDeleteThread(thread) { if (!confirm(thread.censored ? 'Un-censor?' : 'Censor?')) return; await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), { censored: !thread.censored }); thread.censored = !thread.censored; },
-        async deleteThread(threadId) { if (!confirm('Delete?')) return; await deleteDoc(doc(db, COLLECTIONS.FORMS, threadId)); this.threads = this.threads.filter(t => t.id !== threadId); },
-
-        async postComment(forumId) {
-            const thread = this.threads.find(t => t.id === forumId); if (!thread?.quill) return;
-            const content = thread.quill.root.innerHTML; if (!content || content === '<p><br></p>') return;
-            const user = Alpine.store('auth').user;
-            await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), { content, authorId: user.uid, createdAt: serverTimestamp(), parentCommentId: null });
-            await updateDoc(doc(db, COLLECTIONS.FORMS, forumId), { commentCount: increment(1) });
-            thread.quill.root.innerHTML = '';
-            const q = query(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), orderBy('createdAt', 'asc'));
-            thread.comments = (await getDocs(q)).docs.map(d => ({ id: d.id, ...d.data() }));
+        getReplies(t, pid) { return t.comments.filter(c => c.parentCommentId === pid); },
+        async softDeleteThread(t) { if (confirm(t.censored ? 'Un-censor?' : 'Censor?')) { await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), { censored: !t.censored }); t.censored = !t.censored; } },
+        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.FORMS, id)); this.threads = this.threads.filter(t => t.id !== id); } },
+        async postComment(fid) {
+            const t = this.threads.find(t => t.id === fid); if (!t?.quill) return;
+            const c = t.quill.root.innerHTML; if (!c || c === '<p><br></p>') return;
+            await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(fid)), { content: c, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp(), parentCommentId: null });
+            await updateDoc(doc(db, COLLECTIONS.FORMS, fid), { commentCount: increment(1) });
+            t.quill.root.innerHTML = ''; t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(fid)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
         },
-
-        async vote(forumId, comment, type) {
-            const user = Alpine.store('auth').user; if (!user) return Swal.fire('Error', 'Sign in to vote', 'error');
-            const reactions = comment.reactions || {}; const uid = user.uid;
-            if (type === 'up' || type === 'down') {
-                const key = `${type}_${uid}`, other = type === 'up' ? `down_${uid}` : `up_${uid}`;
-                if (reactions[key]) delete reactions[key]; else { reactions[key] = true; delete reactions[other]; }
-            } else {
-                const key = `${type}_${uid}`; const was = reactions[key];
-                Object.keys(reactions).forEach(k => { const [e, u] = k.split('_'); if (u === uid && e !== 'up' && e !== 'down') delete reactions[k]; });
-                if (!was) reactions[key] = true;
-            }
-            await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { reactions }); comment.reactions = reactions;
+        async vote(fid, c, type) {
+            const u = Alpine.store('auth').user; if (!u) return Swal.fire('Error', 'Sign in to vote', 'error');
+            const r = c.reactions || {}, uid = u.uid;
+            if (type === 'up' || type === 'down') { const k = `${type}_${uid}`, o = type === 'up' ? `down_${uid}` : `up_${uid}`; if (r[k]) delete r[k]; else { r[k] = true; delete r[o]; } }
+            else { const k = `${type}_${uid}`, was = r[k]; Object.keys(r).forEach(x => { const [e, id] = x.split('_'); if (id === uid && e !== 'up' && e !== 'down') delete r[x]; }); if (!was) r[k] = true; }
+            await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(fid), c.id), { reactions: r }); c.reactions = r;
         },
-
-        hasVoted(comment, type) { const u = Alpine.store('auth').user; return u && comment.reactions?.[`${type}_${u.uid}`]; },
-        getVoteScore(comment) { if (!comment.reactions) return 0; let s = 0; Object.keys(comment.reactions).forEach(k => { if (k.startsWith('up_')) s++; if (k.startsWith('down_')) s--; }); return s; },
-        getReactions(comment) { if (!comment.reactions) return {}; const c = {}; Object.keys(comment.reactions).forEach(k => { const e = k.split('_')[0]; if (e !== 'up' && e !== 'down') c[e] = (c[e] || 0) + 1; }); return c; },
-
-        async replyTo(thread, parent) {
-            const content = await promptEditor('Reply', '', '', 'Write reply...');
-            if (content) {
-                const user = Alpine.store('auth').user;
-                await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), { content, authorId: user.uid, createdAt: serverTimestamp(), parentCommentId: parent.parentCommentId || parent.id });
-                await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), { commentCount: increment(1) });
-                thread.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(thread.id)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
+        hasVoted(c, t) { const u = Alpine.store('auth').user; return u && c.reactions?.[`${t}_${u.uid}`]; },
+        getVoteScore(c) { if (!c.reactions) return 0; let s = 0; Object.keys(c.reactions).forEach(k => { if (k.startsWith('up_')) s++; if (k.startsWith('down_')) s--; }); return s; },
+        getReactions(c) { if (!c.reactions) return {}; const res = {}; Object.keys(c.reactions).forEach(k => { const e = k.split('_')[0]; if (e !== 'up' && e !== 'down') res[e] = (res[e] || 0) + 1; }); return res; },
+        async replyTo(t, p) {
+            const c = await promptEditor('Reply', '', '', 'Write reply...');
+            if (c) {
+                await addDoc(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), { content: c, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp(), parentCommentId: p.parentCommentId || p.id });
+                await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), { commentCount: increment(1) });
+                t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
             }
         },
-
-        async deleteComment(forumId, commentId) {
+        async deleteComment(fid, cid) {
             if (!confirm('Delete?')) return;
-            await updateDoc(doc(db, COLLECTIONS.FORMS, forumId), { commentCount: increment(-1) });
-            await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), commentId));
-            const thread = this.threads.find(t => t.id === forumId);
-            if (thread) thread.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(forumId)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
+            await updateDoc(doc(db, COLLECTIONS.FORMS, fid), { commentCount: increment(-1) });
+            await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(fid), cid));
+            const t = this.threads.find(t => t.id === fid); if (t) t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(fid)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
         },
-
-        async editThread(thread) {
-            const html = `<input id="s1" class="swal2-input" value="${thread.title}"><input id="s2" class="swal2-input" value="${thread.tags||''}"><select id="s3" class="swal2-input"><option value="announcements"${thread.category==='announcements'?' selected':''}>Announcements</option><option value="gaming"${thread.category==='gaming'?' selected':''}>Gaming</option><option value="discussion"${thread.category==='discussion'?' selected':''}>Discussion</option><option value="support"${thread.category==='support'?' selected':''}>Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10">${thread.description || ''}</textarea>`;
-            const { value } = await Swal.fire({ title: 'Edit', html, preConfirm: () => [document.getElementById('s1').value, document.getElementById('s2').value, document.getElementById('s3').value, document.getElementById('ed-thread-content').value] });
-            if (value) {
-                await updateDoc(doc(db, COLLECTIONS.FORMS, thread.id), { title: value[0], tags: value[1], category: value[2], description: value[3], updatedAt: serverTimestamp() });
-                Object.assign(thread, { title: value[0], tags: value[1], category: value[2], description: value[3] });
-            }
+        async editThread(t) {
+            const html = `<input id="s1" class="swal2-input" value="${t.title}"><input id="s2" class="swal2-input" value="${t.tags||''}"><select id="s3" class="swal2-input"><option value="announcements"${t.category==='announcements'?' selected':''}>Announcements</option><option value="gaming"${t.category==='gaming'?' selected':''}>Gaming</option><option value="discussion"${t.category==='discussion'?' selected':''}>Discussion</option><option value="support"${t.category==='support'?' selected':''}>Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10">${t.description || ''}</textarea>`;
+            const { value: v } = await Swal.fire({ title: 'Edit', html, preConfirm: () => [document.getElementById('s1').value, document.getElementById('s2').value, document.getElementById('s3').value, document.getElementById('ed-thread-content').value] });
+            if (v) { await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), { title: v[0], tags: v[1], category: v[2], description: v[3], updatedAt: serverTimestamp() }); Object.assign(t, { title: v[0], tags: v[1], category: v[2], description: v[3] }); }
         },
-
-        async editComment(forumId, comment) {
-            const content = await promptEditor('Edit', '', comment.content);
-            if (content) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { content }); comment.content = content; }
-        },
-
-        async censorComment(forumId, comment) {
-            const content = await promptEditor('Redact', '', comment.content);
-            if (content) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(forumId), comment.id), { content, censored: true }); comment.content = content; comment.censored = true; }
-        }
+        async editComment(fid, c) { const res = await promptEditor('Edit', '', c.content); if (res) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(fid), c.id), { content: res }); c.content = res; } },
+        async censorComment(fid, c) { const res = await promptEditor('Redact', '', c.content); if (res) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(fid), c.id), { content: res, censored: true }); c.content = res; c.censored = true; } }
     }));
 }
 
@@ -554,71 +410,32 @@ function registerMessageData() {
 
 function registerPageWikiManagement() {
     Alpine.store('mgmt', {
-        async createPage(callback) {
-            const { value } = await Swal.fire({
-                title: 'Create Page',
-                html: '<input id="np-title" class="form-control mb-2" placeholder="Title"><input id="np-slug" class="form-control mb-2" placeholder="Slug"><textarea id="np-content" class="form-control" rows="10" placeholder="HTML Content"></textarea>',
-                showCancelButton: true,
-                preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, createdAt: serverTimestamp() })
-            });
-            if (value) { await addDoc(collection(db, COLLECTIONS.PAGES), value); if (callback) callback(); Swal.fire('Success', 'Page created', 'success'); }
+        async createPage(cb) {
+            const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="form-control mb-2" placeholder="Title"><input id="np-slug" class="form-control mb-2" placeholder="Slug"><textarea id="np-content" class="form-control" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, createdAt: serverTimestamp() }) });
+            if (v) { await addDoc(collection(db, COLLECTIONS.PAGES), v); if (cb) cb(); Swal.fire('Success', 'Page created', 'success'); }
         },
-        async editPage(page, callback) {
-            const { value } = await Swal.fire({
-                title: 'Edit Page', width: '800px',
-                html: `<input id="ep-title" class="form-control mb-2" placeholder="Title" value="${page.title}"><input id="ep-slug" class="form-control mb-2" placeholder="Slug" value="${page.slug}"><textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content">${page.content}</textarea>`,
-                showCancelButton: true,
-                preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() })
-            });
-            if (value) { await updateDoc(doc(db, COLLECTIONS.PAGES, page.id), value); if (callback) callback(); Swal.fire('Success', 'Page updated', 'success'); }
+        async editPage(p, cb) {
+            const { value: v } = await Swal.fire({ title: 'Edit Page', width: '800px', html: `<input id="ep-title" class="form-control mb-2" placeholder="Title" value="${p.title}"><input id="ep-slug" class="form-control mb-2" placeholder="Slug" value="${p.slug}"><textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content">${p.content}</textarea>`, showCancelButton: true, preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() }) });
+            if (v) { await updateDoc(doc(db, COLLECTIONS.PAGES, p.id), v); if (cb) cb(); Swal.fire('Success', 'Page updated', 'success'); }
         },
-        async deletePage(id, callback) {
-            if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) {
-                await deleteDoc(doc(db, COLLECTIONS.PAGES, id)); if (callback) callback(); Swal.fire('Deleted', 'Page has been deleted.', 'success');
-            }
+        async deletePage(id, cb) {
+            if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) { await deleteDoc(doc(db, COLLECTIONS.PAGES, id)); if (cb) cb(); Swal.fire('Deleted', 'Page has been deleted.', 'success'); }
         },
-        async createWikiSection(callback) {
-            const { value } = await Swal.fire({
-                title: 'Create Wiki Section',
-                html: '<input id="nw-id" class="form-control mb-2" placeholder="Section ID (e.g. servers)"><textarea id="nw-content" class="form-control font-monospace" rows="12" placeholder="HTML Content"></textarea>',
-                showCancelButton: true,
-                preConfirm: () => ({ id: document.getElementById('nw-id').value.toLowerCase().replace(/\s+/g, '-'), content: document.getElementById('nw-content').value })
-            });
-            if (value && value.id) {
-                await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, value.id), { content: value.content, allowedEditors: [], updatedAt: serverTimestamp() });
-                if (callback) callback(); Swal.fire('Success', 'Wiki section created', 'success');
-            }
+        async createWikiSection(cb) {
+            const { value: v } = await Swal.fire({ title: 'Create Wiki Section', html: '<input id="nw-id" class="form-control mb-2" placeholder="Section ID (e.g. servers)"><textarea id="nw-content" class="form-control font-monospace" rows="12" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ id: document.getElementById('nw-id').value.toLowerCase().replace(/\s+/g, '-'), content: document.getElementById('nw-content').value }) });
+            if (v?.id) { await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, v.id), { content: v.content, allowedEditors: [], updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Wiki section created', 'success'); }
         },
-        async editWikiSection(section, callback) {
-            const { value } = await Swal.fire({
-                title: `Edit: ${section.id}`, width: '900px',
-                html: `<textarea id="ew-content" class="form-control font-monospace" rows="20">${section.content || ''}</textarea>`,
-                showCancelButton: true,
-                preConfirm: () => document.getElementById('ew-content').value
-            });
-            if (value !== undefined) {
-                await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, section.id), { content: value, updatedAt: serverTimestamp() });
-                if (callback) callback(); Swal.fire('Success', 'Wiki section updated', 'success');
-            }
+        async editWikiSection(s, cb) {
+            const { value: v } = await Swal.fire({ title: `Edit: ${s.id}`, width: '900px', html: `<textarea id="ew-content" class="form-control font-monospace" rows="20">${s.content || ''}</textarea>`, showCancelButton: true, preConfirm: () => document.getElementById('ew-content').value });
+            if (v !== undefined) { await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, s.id), { content: v, updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Wiki section updated', 'success'); }
         },
-        async manageWikiEditors(section, users, callback) {
-            const currentEditors = section.allowedEditors || [];
-            const userOpts = users.map(u => `<option value="${u.id}" ${currentEditors.includes(u.id) ? 'selected' : ''}>${u.displayName || u.email}</option>`).join('');
-            const { value } = await Swal.fire({
-                title: `Allowed Editors: ${section.id}`,
-                html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" class="form-select" multiple size="10">${userOpts}</select>`,
-                showCancelButton: true,
-                preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value)
-            });
-            if (value !== undefined) {
-                await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, section.id), { allowedEditors: value, updatedAt: serverTimestamp() });
-                if (callback) callback(); Swal.fire('Success', 'Editors updated', 'success');
-            }
+        async manageWikiEditors(s, users, cb) {
+            const cur = s.allowedEditors || [], opts = users.map(u => `<option value="${u.id}" ${cur.includes(u.id) ? 'selected' : ''}>${u.displayName || u.email}</option>`).join('');
+            const { value: v } = await Swal.fire({ title: `Allowed Editors: ${s.id}`, html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" class="form-select" multiple size="10">${opts}</select>`, showCancelButton: true, preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value) });
+            if (v !== undefined) { await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, s.id), { allowedEditors: v, updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Editors updated', 'success'); }
         },
-        async deleteWikiSection(id, callback) {
-            if ((await Swal.fire({ title: 'Delete Wiki Section?', text: 'This cannot be undone!', icon: 'warning', showCancelButton: true })).isConfirmed) {
-                await deleteDoc(doc(db, COLLECTIONS.WIKI_PAGES, id)); if (callback) callback(); Swal.fire('Deleted', 'Section removed.', 'success');
-            }
+        async deleteWikiSection(id, cb) {
+            if ((await Swal.fire({ title: 'Delete Wiki Section?', text: 'This cannot be undone!', icon: 'warning', showCancelButton: true })).isConfirmed) { await deleteDoc(doc(db, COLLECTIONS.WIKI_PAGES, id)); if (cb) cb(); Swal.fire('Deleted', 'Section removed.', 'success'); }
         }
     });
 }
@@ -1306,7 +1123,7 @@ document.addEventListener('alpine:init', () => {
     });
     registerAll();
 });
-if (window.Alpine) {}
+if (window.Alpine) { registerAll(); }
 document.addEventListener('DOMContentLoaded', initLayout);
 
 export {app, auth, db, projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection, collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, startAfter, serverTimestamp, increment, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, signOut, updateProfile, sendPasswordResetEmail};
