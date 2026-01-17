@@ -20,7 +20,9 @@ const COLLECTIONS = {
     CONVERSATIONS: 'conversations',
     CONV_MESSAGES: (convId) => `conversations/${convId}/messages`,
     THEMES: `${art}/public/data/custom_themes`,
-    PAGES: `${art}/public/data/temp_pages`
+    PAGES: `${art}/public/data/temp_pages`,
+    WIKI_CONFIG: `${art}/public/data/wiki_config`,
+    WIKI_PAGES: `${art}/public/data/wiki_pages`
 };
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
