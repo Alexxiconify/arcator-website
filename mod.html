@@ -49,7 +49,7 @@
                     </header>
                     <div x-show="tab === 'dashboard'" class="row g-4">
                         <template x-for="stat in stats" :key="stat.label">
-                            <div class="col-md-3"><div class="glass-card p-4 stat-card"><h6 class="text-muted text-uppercase mb-2" x-text="stat.label"></h6><h2 class="fw-bold mb-0" x-text="stat.value">0</h2><i :class="stat.icon + ' ' + stat.color" class="position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i></div></div>
+                            <div class="col-md-3"><div class="glass-card p-4 hover-card"><h6 class="text-muted text-uppercase mb-2" x-text="stat.label"></h6><h2 class="fw-bold mb-0" x-text="stat.value">0</h2><i :class="stat.icon + ' ' + stat.color" class="position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i></div></div>
                         </template>
                         <div class="col-md-8">
                             <div class="glass-card p-4 h-100">

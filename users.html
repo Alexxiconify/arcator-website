@@ -13,35 +13,24 @@
 <body>
 <div id="navbar-placeholder"></div>
 
-<section class="hero-section">
-    <img src="./creativespawn.png" alt="Hero" loading="lazy">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-        <h1 class="display-4 fw-bold mb-3">User Profile</h1>
-        <p class="lead">Manage your account settings and preferences</p>
-    </div>
-</section>
-
-<main class="container py-5" x-data="{ 
-    email: '', password: '', displayName: '', handle: '', 
-    isSignUp: false,
-    profile: {}, 
-    get user() { return this.$store.auth?.user }, 
-    get storeProfile() { return this.$store.auth?.profile }
-}" x-init="$watch('storeProfile', v => { if(v) profile = {...v} }); if($store.auth?.profile) profile = {...$store.auth.profile}">
-
+<main class="container py-4" x-data="{ email: '', password: '', displayName: '', handle: '', isSignUp: false, profile: {}, settingsTab: 'profile', get user() { return this.$store.auth?.user }, get storeProfile() { return this.$store.auth?.profile } }" x-init="$watch('storeProfile', v => { if(v) profile = {...v} }); if($store.auth?.profile) profile = {...$store.auth.profile}">
+    <div class="glass-card p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <div>
+                <h2 class="fw-bold m-0"><i class="bi bi-person-gear me-2"></i>User Profile</h2>
+                <p class="text-muted small m-0">Manage your account settings and preferences</p>
+            </div>
+        </div>
     <div x-show="!user" class="row justify-content-center">
         <div class="col-md-6 col-lg-4">
             <div class="card">
                 <div class="card-body">
                     <h4 class="card-title mb-4" x-text="isSignUp ? 'Create Account' : 'Sign In'"></h4>
-                    
                     <form x-show="!isSignUp" @submit.prevent="$store.auth.login(email, password).catch(e => Swal.fire('Error', e.message, 'error'))">
                         <div class="mb-3"><input type="email" x-model="email" class="form-control" placeholder="Email" autocomplete="email" required></div>
                         <div class="mb-3"><input type="password" x-model="password" class="form-control" placeholder="Password" autocomplete="current-password" required></div>
                         <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
                     </form>
-                    
                     <form x-show="isSignUp" @submit.prevent="$store.auth.signup(email, password, displayName, handle).then(() => Swal.fire('Success', 'Account created!', 'success')).catch(e => Swal.fire('Error', e.message, 'error'))">
                         <div class="mb-3"><input type="text" x-model="displayName" class="form-control" placeholder="Display Name" required></div>
                         <div class="mb-3"><input type="text" x-model="handle" class="form-control" placeholder="Handle (username)"></div>
@@ -49,11 +38,7 @@
                         <div class="mb-3"><input type="password" x-model="password" class="form-control" placeholder="Password (min 6 chars)" autocomplete="new-password" required minlength="6"></div>
                         <button type="submit" class="btn btn-primary w-100 mb-3">Create Account</button>
                     </form>
-                    
-                    <div class="text-center mb-3">
-                        <button class="btn btn-link" @click="isSignUp = !isSignUp" x-text="isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'" title="Toggle Sign Up"></button>
-                    </div>
-                    
+                    <div class="text-center mb-3"><button class="btn btn-link" @click="isSignUp = !isSignUp" x-text="isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'" title="Toggle Sign Up"></button></div>
                     <hr>
                     <p class="text-center text-secondary small mb-2">Or continue with</p>
                     <div class="d-grid gap-2">
@@ -66,194 +51,99 @@
         </div>
     </div>
 
-    <div x-show="user" class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Profile Settings</h4>
-                    <button class="btn btn-outline-danger btn-sm" @click="$store.auth.logout()">Sign Out</button>
+    <div x-show="user">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+                <div class="d-flex align-items-center gap-3">
+                    <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary" style="width:48px;height:48px;object-fit:cover" alt="Profile">
+                    <div>
+                        <h4 class="fw-bold m-0" x-text="profile.displayName || 'User'"></h4>
+                        <p class="text-muted small m-0" x-text="'@' + (profile.handle || 'handle')"></p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form @submit.prevent="(async () => { await $store.auth.saveProfile($store.auth.user.uid, profile); Swal.fire('Success', 'Profile updated', 'success'); })().catch(e => Swal.fire('Error', e.message, 'error'))">
-                        
-                        <div class="d-flex align-items-center gap-4 mb-4">
-                            <img :src="profile.photoURL || './defaultuser.png'" class="rounded-circle border border-primary avatar-lg" alt="Profile">
-                            <div class="flex-grow-1">
-                                <h5 class="mb-3">Profile</h5>
-                                <div class="row g-3">
-                                    <div class="col-md-6"><label class="form-label" for="profile-displayName">Display Name</label><input id="profile-displayName" x-model="profile.displayName" class="form-control" title="Display Name"></div>
-                                    <div class="col-md-6"><label class="form-label" for="profile-handle">Handle</label><input id="profile-handle" x-model="profile.handle" class="form-control" title="Handle"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6"><label class="form-label" for="profile-email">Email</label><input id="profile-email" x-model="profile.email" class="form-control" readonly title="Email Address"></div>
-                            <div class="col-md-6"><label class="form-label" for="profile-photoURL">Photo URL</label><input id="profile-photoURL" x-model="profile.photoURL" class="form-control" title="Profile Picture URL"></div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label" for="profile-customCSS">Custom CSS</label>
-                            <textarea id="profile-customCSS" x-model="profile.customCSS" class="form-control" rows="3" placeholder="/* Custom CSS here */" title="Custom CSS"></textarea>
-                        </div>
-                        <hr>
-                        <h5 class="mb-3">Appearance</h5>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label" for="profile-theme">Theme</label>
-                                <select id="profile-theme" x-model="profile.themePreference" class="form-select" aria-label="Theme Preference" title="Theme Preference">
-                                    <option value="dark">Dark</option>
-                                    <option value="light">Light</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="profile-font">Font Size</label>
-                                <select id="profile-font" x-model="profile.fontScaling" class="form-select" aria-label="Font Scaling" title="Font Scaling">
-                                    <option value="small">Small</option>
-                                    <option value="normal">Normal</option>
-                                    <option value="large">Large</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label" for="profile-bg">Background Image URL</label>
-                                <input id="profile-bg" x-model="profile.backgroundImage" class="form-control" placeholder="https://example.com/image.jpg" title="Background Image URL">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="profile-glass-color">Glass Color (Hex)</label>
-                                <input type="color" id="profile-glass-color" x-model="profile.glassColor" class="form-control form-control-color w-100" title="Glass Tint Color">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="profile-glass-opacity">Glass Opacity (0-1)</label>
-                                <input type="number" id="profile-glass-opacity" x-model="profile.glassOpacity" class="form-control" step="0.05" min="0" max="1" placeholder="0.95" title="Glass Opacity">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="profile-glass-blur">Glass Blur (px)</label>
-                                <input type="number" id="profile-glass-blur" x-model="profile.glassBlur" class="form-control" placeholder="10" title="Glass Blur Amount">
-                            </div>
-                        </div>
-                        <h5 class="mb-3">Preferences</h5>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="pref-emailNotifs" x-model="profile.emailNotifications">
-                                    <label class="form-check-label" for="pref-emailNotifs">Email Notifications</label>
-                                </div>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="pref-pushNotifs" x-model="profile.pushNotifications">
-                                    <label class="form-check-label" for="pref-pushNotifs">Push Notifications</label>
-                                </div>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="pref-discordNotifs" x-model="profile.discordNotifications">
-                                    <label class="form-check-label" for="pref-discordNotifs">Discord Notifications</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="pref-profileVisible" x-model="profile.profileVisible">
-                                    <label class="form-check-label" for="pref-profileVisible">Profile Visible</label>
-                                </div>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="pref-thirdParty" x-model="profile.thirdPartySharing">
-                                    <label class="form-check-label" for="pref-thirdParty">Third Party Sharing</label>
-                                </div>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="pref-debug" x-model="profile.debugMode">
-                                    <label class="form-check-label" for="pref-debug">Debug Mode</label>
-                                </div>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="pref-activity" x-model="profile.activityTracking">
-                                    <label class="form-check-label" for="pref-activity">Activity Tracking</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4">
-                                <label class="form-label" for="pref-retention">Data Retention (days)</label>
-                                <input type="number" id="pref-retention" x-model="profile.dataRetention" class="form-control" title="Data Retention Period">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="pref-shortcuts">Keyboard Shortcuts</label>
-                                <select id="pref-shortcuts" x-model="profile.keyboardShortcuts" class="form-select" title="Keyboard Shortcuts">
-                                    <option value="enabled">Enabled</option>
-                                    <option value="disabled">Disabled</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="pref-notifFreq">Notification Frequency</label>
-                                <select id="pref-notifFreq" x-model="profile.notificationFrequency" class="form-select" title="Notification Frequency">
-                                    <option value="immediate">Immediate</option>
-                                    <option value="daily">Daily Digest</option>
-                                    <option value="weekly">Weekly Digest</option>
-                                </select>
-                            </div>
-                        </div>
-                        <h5 class="mb-3">Accessibility</h5>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="acc-highContrast" x-model="profile.highContrast">
-                                    <label class="form-check-label" for="acc-highContrast">High Contrast</label>
-                                </div>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="acc-reducedMotion" x-model="profile.reducedMotion">
-                                    <label class="form-check-label" for="acc-reducedMotion">Reduced Motion</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="acc-screenReader" x-model="profile.screenReader">
-                                    <label class="form-check-label" for="acc-screenReader">Screen Reader Optimized</label>
-                                </div>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="acc-focus" x-model="profile.focusIndicators">
-                                    <label class="form-check-label" for="acc-focus">Focus Indicators</label>
-                                </div>
-                            </div>
-                        </div>
-                        <hr>
-                        <h5 class="mb-3">Linked Accounts</h5>
-                        <div class="row g-2 mb-4">
-                            <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center p-2 border rounded">
-                                    <span>Google</span>
-                                    <button type="button" class="btn btn-sm" 
-                                        :class="$store.auth.isProviderLinked('google.com') ? 'btn-outline-danger' : 'btn-outline-primary'"
-                                        @click="$store.auth.isProviderLinked('google.com') ? $store.auth.unlinkProvider('google.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('google').catch(e => Swal.fire('Error', e.message, 'error'))"
-                                        x-text="$store.auth.isProviderLinked('google.com') ? 'Unlink' : 'Link'" title="Link or Unlink Google"></button>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center p-2 border rounded">
-                                    <span>GitHub</span>
-                                    <button type="button" class="btn btn-sm" 
-                                        :class="$store.auth.isProviderLinked('github.com') ? 'btn-outline-danger' : 'btn-outline-primary'"
-                                        @click="$store.auth.isProviderLinked('github.com') ? $store.auth.unlinkProvider('github.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('github').catch(e => Swal.fire('Error', e.message, 'error'))"
-                                        x-text="$store.auth.isProviderLinked('github.com') ? 'Unlink' : 'Link'" title="Link or Unlink GitHub"></button>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center p-2 border rounded">
-                                    <span>Discord</span>
-                                    <button type="button" class="btn btn-sm" 
-                                        :class="$store.auth.isProviderLinked('oidc.oidc.discord') ? 'btn-outline-danger' : 'btn-outline-primary'"
-                                        @click="$store.auth.isProviderLinked('oidc.oidc.discord') ? $store.auth.unlinkProvider('oidc.oidc.discord').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('discord').catch(e => Swal.fire('Error', e.message, 'error'))"
-                                        x-text="$store.auth.isProviderLinked('oidc.oidc.discord') ? 'Unlink' : 'Link'" title="Link or Unlink Discord"></button>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center p-2 border rounded">
-                                    <span>Twitter</span>
-                                    <button type="button" class="btn btn-sm" 
-                                        :class="$store.auth.isProviderLinked('twitter.com') ? 'btn-outline-danger' : 'btn-outline-primary'"
-                                        @click="$store.auth.isProviderLinked('twitter.com') ? $store.auth.unlinkProvider('twitter.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('twitter').catch(e => Swal.fire('Error', e.message, 'error'))"
-                                        x-text="$store.auth.isProviderLinked('twitter.com') ? 'Unlink' : 'Link'" title="Link or Unlink Twitter"></button>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Save All Changes</button>
-                    </form>
-                </div>
+                <button class="btn btn-outline-danger btn-sm" @click="$store.auth.logout()"><i class="bi bi-box-arrow-right me-1"></i>Sign Out</button>
             </div>
+            <ul class="nav nav-pills mb-4">
+                <li class="nav-item"><button class="nav-link" :class="{ 'active': settingsTab === 'profile' }" @click="settingsTab = 'profile'"><i class="bi bi-person me-1"></i>Profile</button></li>
+                <li class="nav-item"><button class="nav-link" :class="{ 'active': settingsTab === 'appearance' }" @click="settingsTab = 'appearance'"><i class="bi bi-palette me-1"></i>Appearance</button></li>
+                <li class="nav-item"><button class="nav-link" :class="{ 'active': settingsTab === 'preferences' }" @click="settingsTab = 'preferences'"><i class="bi bi-sliders me-1"></i>Preferences</button></li>
+                <li class="nav-item"><button class="nav-link" :class="{ 'active': settingsTab === 'accessibility' }" @click="settingsTab = 'accessibility'"><i class="bi bi-universal-access me-1"></i>Accessibility</button></li>
+                <li class="nav-item"><button class="nav-link" :class="{ 'active': settingsTab === 'accounts' }" @click="settingsTab = 'accounts'"><i class="bi bi-link-45deg me-1"></i>Linked Accounts</button></li>
+            </ul>
+            <form @submit.prevent="(async () => { await $store.auth.saveProfile($store.auth.user.uid, profile); Swal.fire('Success', 'Profile updated', 'success'); })().catch(e => Swal.fire('Error', e.message, 'error'))">
+                <div x-show="settingsTab === 'profile'">
+                    <div class="accent-card p-4">
+                        <h5 class="mb-3"><span class="emoji-icon">👤</span>Profile Information</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="form-label" for="profile-displayName">Display Name</label><input id="profile-displayName" x-model="profile.displayName" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-handle">Handle</label><input id="profile-handle" x-model="profile.handle" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-email">Email</label><input id="profile-email" x-model="profile.email" class="form-control" readonly></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-photoURL">Photo URL</label><input id="profile-photoURL" x-model="profile.photoURL" class="form-control"></div>
+                            <div class="col-12"><label class="form-label" for="profile-customCSS">Custom CSS</label><textarea id="profile-customCSS" x-model="profile.customCSS" class="form-control" rows="3" placeholder="/* Custom CSS here */"></textarea></div>
+                        </div>
+                    </div>
+                </div>
+                <div x-show="settingsTab === 'appearance'">
+                    <div class="accent-card p-4">
+                        <h5 class="mb-3"><span class="emoji-icon">🎨</span>Appearance Settings</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="form-label" for="profile-theme">Theme</label><select id="profile-theme" x-model="profile.themePreference" class="form-select"><option value="dark">Dark</option><option value="light">Light</option></select></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-font">Font Size</label><select id="profile-font" x-model="profile.fontScaling" class="form-select"><option value="small">Small</option><option value="normal">Normal</option><option value="large">Large</option></select></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-bg">Background Image URL</label><input id="profile-bg" x-model="profile.backgroundImage" class="form-control" placeholder="https://example.com/image.jpg"></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-glass-color">Glass Color</label><input type="color" id="profile-glass-color" x-model="profile.glassColor" class="form-control form-control-color w-100"></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-glass-opacity">Glass Opacity (0-1)</label><input type="number" id="profile-glass-opacity" x-model="profile.glassOpacity" class="form-control" step="0.05" min="0" max="1" placeholder="0.95"></div>
+                            <div class="col-md-6"><label class="form-label" for="profile-glass-blur">Glass Blur (px)</label><input type="number" id="profile-glass-blur" x-model="profile.glassBlur" class="form-control" placeholder="10"></div>
+                        </div>
+                    </div>
+                </div>
+                <div x-show="settingsTab === 'preferences'">
+                    <div class="accent-card p-4">
+                        <h5 class="mb-3"><span class="emoji-icon">⚙️</span>Notification & Privacy</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="pref-emailNotifs" x-model="profile.emailNotifications"><label class="form-check-label" for="pref-emailNotifs">Email Notifications</label></div>
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="pref-pushNotifs" x-model="profile.pushNotifications"><label class="form-check-label" for="pref-pushNotifs">Push Notifications</label></div>
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="pref-discordNotifs" x-model="profile.discordNotifications"><label class="form-check-label" for="pref-discordNotifs">Discord Notifications</label></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="pref-profileVisible" x-model="profile.profileVisible"><label class="form-check-label" for="pref-profileVisible">Profile Visible</label></div>
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="pref-thirdParty" x-model="profile.thirdPartySharing"><label class="form-check-label" for="pref-thirdParty">Third Party Sharing</label></div>
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="pref-debug" x-model="profile.debugMode"><label class="form-check-label" for="pref-debug">Debug Mode</label></div>
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="pref-activity" x-model="profile.activityTracking"><label class="form-check-label" for="pref-activity">Activity Tracking</label></div>
+                            </div>
+                            <div class="col-md-4"><label class="form-label" for="pref-retention">Data Retention (days)</label><input type="number" id="pref-retention" x-model="profile.dataRetention" class="form-control"></div>
+                            <div class="col-md-4"><label class="form-label" for="pref-shortcuts">Keyboard Shortcuts</label><select id="pref-shortcuts" x-model="profile.keyboardShortcuts" class="form-select"><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></div>
+                            <div class="col-md-4"><label class="form-label" for="pref-notifFreq">Notification Frequency</label><select id="pref-notifFreq" x-model="profile.notificationFrequency" class="form-select"><option value="immediate">Immediate</option><option value="daily">Daily Digest</option><option value="weekly">Weekly Digest</option></select></div>
+                        </div>
+                    </div>
+                </div>
+                <div x-show="settingsTab === 'accessibility'">
+                    <div class="accent-card p-4">
+                        <h5 class="mb-3"><span class="emoji-icon">♿</span>Accessibility Options</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="acc-highContrast" x-model="profile.highContrast"><label class="form-check-label" for="acc-highContrast">High Contrast</label></div>
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="acc-reducedMotion" x-model="profile.reducedMotion"><label class="form-check-label" for="acc-reducedMotion">Reduced Motion</label></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="acc-screenReader" x-model="profile.screenReader"><label class="form-check-label" for="acc-screenReader">Screen Reader Optimized</label></div>
+                                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="acc-focus" x-model="profile.focusIndicators"><label class="form-check-label" for="acc-focus">Focus Indicators</label></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div x-show="settingsTab === 'accounts'">
+                    <div class="accent-card p-4">
+                        <h5 class="mb-3"><span class="emoji-icon">🔗</span>Linked Accounts</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6"><div class="d-flex justify-content-between align-items-center p-3 border rounded"><span><i class="bi bi-google me-2"></i>Google</span><button type="button" class="btn btn-sm" :class="$store.auth.isProviderLinked('google.com') ? 'btn-outline-danger' : 'btn-outline-primary'" @click="$store.auth.isProviderLinked('google.com') ? $store.auth.unlinkProvider('google.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('google').catch(e => Swal.fire('Error', e.message, 'error'))" x-text="$store.auth.isProviderLinked('google.com') ? 'Unlink' : 'Link'" title="Link or Unlink Google"></button></div></div>
+                            <div class="col-md-6"><div class="d-flex justify-content-between align-items-center p-3 border rounded"><span><i class="bi bi-github me-2"></i>GitHub</span><button type="button" class="btn btn-sm" :class="$store.auth.isProviderLinked('github.com') ? 'btn-outline-danger' : 'btn-outline-primary'" @click="$store.auth.isProviderLinked('github.com') ? $store.auth.unlinkProvider('github.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('github').catch(e => Swal.fire('Error', e.message, 'error'))" x-text="$store.auth.isProviderLinked('github.com') ? 'Unlink' : 'Link'" title="Link or Unlink GitHub"></button></div></div>
+                            <div class="col-md-6"><div class="d-flex justify-content-between align-items-center p-3 border rounded"><span><i class="bi bi-discord me-2"></i>Discord</span><button type="button" class="btn btn-sm" :class="$store.auth.isProviderLinked('oidc.oidc.discord') ? 'btn-outline-danger' : 'btn-outline-primary'" @click="$store.auth.isProviderLinked('oidc.oidc.discord') ? $store.auth.unlinkProvider('oidc.oidc.discord').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('discord').catch(e => Swal.fire('Error', e.message, 'error'))" x-text="$store.auth.isProviderLinked('oidc.oidc.discord') ? 'Unlink' : 'Link'" title="Link or Unlink Discord"></button></div></div>
+                            <div class="col-md-6"><div class="d-flex justify-content-between align-items-center p-3 border rounded"><span><i class="bi bi-twitter-x me-2"></i>Twitter</span><button type="button" class="btn btn-sm" :class="$store.auth.isProviderLinked('twitter.com') ? 'btn-outline-danger' : 'btn-outline-primary'" @click="$store.auth.isProviderLinked('twitter.com') ? $store.auth.unlinkProvider('twitter.com').catch(e => Swal.fire('Error', e.message, 'error')) : $store.auth.linkProvider('twitter').catch(e => Swal.fire('Error', e.message, 'error'))" x-text="$store.auth.isProviderLinked('twitter.com') ? 'Unlink' : 'Link'" title="Link or Unlink Twitter"></button></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4"><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save All Changes</button></div>
+            </form>
         </div>
     </div>
 </main>
