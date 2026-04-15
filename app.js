@@ -1,10 +1,11 @@
 
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-import {createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, onAuthStateChanged, onIdTokenChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, signOut, updateProfile} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-import {addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where, writeBatch} from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js';
+import {createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, onAuthStateChanged, onIdTokenChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, unlink, signOut, updateProfile} from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js';
+import {addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where, writeBatch} from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
 
 const cfg = {apiKey: "AIzaSyCP5Zb1CRermAKn7p_S30E8qzCbvsMxhm4", authDomain: "arcator-web.firebaseapp.com", databaseURL: "https://arcator-web-default-rtdb.firebaseio.com", projectId: "arcator-web", storageBucket: "arcator-web.firebasestorage.app", messagingSenderId: "1033082068049", appId: "1:1033082068049:web:dd154c8b188bde1930ec70", measurementId: "G-DJXNT1L7CM"};
 const app = initializeApp(cfg);
+app.automaticDataCollectionEnabled = false;
 const auth = getAuth(app);
 const db = initializeFirestore(app, {});
 const projectId = cfg.projectId;
@@ -21,8 +22,8 @@ const formatDate = ts => { if (!ts) return ''; const d = new Date(ts.seconds ? t
 const escapeHtml = str => { if (!str) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);};
 const generateProfilePic = name => { const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'], canvas = document.createElement('canvas'); canvas.width = canvas.height = 200; const ctx = canvas.getContext('2d'), hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0); ctx.fillStyle = colors[Math.abs(hash) % colors.length]; ctx.fillRect(0, 0, 200, 200); ctx.fillStyle = '#FFF'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), 100, 100); return canvas.toDataURL('image/png');};
 const randomIdentity = () => { const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'], noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl']; const a = adj[Math.floor(Math.random() * adj.length)], n = noun[Math.floor(Math.random() * noun.length)]; return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` };};
-const NAV_HTML = `<nav class="arc-nav"><div class="container-fluid px-4 arc-nav-inner"><a class="navbar-brand fw-bold" href="./index.html">Arcator</a><ul class="arc-nav-links"><li><a class="nav-link" href="./wiki.html">Wiki</a></li><li><a class="nav-link" href="./forms.html">Forums</a></li><li><a class="nav-link" href="./pages.html">Pages</a></li><li><a class="nav-link" href="./resources.html">Resources</a></li><li class="d-none" id="admin-link"><a class="nav-link" href="./mod.html">Admin</a></li></ul><div class="arc-user-section"><a href="./users.html" class="btn btn-primary btn-sm" id="sign-in-btn">Sign In</a><a href="./users.html" class="d-none arc-profile-link" id="user-profile-link"><img src="./defaultuser.png" class="avatar-sm" alt="Profile" id="user-avatar"></a></div></div></nav>`;
-const FOOTER_HTML = `<footer class="arc-footer"><div class="container-fluid px-4 arc-footer-inner"><div class="d-flex gap-3"><a href="https://ssmp.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a><a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a></div><span class="text-secondary">© 2025 Arcator</span></div></footer>`;
+const NAV_HTML = `<nav class="arc-nav"><div class="container-fluid px-4 arc-nav-inner"><a class="navbar-brand fw-bold" href="./index.html">Arcator</a><ul class="arc-nav-links"><li><a class="nav-link" href="./wiki.html">Wiki</a></li><li><a class="nav-link" href="./forms.html">Forums</a></li><li><a class="nav-link" href="./pages.html">Pages</a></li><li><a class="nav-link" href="./resources.html">Resources</a></li><li class="d-none" id="admin-link"><a class="nav-link" href="./mod.html">Admin</a></li></ul><div class="arc-user-section"><a href="./users.html" class="btn-sm" role="button" id="sign-in-btn">Sign In</a><a href="./users.html" class="d-none arc-profile-link" id="user-profile-link"><img src="./defaultuser.png" class="avatar-sm" alt="Profile" id="user-avatar"></a></div></div></nav>`;
+const FOOTER_HTML = `<footer class="arc-footer"><div class="container-fluid px-4 arc-footer-inner"><div class="d-flex gap-3"><a href="https://ssmp.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a><a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a></div><span class="text-secondary">© 2026 Arcator</span></div></footer>`;
 function initLayout() {
     const nav = document.getElementById('navbar-placeholder'), foot = document.getElementById('footer-placeholder');
     if (nav) {
@@ -48,7 +49,7 @@ function updateUserSection(u, p, isAdmin = false) {
 const cacheUser = (u, p) => localStorage.setItem('arcator_user_cache', JSON.stringify({uid: u.uid, displayName: p?.displayName || u.displayName, photoURL: p?.photoURL || u.photoURL, themePreference: p?.themePreference || 'dark', fontScaling: p?.fontScaling || 'normal', backgroundImage: p?.backgroundImage, glassColor: p?.glassColor, glassOpacity: p?.glassOpacity, glassBlur: p?.glassBlur}));
 const updateTheme = (t = 'dark', f = 'normal', css = '', bg = '', gc = '', go = 0.95, gb = '') => {
     const r = document.documentElement;
-    r.setAttribute('data-bs-theme', t); r.setAttribute('data-font-size', f);
+    r.setAttribute('data-theme', t); r.setAttribute('data-font-size', f);
     document.body.style.backgroundImage = bg ? `url('${bg}')` : '';
     if (gc && go !== '') {
         const rgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(gc);
@@ -326,7 +327,7 @@ function registerForumData() {
         async editThread(t) {
             const { value: v } = await Swal.fire({
                 title: 'Edit',
-                html: `<input id="s1" class="swal2-input" placeholder="Title"><input id="s2" class="swal2-input" placeholder="Tags"><select id="s3" class="swal2-input"><option value="announcements">Announcements</option><option value="gaming">Gaming</option><option value="discussion">Discussion</option><option value="support">Support</option></select><textarea id="ed-thread-content" class="form-control" rows="10"></textarea>`,
+                html: `<input id="s1" class="swal2-input" placeholder="Title"><input id="s2" class="swal2-input" placeholder="Tags"><select id="s3" class="swal2-input"><option value="announcements">Announcements</option><option value="gaming">Gaming</option><option value="discussion">Discussion</option><option value="support">Support</option></select><textarea id="ed-thread-content" rows="10"></textarea>`,
                 didOpen: () => {
                     document.getElementById('s1').value = t.title;
                     document.getElementById('s2').value = t.tags || '';
@@ -384,7 +385,7 @@ function registerMessageData() {
             const snap = await getDocs(collection(db, COLLECTIONS.USER_PROFILES)); const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             const u = Alpine.store('auth').user; const others = users.filter(x => x.id !== u.uid); if (!others.length) return Swal.fire('No users', '', 'info');
             const opts = others.map(x => `<option value="${x.id}">${x.displayName || x.email}</option>`).join('');
-            const { value: id } = await Swal.fire({ title: 'New Conversation', html: `<select id="new-conv" class="form-select">${opts}</select>`, preConfirm: () => document.getElementById('new-conv').value, showCancelButton: true });
+            const { value: id } = await Swal.fire({ title: 'New Conversation', html: `<select id="new-conv">${opts}</select>`, preConfirm: () => document.getElementById('new-conv').value, showCancelButton: true });
             if (id) { const ex = this.conversations.find(c => c.participants.includes(id) && c.participants.length === 2); if (ex) return this.selectConv(ex); await addDoc(collection(db, COLLECTIONS.CONVERSATIONS), { participants: [u.uid, id], createdAt: serverTimestamp(), lastMessageTime: serverTimestamp() }); this.loadConversations(); }
         }
     }));
@@ -393,28 +394,28 @@ function registerMessageData() {
 function registerPageWikiManagement() {
     Alpine.store('mgmt', {
         async createPage(cb) {
-            const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="form-control mb-2" placeholder="Title"><input id="np-slug" class="form-control mb-2" placeholder="Slug"><textarea id="np-content" class="form-control" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, createdAt: serverTimestamp() }) });
+            const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="mb-2" placeholder="Title"><input id="np-slug" class="mb-2" placeholder="Slug"><textarea id="np-content" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, createdAt: serverTimestamp() }) });
             if (v) { await addDoc(collection(db, COLLECTIONS.PAGES), v); if (cb) cb(); Swal.fire('Success', 'Page created', 'success'); }
         },
         async editPage(p, cb) {
-            const { value: v } = await Swal.fire({ title: 'Edit Page', width: '800px', html: `<input id="ep-title" class="form-control mb-2" placeholder="Title"><input id="ep-slug" class="form-control mb-2" placeholder="Slug"><textarea id="ep-content" class="form-control font-monospace" rows="15" placeholder="HTML Content"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ep-title').value = p.title; document.getElementById('ep-slug').value = p.slug; document.getElementById('ep-content').value = p.content; }, preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() }) });
+            const { value: v } = await Swal.fire({ title: 'Edit Page', width: '800px', html: `<input id="ep-title" class="mb-2" placeholder="Title"><input id="ep-slug" class="mb-2" placeholder="Slug"><textarea id="ep-content" class="font-monospace" rows="15" placeholder="HTML Content"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ep-title').value = p.title; document.getElementById('ep-slug').value = p.slug; document.getElementById('ep-content').value = p.content; }, preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() }) });
             if (v) { await updateDoc(doc(db, COLLECTIONS.PAGES, p.id), v); if (cb) cb(); Swal.fire('Success', 'Page updated', 'success'); }
         },
         async deletePage(id, cb) {
             if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) { await deleteDoc(doc(db, COLLECTIONS.PAGES, id)); if (cb) cb(); Swal.fire('Deleted', 'Page has been deleted.', 'success'); }
         },
         async createWikiSection(cb) {
-            const { value: v } = await Swal.fire({ title: 'Create Wiki Section', html: '<input id="nw-id" class="form-control mb-2" placeholder="Section ID (e.g. servers)"><textarea id="nw-content" class="form-control font-monospace" rows="12" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ id: document.getElementById('nw-id').value.toLowerCase().replace(/\s+/g, '-'), content: document.getElementById('nw-content').value }) });
+            const { value: v } = await Swal.fire({ title: 'Create Wiki Section', html: '<input id="nw-id" class="mb-2" placeholder="Section ID (e.g. servers)"><textarea id="nw-content" class="font-monospace" rows="12" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ id: document.getElementById('nw-id').value.toLowerCase().replace(/\s+/g, '-'), content: document.getElementById('nw-content').value }) });
             if (v?.id) { await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, v.id), { content: v.content, allowedEditors: [], updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Wiki section created', 'success'); }
         },
         async editWikiSection(s, cb) {
-            const { value: v } = await Swal.fire({ title: `Edit: ${escapeHtml(s.id)}`, width: '900px', html: `<textarea id="ew-content" class="form-control font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ew-content').value = s.content || ''; }, preConfirm: () => document.getElementById('ew-content').value });
+            const { value: v } = await Swal.fire({ title: `Edit: ${escapeHtml(s.id)}`, width: '900px', html: `<textarea id="ew-content" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ew-content').value = s.content || ''; }, preConfirm: () => document.getElementById('ew-content').value });
             if (v !== undefined) { await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, s.id), { content: v, updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Wiki section updated', 'success'); }
         },
         async manageWikiEditors(s, users, cb) {
             const cur = s.allowedEditors || [];
             const opts = users.map(u => `<option value="${escapeHtml(u.id)}" ${cur.includes(u.id) ? 'selected' : ''}>${escapeHtml(u.displayName || u.email)}</option>`).join('');
-            const { value: v } = await Swal.fire({ title: `Allowed Editors: ${escapeHtml(s.id)}`, html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" class="form-select" multiple size="10">${opts}</select>`, showCancelButton: true, preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value) });
+            const { value: v } = await Swal.fire({ title: `Allowed Editors: ${escapeHtml(s.id)}`, html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" multiple size="10">${opts}</select>`, showCancelButton: true, preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value) });
             if (v !== undefined) { await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, s.id), { allowedEditors: v, updatedAt: serverTimestamp() }); if (cb) cb(); Swal.fire('Success', 'Editors updated', 'success'); }
         },
         async deleteWikiSection(id, cb) {
@@ -442,7 +443,7 @@ function registerWikiApp() {
             const { value } = await Swal.fire({
                 title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`,
                 width: '900px',
-                html: `<textarea id="wiki-edit" class="form-control font-monospace" rows="20"></textarea>`,
+                html: `<textarea id="wiki-edit" class="font-monospace" rows="20"></textarea>`,
                 showCancelButton: true,
                 didOpen: () => { document.getElementById('wiki-edit').value = content; },
                 preConfirm: () => document.getElementById('wiki-edit').value
@@ -516,7 +517,7 @@ function registerAdminDashboard() {
             if (!this.isAdmin) return Swal.fire('Error', 'Unauthorized', 'error');
             const { value: v } = await Swal.fire({
                 title: 'Edit User', width: '800px',
-                html: `<div class="text-start admin-modal-scroll"><h6 class="text-primary mb-3">General</h6><div class="row g-2 mb-3">${[{id:'eu-name',l:'Name',v:u.displayName||''},{id:'eu-handle',l:'Handle',v:u.handle||''},{id:'eu-email',l:'Email',v:u.email||''},{id:'eu-photo',l:'Photo',v:u.photoURL||''},{id:'eu-css',l:'CSS',v:u.customCSS||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${escapeHtml(f.v)}"></div>`).join('')}<div class="col-md-6"><label class="small">Role</label><select id="eu-role" class="form-select form-select-sm"><option value="user" ${!u.admin&&u.role!=='staff'?'selected':''}>User</option><option value="staff" ${u.role==='staff'?'selected':''}>Staff</option><option value="admin" ${u.admin?'selected':''}>Admin</option></select></div></div><h6 class="text-primary mb-3 border-top pt-3">Social</h6><div class="row g-2 mb-3">${[{id:'eu-discordId',l:'Discord ID',v:u.discordId||''},{id:'eu-discordTag',l:'Discord Tag',v:u.discordTag||''},{id:'eu-discordPic',l:'Discord Pic',v:u.discordPic||''},{id:'eu-discordURL',l:'Discord URL',v:u.discordURL||''},{id:'eu-githubPic',l:'GitHub Pic',v:u.githubPic||''},{id:'eu-githubURL',l:'GitHub URL',v:u.githubURL||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="form-control form-control-sm" value="${escapeHtml(f.v)}"></div>`).join('')}</div><h6 class="text-primary mb-3 border-top pt-3">Preferences</h6><div class="row g-2 mb-3"><div class="col-md-4"><label class="small">Theme</label><select id="eu-theme" class="form-select form-select-sm"><option value="dark" ${u.themePreference==='dark'?'selected':''}>Dark</option><option value="light" ${u.themePreference==='light'?'selected':''}>Light</option></select></div><div class="col-md-4"><label class="small">Font</label><select id="eu-font" class="form-select form-select-sm"><option value="small" ${u.fontScaling==='small'?'selected':''}>Small</option><option value="normal" ${u.fontScaling==='normal'?'selected':''}>Normal</option><option value="large" ${u.fontScaling==='large'?'selected':''}>Large</option></select></div><div class="col-md-4"><label class="small">Retention</label><input type="number" id="eu-retention" class="form-control form-control-sm" value="${u.dataRetention||365}"></div></div><div class="row g-2 mt-2"><div class="col-md-6"><label class="small">Glass Color</label><input id="eu-glassColor" class="form-control form-control-sm" value="${escapeHtml(u.glassColor||'')}"></div><div class="col-md-6"><label class="small">Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" class="form-control form-control-sm" value="${u.glassOpacity||0.95}"></div><div class="col-md-6"><label class="small">Blur</label><input id="eu-glassBlur" type="number" class="form-control form-control-sm" value="${u.glassBlur||''}"></div><div class="col-12"><label class="small">Background</label><input id="eu-bgImg" class="form-control form-control-sm" value="${escapeHtml(u.backgroundImage||'')}"></div></div><h6 class="text-primary mb-3 border-top pt-3">Flags</h6><div class="row g-2">${[{id:'eu-activity',l:'Activity',c:u.activityTracking},{id:'eu-debug',l:'Debug',c:u.debugMode},{id:'eu-discordLinked',l:'Discord Linked',c:u.discordLinked},{id:'eu-discordNotif',l:'Discord Notifs',c:u.discordNotifications},{id:'eu-emailNotif',l:'Email Notifs',c:u.emailNotifications},{id:'eu-focus',l:'Focus',c:u.focusIndicators},{id:'eu-contrast',l:'Contrast',c:u.highContrast},{id:'eu-visible',l:'Visible',c:u.profileVisible},{id:'eu-push',l:'Push',c:u.pushNotifications},{id:'eu-motion',l:'Motion',c:u.reducedMotion},{id:'eu-reader',l:'Reader',c:u.screenReader},{id:'eu-sharing',l:'Sharing',c:u.thirdPartySharing}].map(f=>`<div class="col-md-4"><div class="form-check"><input type="checkbox" class="form-check-input" id="${f.id}" ${f.c?'checked':''}> <label class="small">${f.l}</label></div></div>`).join('')}</div></div>`,
+                html: `<div class="text-start admin-modal-scroll"><h6 class="text-primary mb-3">General</h6><div class="row g-2 mb-3">${[{id:'eu-name',l:'Name',v:u.displayName||''},{id:'eu-handle',l:'Handle',v:u.handle||''},{id:'eu-email',l:'Email',v:u.email||''},{id:'eu-photo',l:'Photo',v:u.photoURL||''},{id:'eu-css',l:'CSS',v:u.customCSS||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="btn-sm" value="${escapeHtml(f.v)}"></div>`).join('')}<div class="col-md-6"><label class="small">Role</label><select id="eu-role" class="btn-sm"><option value="user" ${!u.admin&&u.role!=='staff'?'selected':''}>User</option><option value="staff" ${u.role==='staff'?'selected':''}>Staff</option><option value="admin" ${u.admin?'selected':''}>Admin</option></select></div></div><h6 class="text-primary mb-3 border-top pt-3">Social</h6><div class="row g-2 mb-3">${[{id:'eu-discordId',l:'Discord ID',v:u.discordId||''},{id:'eu-discordTag',l:'Discord Tag',v:u.discordTag||''},{id:'eu-discordPic',l:'Discord Pic',v:u.discordPic||''},{id:'eu-discordURL',l:'Discord URL',v:u.discordURL||''},{id:'eu-githubPic',l:'GitHub Pic',v:u.githubPic||''},{id:'eu-githubURL',l:'GitHub URL',v:u.githubURL||''}].map(f=>`<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="btn-sm" value="${escapeHtml(f.v)}"></div>`).join('')}</div><h6 class="text-primary mb-3 border-top pt-3">Preferences</h6><div class="row g-2 mb-3"><div class="col-md-4"><label class="small">Theme</label><select id="eu-theme" class="btn-sm"><option value="dark" ${u.themePreference==='dark'?'selected':''}>Dark</option><option value="light" ${u.themePreference==='light'?'selected':''}>Light</option></select></div><div class="col-md-4"><label class="small">Font</label><select id="eu-font" class="btn-sm"><option value="small" ${u.fontScaling==='small'?'selected':''}>Small</option><option value="normal" ${u.fontScaling==='normal'?'selected':''}>Normal</option><option value="large" ${u.fontScaling==='large'?'selected':''}>Large</option></select></div><div class="col-md-4"><label class="small">Retention</label><input type="number" id="eu-retention" class="btn-sm" value="${u.dataRetention||365}"></div></div><div class="row g-2 mt-2"><div class="col-md-6"><label class="small">Glass Color</label><input id="eu-glassColor" class="btn-sm" value="${escapeHtml(u.glassColor||'')}"></div><div class="col-md-6"><label class="small">Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" class="btn-sm" value="${u.glassOpacity||0.95}"></div><div class="col-md-6"><label class="small">Blur</label><input id="eu-glassBlur" type="number" class="btn-sm" value="${u.glassBlur||''}"></div><div class="col-12"><label class="small">Background</label><input id="eu-bgImg" class="btn-sm" value="${escapeHtml(u.backgroundImage||'')}"></div></div><h6 class="text-primary mb-3 border-top pt-3">Flags</h6><div class="row g-2">${[{id:'eu-activity',l:'Activity',c:u.activityTracking},{id:'eu-debug',l:'Debug',c:u.debugMode},{id:'eu-discordLinked',l:'Discord Linked',c:u.discordLinked},{id:'eu-discordNotif',l:'Discord Notifs',c:u.discordNotifications},{id:'eu-emailNotif',l:'Email Notifs',c:u.emailNotifications},{id:'eu-focus',l:'Focus',c:u.focusIndicators},{id:'eu-contrast',l:'Contrast',c:u.highContrast},{id:'eu-visible',l:'Visible',c:u.profileVisible},{id:'eu-push',l:'Push',c:u.pushNotifications},{id:'eu-motion',l:'Motion',c:u.reducedMotion},{id:'eu-reader',l:'Reader',c:u.screenReader},{id:'eu-sharing',l:'Sharing',c:u.thirdPartySharing}].map(f=>`<div class="col-md-4"><div class="form-check"><input type="checkbox" id="${f.id}" ${f.c?'checked':''}> <label class="small">${f.l}</label></div></div>`).join('')}</div></div>`,
                 showCancelButton: true,
                 preConfirm: () => ({
                     displayName: document.getElementById('eu-name').value, handle: document.getElementById('eu-handle').value, email: document.getElementById('eu-email').value, photoURL: document.getElementById('eu-photo').value, role: document.getElementById('eu-role').value, admin: document.getElementById('eu-role').value === 'admin', customCSS: document.getElementById('eu-css').value, discordId: document.getElementById('eu-discordId').value, discordTag: document.getElementById('eu-discordTag').value, discordPic: document.getElementById('eu-discordPic').value, discordURL: document.getElementById('eu-discordURL').value, githubPic: document.getElementById('eu-githubPic').value, githubURL: document.getElementById('eu-githubURL').value, themePreference: document.getElementById('eu-theme').value, fontScaling: document.getElementById('eu-font').value, dataRetention: parseInt(document.getElementById('eu-retention').value), glassColor: document.getElementById('eu-glassColor').value, glassOpacity: parseFloat(document.getElementById('eu-glassOpacity').value), glassBlur: parseInt(document.getElementById('eu-glassBlur').value), backgroundImage: document.getElementById('eu-bgImg').value, activityTracking: document.getElementById('eu-activity').checked, debugMode: document.getElementById('eu-debug').checked, discordLinked: document.getElementById('eu-discordLinked').checked, discordNotifications: document.getElementById('eu-discordNotif').checked, emailNotifications: document.getElementById('eu-emailNotif').checked, focusIndicators: document.getElementById('eu-focus').checked, highContrast: document.getElementById('eu-contrast').checked, profileVisible: document.getElementById('eu-visible').checked, pushNotifications: document.getElementById('eu-push').checked, reducedMotion: document.getElementById('eu-motion').checked, screenReader: document.getElementById('eu-reader').checked, thirdPartySharing: document.getElementById('eu-sharing').checked, updatedAt: serverTimestamp()
@@ -538,9 +539,9 @@ function registerAdminDashboard() {
             const { value: v } = await Swal.fire({
                 title: 'Edit Thread',
                 html: `
-                    <input id="et-title" class="form-control mb-2" placeholder="Title">
-                    <input id="et-tags" class="form-control mb-2" placeholder="Tags">
-                    <select id="et-cat" class="form-select mb-2">
+                    <input id="et-title" class="mb-2" placeholder="Title">
+                    <input id="et-tags" class="mb-2" placeholder="Tags">
+                    <select id="et-cat" class="mb-2">
                         <option value="General">General</option>
                         <option value="Announcements">Announcements</option>
                         <option value="Support">Support</option>
@@ -548,10 +549,10 @@ function registerAdminDashboard() {
                         <option value="Discussion">Discussion</option>
                     </select>
                     <div class="form-check text-start mb-2">
-                        <input class="form-check-input" type="checkbox" id="et-locked">
-                        <label class="form-check-label">Lock</label>
+                        <input type="checkbox" id="et-locked">
+                        <label >Lock</label>
                     </div>
-                    <textarea id="et-desc" class="form-control" rows="5"></textarea>
+                    <textarea id="et-desc" rows="5"></textarea>
                 `,
                 didOpen: () => {
                     document.getElementById('et-title').value = t.title;
@@ -584,8 +585,8 @@ function registerAdminDashboard() {
                         </div>
                         <div class="my-1">${DOMPurify.sanitize(data.content)}</div>
                         <div class="d-flex gap-2 justify-content-end">
-                            <button class="btn btn-sm btn-outline-secondary py-0 edit-comment-btn" data-tid="${t.id}" data-cid="${d.id}">Edit</button>
-                            <button class="btn btn-sm btn-outline-danger py-0 del-comment-btn" data-tid="${t.id}" data-cid="${d.id}">Del</button>
+                            <button class="btn-sm btn-outline-secondary py-0 edit-comment-btn" data-tid="${t.id}" data-cid="${d.id}">Edit</button>
+                            <button class="btn-sm btn-outline-danger py-0 del-comment-btn" data-tid="${t.id}" data-cid="${d.id}">Del</button>
                         </div>
                     </div>`;
             }).join('');
@@ -622,8 +623,8 @@ function registerAdminDashboard() {
                         </div>
                         <div class="my-1">${DOMPurify.sanitize(data.content)}</div>
                         <div class="d-flex gap-2 justify-content-end">
-                            <button class="btn btn-sm btn-outline-secondary py-0 edit-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Edit</button>
-                            <button class="btn btn-sm btn-outline-danger py-0 del-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Del</button>
+                            <button class="btn-sm btn-outline-secondary py-0 edit-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Edit</button>
+                            <button class="btn-sm btn-outline-danger py-0 del-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Del</button>
                         </div>
                     </div>`;
             }).join('');
@@ -658,7 +659,7 @@ function registerAdminDashboard() {
 
 function registerResourcesData() {
     Alpine.data('resourcesData', () => ({
-        censusHeader: [], censusData: [], censusLoading: true, adminLoading: true, adminContent: '', sortBy: 'name',
+        resTab: 'census', censusHeader: [], censusData: [], censusLoading: true, adminLoading: true, adminContent: '', sortBy: 'name',
         async init() { await this.loadCensus(); await this.loadAdminDoc(); },
         parseCSV(t) {
             const res = []; let r = [], f = '', q = false;

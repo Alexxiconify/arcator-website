@@ -1,18 +1,17 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Forums - Arcator</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
     <link href="./styles.css" rel="stylesheet">
     <link href="./favicon.png" rel="icon" type="image/png">
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.3.3/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.24"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 </head>
 <body>
 <div id="navbar-placeholder"></div>
@@ -33,21 +32,20 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="h4 mb-0">Forum Threads</h2>
                 <template x-if="$store.auth.user">
-                    <button class="btn btn-primary btn-sm" @click="showCreateModal = true">Create Thread</button>
+                    <button class="btn-sm" @click="showCreateModal = true">Create Thread</button>
                 </template>
             </div>
-            <div class="card mb-4" x-show="showCreateModal" x-transition>
-                <div class="card-body">
-                    <h5 class="card-title">Create New Thread</h5>
+            <article class="mb-4" x-show="showCreateModal" x-transition>
+                    <h5>Create New Thread</h5>
                     <form @submit.prevent="createThread">
-                        <div class="mb-3"><input class="form-control" x-model="newThread.title" placeholder="Title" required></div>
+                        <div class="mb-3"><input x-model="newThread.title" placeholder="Title" required></div>
                         <div class="mb-3">
-                            <label class="form-label small">Description</label>
+                            <label class="small">Description</label>
                             <div x-ref="createEditor"></div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <select class="form-select" x-model="newThread.category" required aria-label="Select Category">
+                                <select x-model="newThread.category" required aria-label="Select Category">
                                     <option value="">Select category...</option>
                                     <option value="announcements">Announcements</option>
                                     <option value="gaming">Gaming</option>
@@ -55,23 +53,21 @@
                                     <option value="support">Support</option>
                                 </select>
                             </div>
-                            <div class="col-md-6"><input class="form-control" x-model="newThread.tags" placeholder="Tags (comma-separated)"></div>
+                            <div class="col-md-6"><input x-model="newThread.tags" placeholder="Tags (comma-separated)"></div>
                         </div>
                         <div class="d-flex gap-2 justify-content-end">
-                            <button type="button" class="btn btn-secondary btn-sm" @click="showCreateModal = false">Cancel</button>
-                            <button type="submit" class="btn btn-primary btn-sm">Post</button>
+                            <button type="button" class="btn-secondary btn-sm" @click="showCreateModal = false">Cancel</button>
+                            <button type="submit" class="btn-sm">Post</button>
                         </div>
                     </form>
-                </div>
-            </div>
+            </article>
             <div x-spinner="loading"></div>
             <div x-show="!loading && threads.length === 0" class="text-center py-5 text-secondary">No threads yet</div>
             <template x-for="thread in threads" :key="thread.id">
-                <div class="card mb-2 list-item-card">
-                    <div class="card-body py-2">
+                <article class="mb-2 list-item-card py-2">
                         <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                             <div class="d-flex align-items-center gap-2">
-                                <button class="btn btn-link btn-sm p-0 text-primary" @click="toggleThread(thread)">
+                                <button class="btn-link btn-sm p-0 text-primary" @click="toggleThread(thread)">
                                     <span x-text="thread.expanded ? '▼' : '▶'"></span>
                                 </button>
                                 <span class="fw-bold" x-text="thread.title"></span>
@@ -80,11 +76,11 @@
                             <div class="d-flex align-items-center gap-2">
                                 <small class="text-secondary" x-html="getThreadMeta(thread)"></small>
                                 <template x-if="$store.auth.isAdmin || ($store.auth.user && $store.auth.user.uid === thread.authorId)">
-                                    <div class="dropdown">
-                                        <button class="btn btn-link btn-sm p-0 text-secondary" data-bs-toggle="dropdown">
+                                    <div class="dropdown" x-data="{ open: false }">
+                                        <button class="btn-link btn-sm p-0 text-secondary" @click="open = !open">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
                                         </button>
-                                        <ul class="dropdown-menu">
+                                        <ul class="dropdown-menu" x-show="open" @click.outside="open = false" @click="open = false" x-cloak>
                                             <li><a class="dropdown-item" href="#" @click.prevent="editThread(thread)">Edit</a></li>
                                             <template x-if="$store.auth.isAdmin">
                                                 <li><a class="dropdown-item" href="#" @click.prevent="softDeleteThread(thread)" x-text="thread.censored ? 'Un-censor' : 'Censor'"></a></li>
@@ -101,17 +97,16 @@
                         <div x-show="thread.censored && !$store.auth.isAdmin" class="alert alert-warning py-1 mt-1 mb-0 small">
                             This content has been censored.
                         </div>
-                    </div>
-                    <div class="card-footer py-2" x-show="thread.expanded" x-transition>
+                    <footer class="py-2" x-show="thread.expanded" x-transition>
                         <div x-spinner:sm="thread.loadingComments"></div>
                         <div class="comments-list mb-2">
                             <template x-for="comment in thread.comments.filter(c => !c.parentCommentId)" :key="comment.id">
                                 <div class="border-accent mb-2 ms-0">
                                     <div class="d-flex">
                                         <div class="d-flex flex-column align-items-center me-2">
-                                            <button class="btn btn-link btn-sm p-0 text-secondary text-decoration-none" @click="vote(thread.id, comment, 'up')" :class="hasVoted(comment, 'up') ? 'text-primary' : ''">▲</button>
+                                            <button class="btn-link btn-sm p-0 text-secondary text-decoration-none" @click="vote(thread.id, comment, 'up')" :class="hasVoted(comment, 'up') ? 'text-primary' : ''">▲</button>
                                             <span class="small fw-bold" x-text="getVoteScore(comment)"></span>
-                                            <button class="btn btn-link btn-sm p-0 text-secondary text-decoration-none" @click="vote(thread.id, comment, 'down')" :class="hasVoted(comment, 'down') ? 'text-primary' : ''">▼</button>
+                                            <button class="btn-link btn-sm p-0 text-secondary text-decoration-none" @click="vote(thread.id, comment, 'down')" :class="hasVoted(comment, 'down') ? 'text-primary' : ''">▼</button>
                                         </div>
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center gap-2 mb-1">
@@ -124,11 +119,11 @@
                                                     </template>
                                                 </div>
                                                 <template x-if="$store.auth.isAdmin || ($store.auth.user && $store.auth.user.uid === comment.authorId)">
-                                                    <div class="dropdown d-inline-block">
-                                                        <button class="btn btn-link btn-sm p-0 text-secondary" data-bs-toggle="dropdown">
+                                                    <div class="dropdown d-inline-block" x-data="{ open: false }">
+                                                        <button class="btn-link btn-sm p-0 text-secondary" @click="open = !open">
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
                                                         </button>
-                                                        <ul class="dropdown-menu">
+                                                        <ul class="dropdown-menu" x-show="open" @click.outside="open = false" @click="open = false" x-cloak>
                                                             <li><a class="dropdown-item" href="#" @click.prevent="editComment(thread.id, comment)">Edit</a></li>
                                                             <template x-if="$store.auth.isAdmin">
                                                                 <li><a class="dropdown-item" href="#" @click.prevent="censorComment(thread.id, comment)" x-text="comment.censored ? 'Edit Redaction' : 'Redact'"></a></li>
@@ -143,17 +138,17 @@
                                                 <span class="badge bg-danger" style="font-size: 0.6em;">[Redacted by Staff]</span>
                                             </template>
                                             <div class="d-flex gap-2 align-items-center">
-                                                <button class="btn btn-link btn-sm p-0 text-secondary text-decoration-none" @click="replyTo(thread, comment)">Reply</button>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-link btn-sm p-0 text-secondary text-decoration-none" data-bs-toggle="dropdown">React</button>
-                                                    <div class="dropdown-menu p-2" style="min-width: 220px;">
+                                                <button class="btn-link btn-sm p-0 text-secondary text-decoration-none" @click="replyTo(thread, comment)">Reply</button>
+                                                <div class="dropdown" x-data="{ open: false }">
+                                                    <button class="btn-link btn-sm p-0 text-secondary text-decoration-none" @click="open = !open">React</button>
+                                                    <div class="dropdown-menu p-2" style="min-width: 220px;" x-show="open" @click.outside="open = false" @click="open = false" x-cloak>
                                                         <div class="d-flex justify-content-between">
-                                                            <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, comment, '👍')">👍</button>
-                                                            <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, comment, '❤️')">❤️</button>
-                                                            <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, comment, '😂')">😂</button>
-                                                            <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, comment, '😮')">😮</button>
-                                                            <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, comment, '�')">😢</button>
-                                                            <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, comment, '�')">😡</button>
+                                                            <button class="btn-sm btn-light p-1" @click="vote(thread.id, comment, '👍')">👍</button>
+                                                            <button class="btn-sm btn-light p-1" @click="vote(thread.id, comment, '❤️')">❤️</button>
+                                                            <button class="btn-sm btn-light p-1" @click="vote(thread.id, comment, '😂')">😂</button>
+                                                            <button class="btn-sm btn-light p-1" @click="vote(thread.id, comment, '😮')">😮</button>
+                                                            <button class="btn-sm btn-light p-1" @click="vote(thread.id, comment, '�')">😢</button>
+                                                            <button class="btn-sm btn-light p-1" @click="vote(thread.id, comment, '�')">😡</button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -165,9 +160,9 @@
                                                     <div class="comment mb-2">
                                                         <div class="d-flex">
                                                             <div class="d-flex flex-column align-items-center me-2">
-                                                                <button class="btn btn-link btn-sm p-0 text-secondary text-decoration-none" @click="vote(thread.id, reply, 'up')" :class="hasVoted(reply, 'up') ? 'text-primary' : ''">▲</button>
+                                                                <button class="btn-link btn-sm p-0 text-secondary text-decoration-none" @click="vote(thread.id, reply, 'up')" :class="hasVoted(reply, 'up') ? 'text-primary' : ''">▲</button>
                                                                 <span class="small fw-bold" x-text="getVoteScore(reply)"></span>
-                                                                <button class="btn btn-link btn-sm p-0 text-secondary text-decoration-none" @click="vote(thread.id, reply, 'down')" :class="hasVoted(reply, 'down') ? 'text-primary' : ''">▼</button>
+                                                                <button class="btn-link btn-sm p-0 text-secondary text-decoration-none" @click="vote(thread.id, reply, 'down')" :class="hasVoted(reply, 'down') ? 'text-primary' : ''">▼</button>
                                                             </div>
                                                             <div class="flex-grow-1">
                                                                 <div class="d-flex align-items-center gap-2 mb-1">
@@ -180,11 +175,11 @@
                                                                         </template>
                                                                     </div>
                                                                     <template x-if="$store.auth.isAdmin || ($store.auth.user && $store.auth.user.uid === reply.authorId)">
-                                                                        <div class="dropdown d-inline-block">
-                                                                            <button class="btn btn-link btn-sm p-0 text-secondary" data-bs-toggle="dropdown">
+                                                                        <div class="dropdown d-inline-block" x-data="{ open: false }">
+                                                                            <button class="btn-link btn-sm p-0 text-secondary" @click="open = !open">
                                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
                                                                             </button>
-                                                                            <ul class="dropdown-menu">
+                                                                            <ul class="dropdown-menu" x-show="open" @click.outside="open = false" @click="open = false" x-cloak>
                                                                                 <li><a class="dropdown-item" href="#" @click.prevent="editComment(thread.id, reply)">Edit</a></li>
                                                                                 <template x-if="$store.auth.isAdmin">
                                                                                     <li><a class="dropdown-item" href="#" @click.prevent="censorComment(thread.id, reply)" x-text="reply.censored ? 'Edit Redaction' : 'Redact'"></a></li>
@@ -199,17 +194,17 @@
                                                                     <span class="badge bg-danger" style="font-size: 0.6em;">[Redacted by Staff]</span>
                                                                 </template>
                                                                 <div class="d-flex gap-2 align-items-center">
-                                                                    <button class="btn btn-link btn-sm p-0 text-secondary text-decoration-none" @click="replyTo(thread, reply)">Reply</button>
-                                                                    <div class="dropdown">
-                                                                        <button class="btn btn-link btn-sm p-0 text-secondary text-decoration-none" data-bs-toggle="dropdown">React</button>
-                                                                        <div class="dropdown-menu p-2" style="min-width: 220px;">
+                                                                    <button class="btn-link btn-sm p-0 text-secondary text-decoration-none" @click="replyTo(thread, reply)">Reply</button>
+                                                                    <div class="dropdown" x-data="{ open: false }">
+                                                                        <button class="btn-link btn-sm p-0 text-secondary text-decoration-none" @click="open = !open">React</button>
+                                                                        <div class="dropdown-menu p-2" style="min-width: 220px;" x-show="open" @click.outside="open = false" @click="open = false" x-cloak>
                                                                             <div class="d-flex justify-content-between">
-                                                                                <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, reply, '👍')">👍</button>
-                                                                                <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, reply, '❤️')">❤️</button>
-                                                                                <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, reply, '😂')">😂</button>
-                                                                                <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, reply, '😮')">😮</button>
-                                                                                <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, reply, '😢')">😢</button>
-                                                                                <button class="btn btn-sm btn-light p-1" @click="vote(thread.id, reply, '😡')">😡</button>
+                                                                                <button class="btn-sm btn-light p-1" @click="vote(thread.id, reply, '👍')">👍</button>
+                                                                                <button class="btn-sm btn-light p-1" @click="vote(thread.id, reply, '❤️')">❤️</button>
+                                                                                <button class="btn-sm btn-light p-1" @click="vote(thread.id, reply, '😂')">😂</button>
+                                                                                <button class="btn-sm btn-light p-1" @click="vote(thread.id, reply, '😮')">😮</button>
+                                                                                <button class="btn-sm btn-light p-1" @click="vote(thread.id, reply, '😢')">😢</button>
+                                                                                <button class="btn-sm btn-light p-1" @click="vote(thread.id, reply, '😡')">😡</button>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -238,12 +233,12 @@
                                     })
                                 " style="min-height: 100px; background: #222; color: #fff; border-radius: 0 0 5px 5px;"></div>
                                 <div class="d-flex justify-content-end mt-2">
-                                    <button class="btn btn-primary btn-sm" @click="postComment(thread.id)">Post Comment</button>
+                                    <button class="btn-sm" @click="postComment(thread.id)">Post Comment</button>
                                 </div>
                             </div>
                         </template>
-                    </div>
-                </div>
+                    </footer>
+                </article>
             </template>
         </div>
 
@@ -256,7 +251,7 @@
                     <div class="col-md-4 border-end">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="mb-0">Conversations</h5>
-                            <button class="btn btn-primary btn-sm" @click="createConversation">New</button>
+                            <button class="btn-sm" @click="createConversation">New</button>
                         </div>
                         <div class="list-group">
                             <template x-for="conv in conversations" :key="conv.id">
@@ -291,11 +286,11 @@
                                                         <small class="d-block text-end" style="font-size: 0.7em; opacity: 0.7;" x-text="formatDate(msg.createdAt)"></small>
                                                     </div>
                                                     <template x-if="msg.senderId === $store.auth.user.uid">
-                                                        <div class="dropdown align-self-center">
-                                                            <button class="btn btn-link btn-sm p-0 text-secondary" data-bs-toggle="dropdown">
+                                                        <div class="dropdown align-self-center" x-data="{ open: false }">
+                                                            <button class="btn-link btn-sm p-0 text-secondary" @click="open = !open">
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
                                                             </button>
-                                                            <ul class="dropdown-menu">
+                                                            <ul class="dropdown-menu" x-show="open" @click.outside="open = false" @click="open = false" x-cloak>
                                                                 <li><a class="dropdown-item" href="#" @click.prevent="editMessage(msg)">Edit</a></li>
                                                                 <li><a class="dropdown-item text-danger" href="#" @click.prevent="deleteMessage(msg.id)">Delete</a></li>
                                                             </ul>
@@ -307,8 +302,8 @@
                                     </template>
                                 </div>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" x-model="newMessage" @keydown.enter="sendMessage">
-                                    <button class="btn btn-primary" @click="sendMessage">Send</button>
+                                    <input type="text" x-model="newMessage" @keydown.enter="sendMessage">
+                                    <button @click="sendMessage">Send</button>
                                 </div>
                             </div>
                         </template>
@@ -323,6 +318,6 @@
 <div id="footer-placeholder"></div>
 
 <script type="module" src="./app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 </body>
 </html>
