@@ -1,9 +1,9 @@
 
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js';
-import {createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, unlink, signOut, updateProfile} from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js';
-import {addDoc, arrayRemove, arrayUnion, collection,  deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore,  onSnapshot, orderBy, query, serverTimestamp, setDoc,  updateDoc, where, writeBatch} from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js';
+import { createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, unlink, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
 
-const cfg = {apiKey: "AIzaSyCP5Zb1CRermAKn7p_S30E8qzCbvsMxhm4", authDomain: "arcator-web.firebaseapp.com", databaseURL: "https://arcator-web-default-rtdb.firebaseio.com", projectId: "arcator-web", storageBucket: "arcator-web.firebasestorage.app", messagingSenderId: "1033082068049", appId: "1:1033082068049:web:dd154c8b188bde1930ec70", measurementId: "G-DJXNT1L7CM"};
+const cfg = { apiKey: "AIzaSyCP5Zb1CRermAKn7p_S30E8qzCbvsMxhm4", authDomain: "arcator-web.firebaseapp.com", databaseURL: "https://arcator-web-default-rtdb.firebaseio.com", projectId: "arcator-web", storageBucket: "arcator-web.firebasestorage.app", messagingSenderId: "1033082068049", appId: "1:1033082068049:web:dd154c8b188bde1930ec70", measurementId: "G-DJXNT1L7CM" };
 const app = initializeApp(cfg);
 app.automaticDataCollectionEnabled = false;
 const auth = getAuth(app);
@@ -13,7 +13,7 @@ const appId = cfg.appId;
 const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
 
-const COLLECTIONS = {USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FORMS: 'forms', SUBMISSIONS: (formId) => `forms/${formId}/submissions`, CONVERSATIONS: 'conversations', CONV_MESSAGES: (convId) => `conversations/${convId}/messages`, THEMES: 'custom_themes', PAGES: 'temp_pages', WIKI_CONFIG: 'wiki_config', WIKI_PAGES: 'wiki_pages'};
+const COLLECTIONS = { USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FORMS: 'forms', SUBMISSIONS: (formId) => `forms/${formId}/submissions`, CONVERSATIONS: 'conversations', CONV_MESSAGES: (convId) => `conversations/${convId}/messages`, THEMES: 'custom_themes', PAGES: 'temp_pages', WIKI_CONFIG: 'wiki_config', WIKI_PAGES: 'wiki_pages' };
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
@@ -21,16 +21,16 @@ const getCurrentUser = () => auth.currentUser;
 const formatDate = ts => {
     if (!ts) { return ''; }
     const d = new Date(ts.seconds ? ts.seconds * 1000 : ts), now = new Date();
-    return (d.getDate()===now.getDate()&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()) ? d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : d.toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'2-digit'});
+    return (d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) ? d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
 };
 const escapeHtml = str => {
     if (!str) { return ''; }
     return String(str).replaceAll(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
 };
-const generateProfilePic = name => { const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'], canvas = document.createElement('canvas'); canvas.width = canvas.height = 200; const ctx = canvas.getContext('2d'), hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0); ctx.fillStyle = colors[Math.abs(hash) % colors.length]; ctx.fillRect(0, 0, 200, 200); ctx.fillStyle = '#FFF'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), 100, 100); return canvas.toDataURL('image/png');};
-const randomIdentity = () => { const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'], noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl']; const a = adj[Math.floor(Math.random() * adj.length)], n = noun[Math.floor(Math.random() * noun.length)]; return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` };};
-const NAV_HTML = `<nav class="arc-nav" aria-label="Main"><menu><li><a href="./index.html" class="arc-nav-brand">Arcator</a></li><li><a href="./wiki.html">Wiki</a></li><li><a href="./forms.html">Forums</a></li><li><a href="./pages.html">Pages</a></li><li><a href="./resources.html">Resources</a></li><li><a href="https://jylina.arcator.co.uk/hub">Hub Maps</a></li><li><a href="https://jylina.arcator.co.uk/ssmp">SSMP Maps</a></li><li><a href="https://discord.gg/GwArgw2">Discord</a></li><li><a href="https://apollo.arcator.co.uk/standalone/souls/">Soul Vis</a></li><li><a href="https://apollo.arcator.co.uk/standalone/joins.html">Social Graph</a></li><li class="d-none" id="admin-link"><a href="./mod.html">Admin</a></li><li class="arc-user-section"><a href="./users.html" id="sign-in-btn">Sign In</a><a href="./users.html" class="d-none arc-profile-link" id="user-profile-link"><img src="./defaultuser.png" class="avatar-sm" alt="Profile" id="user-avatar"></a></li></menu></nav>`;
-const FOOTER_HTML = `<footer class="arc-footer"><div class="container-fluid px-4 arc-footer-inner"><div class="d-flex gap-3"><a href="https://ssmp.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a><a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a></div><span class="text-secondary">© 2026 Arcator</span></div></footer>`;
+const generateProfilePic = name => { const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'], canvas = document.createElement('canvas'); canvas.width = canvas.height = 200; const ctx = canvas.getContext('2d'), hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0); ctx.fillStyle = colors[Math.abs(hash) % colors.length]; ctx.fillRect(0, 0, 200, 200); ctx.fillStyle = '#FFF'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), 100, 100); return canvas.toDataURL('image/png'); };
+const randomIdentity = () => { const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'], noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl']; const a = adj[Math.floor(Math.random() * adj.length)], n = noun[Math.floor(Math.random() * noun.length)]; return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` }; };
+const NAV_HTML = `<nav class="arc-nav" aria-label="Main"><menu><li><a href="./index.html" class="arc-nav-brand">Arcator</a></li><li><a href="./wiki.html">Wiki</a></li><li><a href="./forms.html">Forums</a></li><li><a href="./pages.html">Pages</a></li><li><a href="./resources.html">Resources</a></li><li><a href="https://jylina.arcator.co.uk/hub">Hub Maps</a></li><li><a href="https://jylina.arcator.co.uk/stats">Stats</a></li><li><a href="https://discord.gg/GwArgw2">Discord</a></li><li><a href="https://apollo.arcator.co.uk/standalone/souls/">Soul Vis</a></li><li><a href="https://apollo.arcator.co.uk/standalone/joins.html">Social Graph</a></li><li class="d-none" id="admin-link"><a href="./mod.html">Admin</a></li><li class="arc-user-section"><a href="./users.html" id="sign-in-btn">Sign In</a><a href="./users.html" class="d-none arc-profile-link" id="user-profile-link"><img src="./defaultuser.png" class="avatar-sm" alt="Profile" id="user-avatar"></a></li></menu></nav>`;
+const FOOTER_HTML = `<footer class="arc-footer"><div class="container-fluid px-4 arc-footer-inner"><div class="d-flex gap-3"><a href="https://jylina.arcator.co.uk/ssmp" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a><a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a></div><span class="text-secondary">© 2026 Arcator</span></div></footer>`;
 function initLayout() {
     const nav = document.getElementById('navbar-placeholder'), foot = document.getElementById('footer-placeholder');
     if (nav) {
@@ -53,7 +53,7 @@ function updateUserSection(u, p, isAdmin = false) {
         if (adm) adm.classList.add('d-none');
     }
 }
-const cacheUser = (u, p) => localStorage.setItem('arcator_user_cache', JSON.stringify({uid: u.uid, displayName: p?.displayName || u.displayName, photoURL: p?.photoURL || u.photoURL, themePreference: p?.themePreference || 'dark', fontScaling: p?.fontScaling || 'normal', backgroundImage: p?.backgroundImage, glassColor: p?.glassColor, glassOpacity: p?.glassOpacity, glassBlur: p?.glassBlur}));
+const cacheUser = (u, p) => localStorage.setItem('arcator_user_cache', JSON.stringify({ uid: u.uid, displayName: p?.displayName || u.displayName, photoURL: p?.photoURL || u.photoURL, themePreference: p?.themePreference || 'dark', fontScaling: p?.fontScaling || 'normal', backgroundImage: p?.backgroundImage, glassColor: p?.glassColor, glassOpacity: p?.glassOpacity, glassBlur: p?.glassBlur }));
 const updateTheme = (t = 'dark', f = 'normal', css = '', bg = '', gc = '', go = 0.95, gb = '') => {
     const r = document.documentElement;
     r.dataset.theme = t; r.dataset.fontSize = f;
@@ -119,7 +119,7 @@ function registerAuthStore() {
                             this.profile = snap.data();
                             cacheUser(u, this.profile);
                             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS, this.profile.backgroundImage, this.profile.glassColor, this.profile.glassOpacity, this.profile.glassBlur);
-                            
+
                             // Check admins collection for source of truth
                             try {
                                 const adminSnap = await getDoc(doc(db, 'admins', u.uid));
@@ -144,7 +144,7 @@ function registerAuthStore() {
 
         async login(email, password) {
             const result = await signInWithEmailAndPassword(auth, email, password);
-            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
+            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => { });
             return result.user;
         },
 
@@ -168,15 +168,15 @@ function registerAuthStore() {
         async loginWithProvider(providerName) {
             const provider = this.getProvider(providerName);
             const result = await signInWithPopup(auth, provider);
-            
+
             if (providerName === 'discord') {
                 await this.syncDiscordData(result);
             }
-            
+
             if (result._tokenResponse?.isNewUser) {
                 await this.initializeNewUser(result, providerName);
             } else {
-                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
+                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => { });
             }
             return result.user;
         },
@@ -185,8 +185,8 @@ function registerAuthStore() {
             const accessToken = result._tokenResponse?.accessToken;
             if (!accessToken) { return; }
             try {
-                const resp = await fetch('https://discord.com/api/v10/users/@me', { 
-                    headers: { Authorization: `Bearer ${accessToken}` } 
+                const resp = await fetch('https://discord.com/api/v10/users/@me', {
+                    headers: { Authorization: `Bearer ${accessToken}` }
                 });
                 if (resp.ok) {
                     const d = await resp.json();
@@ -205,15 +205,15 @@ function registerAuthStore() {
             const { displayName: rn, handle } = randomIdentity();
             const displayName = result.user.displayName || rn;
             const photoURL = result.user.photoURL || generateProfilePic(displayName);
-            await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { 
-                uid: result.user.uid, displayName, email: result.user.email || '', photoURL, handle, 
-                themePreference: DEFAULT_THEME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: providerName 
+            await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), {
+                uid: result.user.uid, displayName, email: result.user.email || '', photoURL, handle,
+                themePreference: DEFAULT_THEME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: providerName
             });
         },
 
         async saveProfile(uid, profileData) {
             const safeData = { ...profileData };
-            delete safeData.admin; delete safeData.role; delete safeData.staff;
+            delete safeData.admin; delete safeData.role; delete safeData.staff; delete safeData.uid; delete safeData.createdAt;
             await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, uid), safeData);
             this.profile = { ...this.profile, ...safeData };
             cacheUser(this.user, this.profile);
@@ -282,7 +282,7 @@ function forumData() {
             const snap = await getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc')));
             this.threads = await Promise.all(snap.docs.map(d => this.mapThreadDoc(d)));
             const ids = this.getUniqueAuthorIds();
-            await Promise.all(ids.map(fetchAuthor)); 
+            await Promise.all(ids.map(fetchAuthor));
             this.loading = false;
         },
         getUniqueAuthorIds() {
@@ -466,7 +466,7 @@ function registerMessageData() {
 function registerPageWikiManagement() {
     Alpine.store('mgmt', {
         async createPage(cb) {
-            const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="mb-2" placeholder="Title"><input id="np-slug" class="mb-2" placeholder="Slug"><textarea id="np-content" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, createdAt: serverTimestamp() }) });
+            const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="mb-2" placeholder="Title"><input id="np-slug" class="mb-2" placeholder="Slug"><textarea id="np-content" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp() }) });
             if (v) {
                 await addDoc(collection(db, COLLECTIONS.PAGES), v);
                 if (cb) { cb(); }
@@ -526,7 +526,7 @@ function registerPageWikiManagement() {
 
 function wikiApp() {
     return {
-        tab: 'home', loading: true, tabs: [{id:'home',label:'Welcome',icon:'bi-house'},{id:'servers',label:'Servers',icon:'bi-hdd-network'},{id:'software',label:'Software',icon:'bi-code-square'},{id:'sysadmin',label:'Sysadmin',icon:'bi-terminal'},{id:'machines',label:'Machines',icon:'bi-pc-display'},{id:'staff',label:'Staff',icon:'bi-people'},{id:'mcadmin',label:'MCAdmin',icon:'bi-shield-lock'},{id:'growth',label:'Growth Plans',icon:'bi-graph-up'}], tabContent: {}, tabMeta: {},
+        tab: 'home', loading: true, tabs: [{ id: 'home', label: 'Welcome', icon: 'bi-house' }, { id: 'servers', label: 'Servers', icon: 'bi-hdd-network' }, { id: 'software', label: 'Software', icon: 'bi-code-square' }, { id: 'sysadmin', label: 'Sysadmin', icon: 'bi-terminal' }, { id: 'machines', label: 'Machines', icon: 'bi-pc-display' }, { id: 'staff', label: 'Staff', icon: 'bi-people' }, { id: 'mcadmin', label: 'MCAdmin', icon: 'bi-shield-lock' }, { id: 'growth', label: 'Growth Plans', icon: 'bi-graph-up' }], tabContent: {}, tabMeta: {},
         get currentUser() { return Alpine.store('auth')?.user; },
         get isAdmin() { return Alpine.store('auth')?.isAdmin; },
         get canEdit() { return this.currentUser && (this.isAdmin || this.tabMeta[this.tab]?.allowedEditors?.includes(this.currentUser.uid)); },
@@ -576,8 +576,8 @@ function registerPagesData() { Alpine.data('pagesData', pagesData); }
 function adminDashboard() {
     return {
         tab: 'dashboard', loading: true, isAdmin: false, currentUser: null, users: [], pages: [], threads: [], dms: [], wikiSections: [], searchUser: '',
-        navItems: [{id:'dashboard',label:'Dashboard',icon:'bi-speedometer2'},{id:'users',label:'Users',icon:'bi-people'},{id:'pages',label:'Pages',icon:'bi-file-earmark-text'},{id:'wiki',label:'Wiki',icon:'bi-book'},{id:'forums',label:'Forums',icon:'bi-chat-square-text'},{id:'dms',label:'Messages',icon:'bi-envelope'}],
-        get stats() { return [{label:'Total Users',value:this.users.length,icon:'bi-people',color:'text-primary'},{label:'Pages',value:this.pages.length,icon:'bi-file-earmark',color:'text-success'},{label:'Threads',value:this.threads.length,icon:'bi-chat-square-text',color:'text-warning'},{label:'Messages',value:this.dms.length,icon:'bi-envelope',color:'text-info'}]; },
+        navItems: [{ id: 'dashboard', label: 'Dashboard', icon: 'bi-speedometer2' }, { id: 'users', label: 'Users', icon: 'bi-people' }, { id: 'pages', label: 'Pages', icon: 'bi-file-earmark-text' }, { id: 'wiki', label: 'Wiki', icon: 'bi-book' }, { id: 'forums', label: 'Forums', icon: 'bi-chat-square-text' }, { id: 'dms', label: 'Messages', icon: 'bi-envelope' }],
+        get stats() { return [{ label: 'Total Users', value: this.users.length, icon: 'bi-people', color: 'text-primary' }, { label: 'Pages', value: this.pages.length, icon: 'bi-file-earmark', color: 'text-success' }, { label: 'Threads', value: this.threads.length, icon: 'bi-chat-square-text', color: 'text-warning' }, { label: 'Messages', value: this.dms.length, icon: 'bi-envelope', color: 'text-info' }]; },
         get pageTitle() { return this.tab.charAt(0).toUpperCase() + this.tab.slice(1); },
         get filteredUsers() {
             if (!this.searchUser) return this.users;
@@ -585,17 +585,17 @@ function adminDashboard() {
             return this.users.filter(u => (u.displayName?.toLowerCase().includes(l)) || (u.email?.toLowerCase().includes(l)));
         },
         get recentActivity() {
-            const acts = [...this.threads.map(t => ({id:t.id,text:`New thread: ${t.title}`,time:t.createdAt,icon:'bi-chat-square-text text-warning'})), ...this.dms.map(d => ({id:d.id,text:`Message in ${d.participantNames?Object.values(d.participantNames).join(', '):'Conversation'}`,time:d.lastMessageTime,icon:'bi-envelope text-info'}))];
-            return [...acts].sort((a,b) => (b.time?.seconds||0) - (a.time?.seconds||0)).slice(0,5);
+            const acts = [...this.threads.map(t => ({ id: t.id, text: `New thread: ${t.title}`, time: t.createdAt, icon: 'bi-chat-square-text text-warning' })), ...this.dms.map(d => ({ id: d.id, text: `Message in ${d.participantNames ? Object.values(d.participantNames).join(', ') : 'Conversation'}`, time: d.lastMessageTime, icon: 'bi-envelope text-info' }))];
+            return [...acts].sort((a, b) => (b.time?.seconds || 0) - (a.time?.seconds || 0)).slice(0, 5);
         },
         async init() {
-            const evs = [['admin-edit-msg', e => this.editMessage(e.detail.cid, {id:e.detail.mid,content:e.detail.content})], ['admin-del-msg', e => this.deleteMessage(e.detail.cid, e.detail.mid)], ['admin-edit-comment', e => this.editComment(e.detail.tid, {id:e.detail.cid,content:e.detail.content})], ['admin-del-comment', e => this.deleteComment(e.detail.tid, e.detail.cid)]];
+            const evs = [['admin-edit-msg', e => this.editMessage(e.detail.cid, { id: e.detail.mid, content: e.detail.content })], ['admin-del-msg', e => this.deleteMessage(e.detail.cid, e.detail.mid)], ['admin-edit-comment', e => this.editComment(e.detail.tid, { id: e.detail.cid, content: e.detail.content })], ['admin-del-comment', e => this.deleteComment(e.detail.tid, e.detail.cid)]];
             evs.forEach(([n, h]) => document.addEventListener(n, h));
             Alpine.effect(async () => { const s = Alpine.store('auth'); if (!s.loading) { if (s.user) { this.currentUser = s.user; this.isAdmin = s.isAdmin; if (this.isAdmin) await this.refreshAll(); } this.loading = false; } });
         },
         async refreshAll() {
-            const [u,p,t,d,w] = await Promise.all([getDocs(collection(db, COLLECTIONS.USER_PROFILES)),getDocs(collection(db, COLLECTIONS.PAGES)),getDocs(query(collection(db, COLLECTIONS.FORMS),orderBy('createdAt','desc'))),getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS),orderBy('lastMessageTime','desc'))),getDocs(collection(db, COLLECTIONS.WIKI_PAGES))]);
-            this.users = u.docs.map(x => ({id:x.id,...x.data()})); this.pages = p.docs.map(x => ({id:x.id,...x.data()})); this.threads = t.docs.map(x => ({id:x.id,...x.data()})); this.dms = d.docs.map(x => ({id:x.id,...x.data()})); this.wikiSections = w.docs.map(x => ({id:x.id,...x.data()}));
+            const [u, p, t, d, w] = await Promise.all([getDocs(collection(db, COLLECTIONS.USER_PROFILES)), getDocs(collection(db, COLLECTIONS.PAGES)), getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'))), getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), orderBy('lastMessageTime', 'desc'))), getDocs(collection(db, COLLECTIONS.WIKI_PAGES))]);
+            this.users = u.docs.map(x => ({ id: x.id, ...x.data() })); this.pages = p.docs.map(x => ({ id: x.id, ...x.data() })); this.threads = t.docs.map(x => ({ id: x.id, ...x.data() })); this.dms = d.docs.map(x => ({ id: x.id, ...x.data() })); this.wikiSections = w.docs.map(x => ({ id: x.id, ...x.data() }));
         },
         getAuthorName(uid) { const u = this.users.find(x => x.id === uid); return u ? (u.displayName || u.email) : 'Unknown'; },
         getDMName(dm) { return (dm.name && dm.name !== 'Chat') ? dm.name : dm.participants.map(id => this.getAuthorName(id)).join(', '); },
@@ -614,20 +614,20 @@ function adminDashboard() {
         },
         getEditUserHtml(u) { return `<div class="text-start admin-modal-scroll">${[this.getGeneralSectionHtml(u), this.getSocialSectionHtml(u), this.getPreferenceSectionHtml(u), this.getFlagsSectionHtml(u)].join('')}</div>`; },
         getGeneralSectionHtml(u) {
-            const fields = [{id:'eu-name',l:'Name',v:u.displayName||''},{id:'eu-handle',l:'Handle',v:u.handle||''},{id:'eu-email',l:'Email',v:u.email||''},{id:'eu-photo',l:'Photo',v:u.photoURL||''},{id:'eu-css',l:'CSS',v:u.customCSS||''}];
+            const fields = [{ id: 'eu-name', l: 'Name', v: u.displayName || '' }, { id: 'eu-handle', l: 'Handle', v: u.handle || '' }, { id: 'eu-email', l: 'Email', v: u.email || '' }, { id: 'eu-photo', l: 'Photo', v: u.photoURL || '' }, { id: 'eu-css', l: 'CSS', v: u.customCSS || '' }];
             const inputs = fields.map(f => `<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="btn-sm" value="${escapeHtml(f.v)}"></div>`).join('');
-            const roleSelect = `<div class="col-md-6"><label class="small">Role</label><select id="eu-role" class="btn-sm"><option value="user" ${!u.admin&&u.role!=='staff'?'selected':''}>User</option><option value="staff" ${u.role==='staff'?'selected':''}>Staff</option><option value="admin" ${u.admin?'selected':''}>Admin</option></select></div>`;
+            const roleSelect = `<div class="col-md-6"><label class="small">Role</label><select id="eu-role" class="btn-sm"><option value="user" ${!u.admin && u.role !== 'staff' ? 'selected' : ''}>User</option><option value="staff" ${u.role === 'staff' ? 'selected' : ''}>Staff</option><option value="admin" ${u.admin ? 'selected' : ''}>Admin</option></select></div>`;
             return `<h6 class="text-primary mb-3">General</h6><div class="row g-2 mb-3">${inputs}${roleSelect}</div>`;
         },
         getSocialSectionHtml(u) {
-            const fields = [{id:'eu-discordId',l:'Discord ID',v:u.discordId||''},{id:'eu-discordTag',l:'Discord Tag',v:u.discordTag||''},{id:'eu-discordPic',l:'Discord Pic',v:u.discordPic||''},{id:'eu-discordURL',l:'Discord URL',v:u.discordURL||''},{id:'eu-githubPic',l:'GitHub Pic',v:u.githubPic||''},{id:'eu-githubURL',l:'GitHub URL',v:u.githubURL||''}];
+            const fields = [{ id: 'eu-discordId', l: 'Discord ID', v: u.discordId || '' }, { id: 'eu-discordTag', l: 'Discord Tag', v: u.discordTag || '' }, { id: 'eu-discordPic', l: 'Discord Pic', v: u.discordPic || '' }, { id: 'eu-discordURL', l: 'Discord URL', v: u.discordURL || '' }, { id: 'eu-githubPic', l: 'GitHub Pic', v: u.githubPic || '' }, { id: 'eu-githubURL', l: 'GitHub URL', v: u.githubURL || '' }];
             const inputs = fields.map(f => `<div class="col-md-6"><label class="small">${f.l}</label><input id="${f.id}" class="btn-sm" value="${escapeHtml(f.v)}"></div>`).join('');
             return `<h6 class="text-primary mb-3 border-top pt-3">Social</h6><div class="row g-2 mb-3">${inputs}</div>`;
         },
-        getPreferenceSectionHtml(u) { return `<h6 class="text-primary mb-3 border-top pt-3">Preferences</h6><div class="row g-2 mb-3"><div class="col-md-4"><label class="small">Theme</label><select id="eu-theme" class="btn-sm"><option value="dark" ${u.themePreference==='dark'?'selected':''}>Dark</option><option value="light" ${u.themePreference==='light'?'selected':''}>Light</option></select></div><div class="col-md-4"><label class="small">Font</label><select id="eu-font" class="btn-sm"><option value="small" ${u.fontScaling==='small'?'selected':''}>Small</option><option value="normal" ${u.fontScaling==='normal'?'selected':''}>Normal</option><option value="large" ${u.fontScaling==='large'?'selected':''}>Large</option></select></div><div class="col-md-4"><label class="small">Retention</label><input type="number" id="eu-retention" class="btn-sm" value="${u.dataRetention||365}"></div></div><div class="row g-2 mt-2"><div class="col-md-6"><label class="small">Glass Color</label><input id="eu-glassColor" class="btn-sm" value="${escapeHtml(u.glassColor||'')}"></div><div class="col-md-6"><label class="small">Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" class="btn-sm" value="${u.glassOpacity||0.95}"></div><div class="col-md-6"><label class="small">Blur</label><input id="eu-glassBlur" type="number" class="btn-sm" value="${u.glassBlur||''}"></div><div class="col-12"><label class="small">Background</label><input id="eu-bgImg" class="btn-sm" value="${escapeHtml(u.backgroundImage||'')}"></div></div>`; },
+        getPreferenceSectionHtml(u) { return `<h6 class="text-primary mb-3 border-top pt-3">Preferences</h6><div class="row g-2 mb-3"><div class="col-md-4"><label class="small">Theme</label><select id="eu-theme" class="btn-sm"><option value="dark" ${u.themePreference === 'dark' ? 'selected' : ''}>Dark</option><option value="light" ${u.themePreference === 'light' ? 'selected' : ''}>Light</option></select></div><div class="col-md-4"><label class="small">Font</label><select id="eu-font" class="btn-sm"><option value="small" ${u.fontScaling === 'small' ? 'selected' : ''}>Small</option><option value="normal" ${u.fontScaling === 'normal' ? 'selected' : ''}>Normal</option><option value="large" ${u.fontScaling === 'large' ? 'selected' : ''}>Large</option></select></div><div class="col-md-4"><label class="small">Retention</label><input type="number" id="eu-retention" class="btn-sm" value="${u.dataRetention || 365}"></div></div><div class="row g-2 mt-2"><div class="col-md-6"><label class="small">Glass Color</label><input id="eu-glassColor" class="btn-sm" value="${escapeHtml(u.glassColor || '')}"></div><div class="col-md-6"><label class="small">Opacity</label><input id="eu-glassOpacity" type="number" step="0.05" class="btn-sm" value="${u.glassOpacity || 0.95}"></div><div class="col-md-6"><label class="small">Blur</label><input id="eu-glassBlur" type="number" class="btn-sm" value="${u.glassBlur || ''}"></div><div class="col-12"><label class="small">Background</label><input id="eu-bgImg" class="btn-sm" value="${escapeHtml(u.backgroundImage || '')}"></div></div>`; },
         getFlagsSectionHtml(u) {
-            const flags = [{id:'eu-activity',l:'Activity',c:u.activityTracking},{id:'eu-debug',l:'Debug',c:u.debugMode},{id:'eu-discordLinked',l:'Discord Linked',c:u.discordLinked},{id:'eu-discordNotif',l:'Discord Notifs',c:u.discordNotifications},{id:'eu-emailNotif',l:'Email Notifs',c:u.emailNotifications},{id:'eu-focus',l:'Focus',c:u.focusIndicators},{id:'eu-contrast',l:'Contrast',c:u.highContrast},{id:'eu-visible',l:'Visible',c:u.profileVisible},{id:'eu-push',l:'Push',c:u.pushNotifications},{id:'eu-motion',l:'Motion',c:u.reducedMotion},{id:'eu-reader',l:'Reader',c:u.screenReader},{id:'eu-sharing',l:'Sharing',c:u.thirdPartySharing}];
-            const checks = flags.map(f => `<div class="col-md-4"><div class="form-check"><input type="checkbox" id="${f.id}" ${f.c?'checked':''}> <label class="small">${f.l}</label></div></div>`).join('');
+            const flags = [{ id: 'eu-activity', l: 'Activity', c: u.activityTracking }, { id: 'eu-debug', l: 'Debug', c: u.debugMode }, { id: 'eu-discordLinked', l: 'Discord Linked', c: u.discordLinked }, { id: 'eu-discordNotif', l: 'Discord Notifs', c: u.discordNotifications }, { id: 'eu-emailNotif', l: 'Email Notifs', c: u.emailNotifications }, { id: 'eu-focus', l: 'Focus', c: u.focusIndicators }, { id: 'eu-contrast', l: 'Contrast', c: u.highContrast }, { id: 'eu-visible', l: 'Visible', c: u.profileVisible }, { id: 'eu-push', l: 'Push', c: u.pushNotifications }, { id: 'eu-motion', l: 'Motion', c: u.reducedMotion }, { id: 'eu-reader', l: 'Reader', c: u.screenReader }, { id: 'eu-sharing', l: 'Sharing', c: u.thirdPartySharing }];
+            const checks = flags.map(f => `<div class="col-md-4"><div class="form-check"><input type="checkbox" id="${f.id}" ${f.c ? 'checked' : ''}> <label class="small">${f.l}</label></div></div>`).join('');
             return `<h6 class="text-primary mb-3 border-top pt-3">Flags</h6><div class="row g-2">${checks}</div>`;
         },
         getEditUserFormValues() {
@@ -637,9 +637,8 @@ function adminDashboard() {
         },
         async saveUserEdit(uid, v) {
             await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, uid), v);
-            const adminDoc = doc(db, 'artifacts', projectId);
-            if (v.admin) await setDoc(adminDoc, { admins: arrayUnion(uid) }, { merge: true }).catch(e => console.error("Failed to sync admin add", e));
-            else await setDoc(adminDoc, { admins: arrayRemove(uid) }, { merge: true }).catch(e => console.error("Failed to sync admin remove", e));
+            if (v.admin) await setDoc(doc(db, 'admins', uid), { appointedAt: serverTimestamp() }).catch(e => console.error("Failed to add admin", e));
+            else await deleteDoc(doc(db, 'admins', uid)).catch(e => console.error("Failed to remove admin", e));
             this.refreshAll(); Swal.fire('Success', 'User updated', 'success');
         },
         async editThread(t) {
@@ -726,8 +725,8 @@ function resourcesData() {
         },
         get filteredCensus() {
             let d = [...this.censusData];
-            if (this.sortBy === 'name') d.sort((a,b) => a[0].localeCompare(b[0]));
-            else if (this.sortBy === 'total') d.sort((a,b) => (Number.parseInt(b[1], 10)||0) - (Number.parseInt(a[1], 10)||0));
+            if (this.sortBy === 'name') d.sort((a, b) => a[0].localeCompare(b[0]));
+            else if (this.sortBy === 'total') d.sort((a, b) => (Number.parseInt(b[1], 10) || 0) - (Number.parseInt(a[1], 10) || 0));
             return d;
         }
     };
@@ -746,10 +745,10 @@ document.addEventListener('alpine:init', () => {
         const isSm = modifiers.includes('sm');
         const sizeClass = isSm ? 'spinner-border-sm' : '';
         const containerClasses = isSm ? ['text-center', 'py-1'] : ['d-flex', 'justify-content-center', 'align-items-center', 'vh-80'];
-        
+
         el.classList.add(...containerClasses);
         el.innerHTML = `<div class="spinner-border text-primary ${sizeClass}" role="status"></div>`;
-        
+
         effect(() => {
             getLoading(loading => this.updateSpinnerState(el, loading, isSm));
         });
