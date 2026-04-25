@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Maps & Apps - Arcator</title>
+    <link href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="/styles.css" rel="stylesheet">
+    <link href="/favicon.png" rel="icon" type="image/png">
+    <style>
+        body { margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        #navbar-placeholder { flex-shrink: 0; }
+        .hub-layout { display: flex; flex: 1; overflow: hidden; }
+        .hub-sidebar { width: 240px; flex-shrink: 0; overflow-y: auto; border-right: 1px solid rgba(255,255,255,0.08); padding: 1rem 0.75rem; background: rgba(0,0,0,0.3); }
+        .hub-sidebar h5 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pico-muted-color, #888); margin: 0 0 0.5rem 0.5rem; }
+        .hub-sidebar .tab-btn { display: flex; align-items: flex-start; gap: 0.6rem; width: 100%; text-align: left; padding: 0.6rem 0.75rem; border-radius: 8px; border: none; background: transparent; color: inherit; cursor: pointer; font-size: 0.9rem; margin-bottom: 2px; transition: background 0.15s; }
+        .hub-sidebar .tab-btn:hover { background: rgba(255,255,255,0.07); }
+        .hub-sidebar .tab-btn.active { background: rgba(var(--pico-primary-rgb, 86,101,255),0.25); color: var(--pico-primary); }
+        .hub-sidebar .tab-btn .tab-icon { font-size: 1.1rem; margin-top: 1px; }
+        .hub-sidebar .tab-desc { font-size: 0.72rem; color: var(--pico-muted-color, #888); margin: 0; line-height: 1.3; }
+        .hub-iframe-area { flex: 1; position: relative; }
+        .hub-iframe-area iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+        .hub-group-header { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--pico-muted-color,#777); padding: 0.75rem 0.75rem 0.25rem; margin-top: 0.5rem; }
+    </style>
+</head>
+<body x-data="hubApp">
+<div id="navbar-placeholder"></div>
+<div class="hub-layout">
+    <div class="hub-sidebar">
+        <template x-for="group in groups" :key="group.label">
+            <div>
+                <div class="hub-group-header" x-text="group.label"></div>
+                <template x-for="t in group.tabs" :key="t.key">
+                    <button class="tab-btn" :class="{ active: tab === t.key }" @click="tab = t.key" :title="t.description">
+                        <i class="bi tab-icon" :class="t.icon"></i>
+                        <div>
+                            <div x-text="t.label"></div>
+                            <p class="tab-desc" x-text="t.description"></p>
+                        </div>
+                    </button>
+                </template>
+            </div>
+        </template>
+    </div>
+    <div class="hub-iframe-area">
+        <template x-for="group in groups" :key="group.label">
+            <template x-for="t in group.tabs" :key="t.key">
+                <iframe
+                    x-show="tab === t.key"
+                    :src="tab === t.key ? t.src : ''"
+                    :title="t.label"
+                    allowfullscreen
+                    loading="lazy">
+                </iframe>
+            </template>
+        </template>
+    </div>
+</div>
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('hubApp', () => ({
+            tab: 'hub',
+            groups: [
+                {
+                    label: 'Maps & Visuals',
+                    tabs: [
+                        { key: 'hub',         label: 'Hub Map',      icon: 'bi-map',          src: 'https://jylina.arcator.co.uk/hub/',  description: 'Our oldest server and freebuild.' },
+                        { key: 'ssmp',        label: 'SSMP Map',     icon: 'bi-geo-alt',       src: 'https://jylina.arcator.co.uk/ssmp/', description: 'The main survival server since 2019.' },
+                        { key: 'friendgraph', label: 'Friend Graph', icon: 'bi-diagram-3',     src: 'https://apollo.arcator.co.uk/standalone/joins.html', description: 'Visual graph of who invited who.' },
+                        { key: 'joingraph',   label: 'Join Graph',   icon: 'bi-play-circle',   src: 'https://apollo.arcator.co.uk/standalone/souls/', description: 'Press space to unpause. Every second is 2 days.' },
+                        { key: 'stats',       label: 'MC Stats',     icon: 'bi-bar-chart-line', src: 'https://jylina.arcator.co.uk/plan/network/overview', description: 'Minecraft server network statistics.' },
+                    ]
+                },
+                {
+                    label: 'Resources',
+                    tabs: [
+                        { key: 'planning',  label: 'Planning',   icon: 'bi-clipboard',    src: 'https://docs.google.com/document/d/1WvxTStjkBbQh9dp-59v1jJbaLPuofrnk_4N12mSMFo4/view', description: 'Community coordination notes.' },
+                        { key: 'census',    label: 'Census',     icon: 'bi-table',        src: 'https://docs.google.com/spreadsheets/d/1T25WAAJekQAjrU-dhVtDFgiIqJHHlaGIOySToTWrrp8/view', description: "Everyone's interests." },
+                        { key: 'guidebook', label: 'Guidebook',  icon: 'bi-book-half',    src: 'https://apollo.arcator.co.uk/guide.html', description: 'Comprehensive staffing guide.' },
+                        { key: 'sshguide',  label: 'SSH Guide',  icon: 'bi-terminal',     src: 'https://docs.google.com/document/d/12jVogFvlsBPtT2WmkWJmV-uCJ6fd02XHRNZf5anO4dc/view', description: 'Guide on how to use SSH.' },
+                        { key: 'oldchat',   label: 'Old Chat',   icon: 'bi-chat-history', src: 'https://apollo.arcator.co.uk/chat/index.html', description: 'Old chat logs since 2010 (requires login).' },
+                    ]
+                },
+                {
+                    label: 'Games',
+                    tabs: [
+                        { key: 'tag',      label: 'Tag',      icon: 'bi-joystick',  src: '/tag/',      description: 'Multiplayer tag game. WASD keys.' },
+                        { key: 'spelling', label: 'Spelling', icon: 'bi-spellcheck',src: '/spelling/', description: 'Word spelling challenge game.' },
+                    ]
+                }
+            ]
+        }));
+    });
+</script>
+<script type="module" src="/app.js?v=20260425"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
+</body>
+</html>

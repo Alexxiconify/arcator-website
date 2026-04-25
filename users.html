@@ -87,7 +87,7 @@
                             <div class="col-md-6"><label for="profile-theme">Theme</label><select id="profile-theme" x-model="profile.themePreference"><option value="dark">Dark</option><option value="light">Light</option></select></div>
                             <div class="col-md-6"><label for="profile-font">Font Size</label><select id="profile-font" x-model="profile.fontScaling"><option value="small">Small</option><option value="normal">Normal</option><option value="large">Large</option></select></div>
                             <div class="col-md-6"><label for="profile-bg">Background Image URL</label><input id="profile-bg" x-model="profile.backgroundImage" placeholder="https://example.com/image.jpg"></div>
-                            <div class="col-md-6"><label for="profile-glass-color">Glass Color</label><input type="color" id="profile-glass-color" x-model="profile.glassColor"></div>
+                            <div class="col-md-6"><label for="profile-glass-color">Glass Color</label><input type="color" id="profile-glass-color" :value="profile.glassColor || '#000000'" @input="profile.glassColor = $event.target.value"></div>
                             <div class="col-md-6"><label for="profile-glass-opacity">Glass Opacity (0-1)</label><input type="number" id="profile-glass-opacity" x-model="profile.glassOpacity" step="0.05" min="0" max="1" placeholder="0.95"></div>
                             <div class="col-md-6"><label for="profile-glass-blur">Glass Blur (px)</label><input type="number" id="profile-glass-blur" x-model="profile.glassBlur" placeholder="10"></div>
                         </div>
@@ -146,7 +146,7 @@
     </div>
 </main>
 
-<script type="module" src="/app.js"></script>
+<script type="module" src="/app.js?v=20260425"></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 </body>
 </html>

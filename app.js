@@ -9,7 +9,7 @@ import {
 import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
 import './js/keys.js';
 import './js/glitch.js';
-import './js/auth.js';
+import './js/auth.js?v=20260425';
 // Delay Alpine dependent logic until it's ready
 let Alpine, Swal, Quill;
 
@@ -219,11 +219,7 @@ const NAV_HTML = `
         <a href="/resources.html"><i class="bi bi-box-seam"></i> Resources</a>
     </li>
     <li class="arc-nav-group d-flex secondary flex-grow-1 justify-content-center">
-        <a href="https://jylina.arcator.co.uk/hub" target="_blank">Hub</a>
-        <a href="https://jylina.arcator.co.uk/stats" target="_blank">Stats</a>
-        <a href="https://jylina.arcator.co.uk/soulvis" target="_blank">Soul Vis</a>
-        <a href="https://jylina.arcator.co.uk/socialgraph" target="_blank">Social Graph</a>
-        <a href="https://jylina.arcator.co.uk/ssmp" target="_blank">SSMP Maps</a>
+        <a href="/hub.html"><i class="bi bi-grid me-1"></i> Apps & Hub</a>
     </li>
     <li class="arc-nav-group d-flex social">
         <a href="https://discord.gg/GwArgw2" title="Discord" target="_blank"><i class="bi bi-discord"></i></a>
@@ -356,20 +352,24 @@ function forumData() {
             });
             return [...new Set([...authors, ...commentAuthors].filter(Boolean))];
         },
-        async mapThreadDoc(d) {
+        mapThreadDoc(d) {
             const raw = d.data();
-            const q = query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', d.id));
-            const countSnap = await getCountFromServer(q);
-            return {
+            const threadObj = {
                 id: d.id,
                 ...raw,
                 description: raw.body || '',
                 expanded: false,
                 comments: [],
-                commentCount: countSnap.data().count,
+                commentCount: 0,
                 loadingComments: false,
                 quill: null
             };
+            // Lazily evaluate N+1 message counts backward passively so the UI doesn't hitch
+            const q = query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', d.id));
+            getCountFromServer(q).then(countSnap => {
+                threadObj.commentCount = countSnap.data().count;
+            }).catch(() => {});
+            return threadObj;
         },
         getAuthor, fetchAuthor, formatDate,
         getThreadMeta(t) {
@@ -704,12 +704,16 @@ function wikiApp() {
             markSearchReady();
         },
         renderTab(id) { const el = document.querySelector(`.wiki-content[data-tab="${id}"]`); if (el && this.tabContent[id]) { el.innerHTML = this.tabContent[id]; el.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); } },
+        isTransitioning: false,
         selectTab(id) {
+            if (this.tab === id || this.isTransitioning) return;
             if (document.startViewTransition) {
-                document.startViewTransition(() => {
+                this.isTransitioning = true;
+                const transition = document.startViewTransition(() => {
                     this.tab = id;
                     this.$nextTick(() => this.renderTab(id));
                 });
+                transition.finished.finally(() => this.isTransitioning = false).catch(()=>{});
             } else {
                 this.tab = id;
                 this.$nextTick(() => this.renderTab(id));

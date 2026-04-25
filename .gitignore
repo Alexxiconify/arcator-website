@@ -27,3 +27,12 @@ auth-key.json
 Thumbs.db
 backup/
 Website-main.zip
+/website_zip_extract
+
+# Migration & one-off scripts (read Firebase CLI tokens at runtime, not committed)
+migrate.js
+migrate_full.js
+count_collections.js
+inspect_collections.js
+deep_count.js
+*.migrate.js
