@@ -13,6 +13,20 @@ import './js/auth.js?v=20260425';
 // Delay Alpine dependent logic until it's ready
 let Alpine, Swal, Quill;
 
+const getWikiIcon = (id) => {
+    const icons = {
+        home: 'bi-house',
+        servers: 'bi-hdd-network',
+        software: 'bi-code-square',
+        sysadmin: 'bi-terminal',
+        machines: 'bi-pc-display',
+        staff: 'bi-people',
+        mcadmin: 'bi-shield-lock',
+        growth: 'bi-graph-up'
+    };
+    return icons[id] || 'bi-file-text';
+};
+
 const registerAll = () => {
     registerUsersStore(); 
     registerPageWikiManagement(); 
@@ -173,7 +187,7 @@ const encodeProfileBody = (data, optBio) => {
         githubURL: data.githubURL || ''
     };
     const b = optBio !== undefined ? optBio : (data.bio || '');
-    const cleanBio = b.replace(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
+    const cleanBio = b.replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
     return `${cleanBio}\n\n<!-- ARCATOR_META:${JSON.stringify(meta)} -->`;
 };
 
@@ -684,24 +698,51 @@ function registerPageWikiManagement() {
 
 function wikiApp() {
     return {
-        tab: 'home', loading: true, tabs: [{ id: 'home', label: 'Welcome', icon: 'bi-house' }, { id: 'servers', label: 'Servers', icon: 'bi-hdd-network' }, { id: 'software', label: 'Software', icon: 'bi-code-square' }, { id: 'sysadmin', label: 'Sysadmin', icon: 'bi-terminal' }, { id: 'machines', label: 'Machines', icon: 'bi-pc-display' }, { id: 'staff', label: 'Staff', icon: 'bi-people' }, { id: 'mcadmin', label: 'MCAdmin', icon: 'bi-shield-lock' }, { id: 'growth', label: 'Growth Plans', icon: 'bi-graph-up' }], tabContent: {}, tabMeta: {},
+        tab: 'home', loading: true, newTabs: [], legacyTabs: [], tabContent: {}, tabMeta: {},
+        get tabs() { return [...this.newTabs, ...this.legacyTabs]; },
         get currentUser() { return Alpine.store('auth')?.user; },
         get isAdmin() { return Alpine.store('auth')?.isAdmin; },
         get canEdit() { return this.currentUser && (this.isAdmin || this.tabMeta[this.tab]?.allowedEditors?.includes(this.currentUser.uid)); },
         async init() {
             await firebaseReadyPromise;
-            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE)));
-            snap.forEach(d => {
-                if (!isWikiDocId(d.id)) { return; }
-                const data = d.data();
-                const payload = parseBodyJson(data.body);
-                const sectionId = payload.sectionId || d.id.replace(/^wk_/, '');
-                this.tabContent[sectionId] = payload.content || '';
-                this.tabMeta[sectionId] = { allowedEditors: payload.allowedEditors || [], updatedAt: data.updatedAt, docId: d.id };
-                indexDoc({ kind: 'wiki', id: sectionId, title: this.tabs.find(t => t.id === sectionId)?.label ?? sectionId, body: (payload.content || '').replaceAll(/<[^>]+>/g, ' ') });
-            });
-            this.loading = false; this.$nextTick(() => this.renderTab(this.tab));
-            markSearchReady();
+            this.loading = true;
+            try {
+                const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE)));
+                const docs = [];
+                snap.forEach(d => {
+                    const id = d.id;
+                    if (id.startsWith('wk_') || id.startsWith('wiki_')) {
+                        docs.push({ id: d.id, ...d.data() });
+                    }
+                });
+
+                docs.forEach(doc => {
+                    const payload = parseBodyJson(doc.body);
+                    const sectionId = doc.id.replace(/^wk_/, '').replace(/^wiki_/, '');
+                    const content = payload.content || doc.body;
+                    const isNew = payload.isNew || doc.id.startsWith('wk_');
+                    
+                    this.tabContent[sectionId] = content;
+                    this.tabMeta[sectionId] = { ...payload, docId: doc.id };
+
+                    const tabObj = { id: sectionId, label: doc.title || (sectionId.charAt(0).toUpperCase() + sectionId.slice(1)), icon: getWikiIcon(sectionId) };
+                    if (isNew) { this.newTabs.push(tabObj); }
+                    else { this.legacyTabs.push(tabObj); }
+                });
+
+                this.newTabs.sort((a, b) => a.label.localeCompare(b.label));
+                this.legacyTabs.sort((a, b) => a.label.localeCompare(b.label));
+
+                if (this.tabs.length > 0 && !this.tabs.find(t => t.id === this.tab)) {
+                    this.tab = this.tabs[0].id;
+                }
+                this.$nextTick(() => this.renderTab(this.tab));
+            } catch (err) {
+                console.error("Wiki init error:", err);
+            } finally {
+                this.loading = false;
+                markSearchReady();
+            }
         },
         renderTab(id) { const el = document.querySelector(`.wiki-content[data-tab="${id}"]`); if (el && this.tabContent[id]) { el.innerHTML = this.tabContent[id]; el.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); } },
         isTransitioning: false,

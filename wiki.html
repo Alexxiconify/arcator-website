@@ -25,11 +25,27 @@
                 </h4>
                 <p class="text-muted small mt-2 mb-0">Information about our servers and history</p>
             </div>
-            <div class="nav flex-column nav-pills gap-2">
-                <template x-for="t in tabs" :key="t.id">
-                    <a href="#" class="nav-link nav-link-custom" :class="tab === t.id ? 'active' : ''" @click.prevent="selectTab(t.id)">
-                        <i class="bi" :class="t.icon"></i> <span x-text="t.label"></span>
-                    </a>
+            <div class="nav flex-column nav-pills gap-1">
+                <template x-if="newTabs.length > 0">
+                    <div>
+                        <p class="text-muted small px-3 mb-1 mt-2">NEW WIKI</p>
+                        <template x-for="t in newTabs" :key="t.id">
+                            <a href="#" class="nav-link nav-link-custom" :class="tab === t.id ? 'active' : ''" @click.prevent="selectTab(t.id)">
+                                <i class="bi" :class="t.icon"></i> <span x-text="t.label"></span>
+                            </a>
+                        </template>
+                    </div>
+                </template>
+                
+                <template x-if="legacyTabs.length > 0">
+                    <div>
+                        <p class="text-muted small px-3 mb-1 mt-3">LEGACY WIKI</p>
+                        <template x-for="t in legacyTabs" :key="t.id">
+                            <a href="#" class="nav-link nav-link-custom" :class="tab === t.id ? 'active' : ''" @click.prevent="selectTab(t.id)">
+                                <i class="bi" :class="t.icon"></i> <span x-text="t.label"></span>
+                            </a>
+                        </template>
+                    </div>
                 </template>
             </div>
         </div>

@@ -1,0 +1,25 @@
+# ANTIGRAVITY
+
+## STACK
+
+- JS / ALPINE / FIREBASE
+- PICO CSS
+- APP.JS CENTRAL
+
+## WIKI
+
+- `docs/` COLLECTION
+- NEW: `wk_*` + `isNew: true`
+- LEGACY: `wiki_*`
+- SIDEBAR SPLIT
+
+## DATA
+
+- JSON IN HTML BODY COMMENT
+- `isWikiDocId` CHECKS `wk_`
+
+## GOAL
+
+- WOW DESIGN
+- NO PLACEHOLDER
+- FAST
