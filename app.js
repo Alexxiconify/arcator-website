@@ -55,12 +55,16 @@ const initAlpine = () => {
     
     if (Alpine) {
         registerAll();
+        initLayout();
         globalThis.AlpineInitialized = true;
     }
 };
 
-document.addEventListener('alpine:init', initAlpine);
-if (globalThis.Alpine) initAlpine();
+if (globalThis.Alpine) {
+    initAlpine();
+} else {
+    document.addEventListener('alpine:init', initAlpine);
+}
 const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
 
@@ -131,11 +135,12 @@ function makeDocShape({ kind, authorId, title = '', body = '', photoURL = '', pa
 
 function parseProfileData(d, uid) {
     let payload;
-    try { payload = d?.body ? JSON.parse(d.body) : {}; } catch { payload = {}; }
+    try { payload = d?.body ? JSON.parse(d.body) : {}; } catch { payload = { bio: d?.body }; }
     return {
         uid,
-        displayName: d?.title || payload.displayName || 'Unknown User',
-        photoURL: d?.photoURL || payload.photoURL || DEFAULT_PROFILE_PIC,
+        displayName: payload.displayName || d?.title || 'Unknown User',
+        handle: payload.handle || '',
+        photoURL: payload.photoURL || d?.photoURL || DEFAULT_PROFILE_PIC,
         glassColor: payload.glassColor || '#000000',
         ...payload
     };

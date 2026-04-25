@@ -38,14 +38,18 @@
             <article class="mb-4" x-show="showCreateModal" x-transition>
                     <h5>Create New Thread</h5>
                     <form @submit.prevent="createThread">
-                        <div class="mb-3"><input x-model="newThread.title" placeholder="Title" required></div>
                         <div class="mb-3">
-                            <label class="small" id="desc-label">Description</label>
+                            <label for="thread-title-input" class="small">Thread Title</label>
+                            <input id="thread-title-input" x-model="newThread.title" placeholder="Enter thread title..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small" id="desc-label">Thread Description</label>
                             <div x-ref="createEditor" aria-labelledby="desc-label"></div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <select x-model="newThread.category" required aria-label="Select Category">
+                                <label for="category-select" class="small">Category</label>
+                                <select id="category-select" x-model="newThread.category" required>
                                     <option value="">Select category...</option>
                                     <option value="announcements">Announcements</option>
                                     <option value="gaming">Gaming</option>
@@ -53,11 +57,14 @@
                                     <option value="support">Support</option>
                                 </select>
                             </div>
-                            <div class="col-md-6"><input x-model="newThread.tags" placeholder="Tags (comma-separated)"></div>
+                            <div class="col-md-6">
+                                <label for="tags-input" class="small">Tags</label>
+                                <input id="tags-input" x-model="newThread.tags" placeholder="Tags (comma-separated)">
+                            </div>
                         </div>
                         <div class="d-flex gap-2 justify-content-end">
                             <button type="button" class="btn-secondary btn-sm" @click="showCreateModal = false">Cancel</button>
-                            <button type="submit" class="btn-sm">Post</button>
+                            <button type="submit" class="btn-sm">Post Thread</button>
                         </div>
                     </form>
             </article>
@@ -315,7 +322,7 @@
     </div>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 <script type="module" src="/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 </body>
 </html>

@@ -22,17 +22,16 @@ import {
 import { cacheUser, updateTheme } from './ui.js';
 import { safePhoto } from './sanitize.js';
 
-const { Alpine } = globalThis;
-
-Alpine.plugin(morph);
-Alpine.plugin(intersect);
-
-// Stores are created here; Alpine.start() is called inside onAuthStateChanged
-// so that all other modules' alpine:init listeners register first (they run
-// synchronously at module scope).
+// Stores are created here
 document.addEventListener('alpine:init', () => {
-  Alpine.store('profiles', {});
-  Alpine.store('auth', {
+    const Alpine = globalThis.Alpine;
+    if (!Alpine) return;
+
+    Alpine.plugin(morph);
+    Alpine.plugin(intersect);
+
+    Alpine.store('profiles', {});
+    Alpine.store('auth', {
     phase: 'pending', // 'pending' | 'signed-out' | 'unverified' | 'verified'
     admin: false,
     user: null,
@@ -171,17 +170,9 @@ async function ensureProfile(u) {
 
 //  Live auth state 
 
-let _alpineStarted = false;
-
 onAuthStateChanged(auth, async (u) => {
-  // First fire starts Alpine (by this point all module-level alpine:init
-  // listeners have been registered synchronously).
-  if (!_alpineStarted) {
-    _alpineStarted = true;
-    Alpine.start();
-  }
-
   const store = Alpine.store('auth');
+  if (!store) return;
 
   // user and phase are safe to set synchronously — emailVerified is current
   // in the user object delivered by onAuthStateChanged.
@@ -201,49 +192,45 @@ onAuthStateChanged(auth, async (u) => {
     store.phase = u.emailVerified ? 'verified' : 'unverified';
   }
   store.loading = !!u; // Set loading true if we have a user and need to fetch profile
-
   if (u) {
-    const [claimsResult, profileSnap] = await Promise.allSettled([
-      u.getIdTokenResult(true),
-      ensureProfile(u).then(() => getDoc(doc(db, 'docs', `u_${u.uid}`)))
-    ]);
-    
-    if (claimsResult.status === 'fulfilled') {
-      store.admin = claimsResult.value.claims.admin === true;
+    // Use cache for immediate feedback
+    const cache = localStorage.getItem('arcator_user_cache');
+    if (cache) {
+        try {
+            const parsed = JSON.parse(cache);
+            if (parsed.uid === u.uid) {
+                store.profile = parsed;
+                updateTheme(parsed.themePreference, parsed.fontScaling, parsed.customCSS, parsed.backgroundImage, parsed.glassColor, parsed.glassOpacity, parsed.glassBlur);
+            }
+        } catch (e) { console.warn('Cache load error'); }
     }
-    
-    if (profileSnap.status === 'fulfilled' && profileSnap.value.exists()) {
-      const data = profileSnap.value.data();
-      let bodyData = {};
-      try {
-        bodyData = JSON.parse(data.body);
-      } catch (e) {
-        console.warn('Profile parse error, using fallbacks:', e);
-        bodyData = { bio: data.body };
-      }
-      const profile = {
-        ...data,
-        ...bodyData,
-        id: profileSnap.value.id
-      };
-      store.profile = profile;
-      
-      // Apply theme and cache
-      updateTheme(
-        profile.themePreference, 
-        profile.fontScaling, 
-        profile.customCSS, 
-        profile.backgroundImage, 
-        profile.glassColor, 
-        profile.glassOpacity, 
-        profile.glassBlur
-      );
-      cacheUser(u, profile);
-    }
-    store.loading = false;
+
+    // Subscribe to real-time updates
+    const unsub = onSnapshot(doc(db, 'docs', `u_${u.uid}`), (snap) => {
+        if (!snap.exists()) {
+            ensureProfile(u);
+            return;
+        }
+        const data = snap.data();
+        let bodyData = {};
+        try { bodyData = JSON.parse(data.body); } catch(e) { bodyData = { bio: data.body }; }
+
+        const profile = { ...data, ...bodyData, id: snap.id };
+        store.profile = profile;
+        store.loading = false;
+
+        updateTheme(profile.themePreference, profile.fontScaling, profile.customCSS, profile.backgroundImage, profile.glassColor, profile.glassOpacity, profile.glassBlur);
+        cacheUser(u, profile);
+    });
+    // Store unsub in global for logout cleanup
+    globalThis._authUnsub = unsub;
   } else {
-      store.profile = null;
-      store.loading = false;
+    store.profile = null;
+    store.loading = false;
+    if (globalThis._authUnsub) {
+        globalThis._authUnsub();
+        globalThis._authUnsub = null;
+    }
   }
 });
 
