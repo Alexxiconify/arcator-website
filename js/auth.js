@@ -101,24 +101,26 @@ document.addEventListener('alpine:init', () => {
     // Profile management
     async saveProfile(uid, data) {
       const ref = doc(db, 'docs', `u_${uid}`);
-      let prevMeta = {};
-      let bio = data.bio !== undefined ? data.bio : (this.profile?.bio || '');
+      const bio = data.bio === undefined ? (this.profile?.bio || '') : data.bio;
       
-      const rawBody = this.profile?.body || '';
-      const metaMatch = rawBody.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
-      if (metaMatch) { try { prevMeta = JSON.parse(metaMatch[1]); } catch(e){} }
-      else { try { prevMeta = JSON.parse(rawBody); } catch(e){} }
+      const meta = { 
+        ...(this.profile || {}), 
+        ...data, 
+        bio: bio,
+        updatedAt: new Date().toISOString() 
+      };
       
-      const meta = { ...prevMeta, ...data, updatedAt: new Date().toISOString() };
-      delete meta.bio;
       delete meta.id;
+      delete meta.uid;
+      delete meta.temp;
+      delete meta.body;
       
-      const cleanBio = bio.replace(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
-      const body = `${cleanBio}\n\n<!-- ARCATOR_META:${JSON.stringify(meta)} -->`;
+      const cleanBio = bio.replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
 
       await updateDoc(ref, {
-        title: (data.displayName || this.user?.displayName || 'User').slice(0, 100),
-        body: body,
+        title: (meta.displayName || 'User').slice(0, 100),
+        body: cleanBio || '...',
+        temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`,
         updatedAt: srvTs()
       });
     },
@@ -160,12 +162,13 @@ async function ensureProfile(u) {
       glassOpacity: 0.95,
       themePreference: 'dark'
     };
-    const initialBody = `\n\n<!-- ARCATOR_META:${JSON.stringify(meta)} -->`;
+
     tx.set(ref, {
       kind: 'profile',
       authorId: u.uid,
       title: (_pendingDisplayName || u.displayName || 'New User').slice(0, 100),
-      body: initialBody,
+      body: '...',
+      temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`,
       photoURL: safePhoto(u.photoURL),
       allowReplies: true,
       allowPublicEdits: false,
@@ -198,10 +201,10 @@ onAuthStateChanged(auth, async (u) => {
         emailVerified: u.emailVerified,
       }
     : null;
-  if (!u) {
-    store.phase = 'signed-out';
-  } else {
+  if (u) {
     store.phase = u.emailVerified ? 'verified' : 'unverified';
+  } else {
+    store.phase = 'signed-out';
   }
   store.loading = !!u; // Set loading true if we have a user and need to fetch profile
   if (u) {
@@ -214,7 +217,7 @@ onAuthStateChanged(auth, async (u) => {
                 store.profile = parsed;
                 updateTheme(parsed.themePreference, parsed.fontScaling, parsed.customCSS, parsed.backgroundImage, parsed.glassColor, parsed.glassOpacity, parsed.glassBlur);
             }
-        } catch (e) { console.warn('Cache load error'); }
+        } catch (e) { console.warn('Cache load error', e); }
     }
 
     // Subscribe to real-time updates
@@ -226,12 +229,16 @@ onAuthStateChanged(auth, async (u) => {
         const data = snap.data();
         let bodyData = {};
         let bio = (data.body || '').trim();
-        const metaMatch = bio.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
+        const metaStr = (data.temp || bio || '').trim();
+        const metaMatch = metaStr.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
         
         if (metaMatch) {
-            try { bodyData = JSON.parse(metaMatch[1]); bio = bio.replace(metaMatch[0], '').trim(); } catch(e) {}
+            try { 
+                bodyData = JSON.parse(metaMatch[1]); 
+                if (!data.temp) bio = bio.replace(metaMatch[0], '').trim(); 
+            } catch(e) { console.error('Meta parse error', e); }
         } else {
-            try { bodyData = JSON.parse(bio); bio = bodyData.bio || ''; } catch(e) { bodyData = { bio }; }
+            try { bodyData = JSON.parse(metaStr); bio = bodyData.bio || bio; } catch(e) { console.error('Body parse error', e); }
         }
         bodyData.bio = bio;
 

@@ -160,11 +160,17 @@ function makeDocShape({ kind, authorId, title = '', body = '', photoURL = '', pa
 function parseProfileData(d, uid) {
     let payload = {};
     let bio = (d?.body || '').trim();
-    const metaMatch = bio.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
+    const metaStr = (d?.temp || bio || '').trim();
+    const metaMatch = metaStr.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
     if (metaMatch) {
-        try { payload = JSON.parse(metaMatch[1]); bio = bio.replace(metaMatch[0], '').trim(); } catch(e) {}
+        try { 
+            payload = JSON.parse(metaMatch[1]); 
+            if (!d?.temp) {
+                bio = bio.replace(metaMatch[0], '').trim(); 
+            }
+        } catch(e) {}
     } else {
-        try { payload = JSON.parse(bio); bio = payload.bio || ''; } catch(e) {}
+        try { payload = JSON.parse(metaStr); bio = payload.bio || bio; } catch(e) {}
     }
     return {
         uid,
@@ -198,25 +204,34 @@ const encodeProfileBody = (data, optBio) => {
     };
     const b = optBio !== undefined ? optBio : (data.bio || '');
     const cleanBio = b.replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
-    return `${cleanBio}\n\n<!-- ARCATOR_META:${JSON.stringify(meta)} -->`;
+    return {
+        body: safeBody(cleanBio),
+        temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`
+    };
 };
 
 const safeBody = value => (value || '').toString().trim() || '...';
-const parseBodyJson = body => {
-    if (!body) return {};
-    const str = String(body);
+const parseBodyJson = (body, temp) => {
+    const str = String(temp || body || '');
+    if (!str) return {};
     const metaMatch = str.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
     if (metaMatch) {
          try {
              const payload = JSON.parse(metaMatch[1]);
-             payload.content = str.replace(metaMatch[0], '').trim();
+             payload.content = temp ? String(body || '') : str.replace(metaMatch[0], '').trim();
              return payload;
          } catch(e) {}
     }
-    try { return JSON.parse(str); } catch { return { content: str }; }
+    try { return JSON.parse(str); } catch { return { content: String(body || '') }; }
 };
-const pagePayload = (slug, content, authorId) => safeBody(`${content || ''}<!-- ARCATOR_META:${JSON.stringify({ type: 'page', slug, authorId, content: undefined })} -->`);
-const wikiPayload = (sectionId, content, allowedEditors = []) => safeBody(`${content || ''}<!-- ARCATOR_META:${JSON.stringify({ type: 'wiki', sectionId, allowedEditors, content: undefined })} -->`);
+const pagePayload = (slug, content, authorId) => ({ 
+    body: safeBody(content), 
+    temp: `<!-- ARCATOR_META:${JSON.stringify({ type: 'page', slug, authorId })} -->` 
+});
+const wikiPayload = (sectionId, content, allowedEditors = []) => ({ 
+    body: safeBody(content), 
+    temp: `<!-- ARCATOR_META:${JSON.stringify({ type: 'wiki', sectionId, allowedEditors })} -->` 
+});
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
@@ -645,7 +660,7 @@ function registerPageWikiManagement() {
             const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="mb-2" placeholder="Title"><input id="np-slug" class="mb-2" placeholder="Slug"><textarea id="np-content" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, authorId: Alpine.store('auth').user.uid }) });
             if (v) {
                 const id = pageDocId(v.slug);
-                await setDoc(docsRef(id), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: v.authorId, title: v.title || 'Untitled', body: pagePayload(v.slug, v.content, v.authorId), photoURL: '', allowReplies: false, allowPublicEdits: false }));
+                await setDoc(docsRef(id), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: v.authorId, title: v.title || 'Untitled', photoURL: '', allowReplies: false, allowPublicEdits: false, ...pagePayload(v.slug, v.content, v.authorId) }));
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Page created', 'success');
             }
@@ -653,7 +668,7 @@ function registerPageWikiManagement() {
         async editPage(p, cb) {
             const { value: v } = await Swal.fire({ title: 'Edit Page', width: '800px', html: `<input id="ep-title" class="mb-2" placeholder="Title"><input id="ep-slug" class="mb-2" placeholder="Slug"><textarea id="ep-content" class="font-monospace" rows="15" placeholder="HTML Content"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ep-title').value = p.title; document.getElementById('ep-slug').value = p.slug; document.getElementById('ep-content').value = p.content; }, preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() }) });
             if (v) {
-                await updateDoc(docsRef(p.id), { title: (v.title || '').slice(0, 500), body: pagePayload(v.slug, v.content, p.authorId), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                await updateDoc(docsRef(p.id), { title: (v.title || '').slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...pagePayload(v.slug, v.content, p.authorId) });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Page updated', 'success');
             }
@@ -670,7 +685,7 @@ function registerPageWikiManagement() {
             const { value: v } = await Swal.fire({ title: 'Create Wiki Section', html: '<input id="nw-id" class="mb-2" placeholder="Section ID (e.g. servers)"><textarea id="nw-content" class="font-monospace" rows="12" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ id: document.getElementById('nw-id').value.toLowerCase().replaceAll(/\s+/g, '-'), content: document.getElementById('nw-content').value }) });
             if (v?.id) {
                 const uid = Alpine.store('auth').user?.uid;
-                await setDoc(docsRef(wikiDocId(v.id)), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: uid, title: v.id, body: wikiPayload(v.id, v.content, []), photoURL: '', allowReplies: false, allowPublicEdits: false }));
+                await setDoc(docsRef(wikiDocId(v.id)), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: uid, title: v.id, photoURL: '', allowReplies: false, allowPublicEdits: false, ...wikiPayload(v.id, v.content, []) }));
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section created', 'success');
             }
@@ -678,8 +693,8 @@ function registerPageWikiManagement() {
         async editWikiSection(s, cb) {
             const { value: v } = await Swal.fire({ title: `Edit: ${escapeHtml(s.id)}`, width: '900px', html: `<textarea id="ew-content" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ew-content').value = s.content || ''; }, preConfirm: () => document.getElementById('ew-content').value });
             if (v !== undefined) {
-                const payload = parseBodyJson(s.body);
-                await updateDoc(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), body: wikiPayload(payload.sectionId || s.id, v, payload.allowedEditors || []), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                const payload = parseBodyJson(s.body, s.temp);
+                await updateDoc(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...wikiPayload(payload.sectionId || s.id, v, payload.allowedEditors || []) });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section updated', 'success');
             }
@@ -689,8 +704,8 @@ function registerPageWikiManagement() {
             const opts = users.map(u => `<option value="${escapeHtml(u.id)}" ${cur.includes(u.id) ? 'selected' : ''}>${escapeHtml(u.displayName || u.email)}</option>`).join('');
             const { value: v } = await Swal.fire({ title: `Allowed Editors: ${escapeHtml(s.id)}`, html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" multiple size="10">${opts}</select>`, showCancelButton: true, preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value) });
             if (v !== undefined) {
-                const payload = parseBodyJson(s.body);
-                await updateDoc(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), body: wikiPayload(payload.sectionId || s.id, payload.content || '', v), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                const payload = parseBodyJson(s.body, s.temp);
+                await updateDoc(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...wikiPayload(payload.sectionId || s.id, payload.content || '', v) });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Editors updated', 'success');
             }
@@ -726,7 +741,7 @@ function wikiApp() {
                 });
 
                 docs.forEach(doc => {
-                    const payload = parseBodyJson(doc.body);
+                    const payload = parseBodyJson(doc.body, doc.temp);
                     let sectionId = doc.id;
                     if (sectionId.startsWith('wk_')) sectionId = sectionId.substring(3);
                     else if (sectionId.startsWith('wiki_')) sectionId = sectionId.substring(5);
@@ -805,7 +820,7 @@ function wikiApp() {
             if (value !== undefined) {
                 const meta = this.tabMeta[this.tab] || {};
                 const docId = meta.docId || wikiDocId(this.tab);
-                await updateDoc(docsRef(docId), { title: this.tab.slice(0, 500), body: wikiPayload(this.tab, value, meta.allowedEditors || []), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                await updateDoc(docsRef(docId), { title: this.tab.slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...wikiPayload(this.tab, value, meta.allowedEditors || []) });
                 this.tabContent[this.tab] = value; this.renderTab(this.tab); Swal.fire('Saved', 'Wiki section updated', 'success');
             }
         }
@@ -826,7 +841,7 @@ function pagesData() {
                 .filter(d => isPageDocId(d.id))
                 .map(d => {
                     const raw = d.data();
-                    const payload = parseBodyJson(raw.body);
+                    const payload = parseBodyJson(raw.body, raw.temp);
                     return { id: d.id, ...raw, slug: payload.slug || d.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
                 });
             this.pages.forEach(p => indexDoc({ kind: 'page', id: p.id, title: p.title, body: (p.content || '').replaceAll(/<[^>]+>/g, ' ') }));
@@ -837,7 +852,7 @@ function pagesData() {
             const snap = await getDoc(docsRef(id));
             if (snap.exists()) {
                 const raw = snap.data();
-                const payload = parseBodyJson(raw.body);
+                const payload = parseBodyJson(raw.body, raw.temp);
                 this.currentPage = { id: snap.id, ...raw, slug: payload.slug || snap.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
                 document.title = `${this.currentPage.title || 'Page'} - Arcator`;
                 await this.loadAuthor(this.currentPage.authorId);
@@ -885,16 +900,16 @@ function adminDashboard() {
             ]);
             this.users = profiles.docs.map(x => ({ id: x.data().authorId, docId: x.id, ...parseProfileData(x.data(), x.data().authorId) }));
             this.pages = articles.docs.filter(x => isPageDocId(x.id)).map(x => {
-                const p = parseBodyJson(x.data().body);
+                const p = parseBodyJson(x.data().body, x.data().temp);
                 return { id: x.id, ...x.data(), slug: p.slug || x.id.replace(/^pg_/, ''), content: p.content || '', authorId: p.authorId || x.data().authorId };
             });
             this.threads = articles.docs.filter(x => !isPageDocId(x.id) && !isWikiDocId(x.id) && !x.id.startsWith('cv_')).map(x => ({ id: x.id, ...x.data(), description: x.data().body || '' }));
             this.dms = articles.docs.filter(x => x.id.startsWith('cv_')).map(x => {
-                const p = parseBodyJson(x.data().body);
+                const p = parseBodyJson(x.data().body, x.data().temp);
                 return { id: x.id, ...x.data(), participants: p.participants || [], participantNames: p.participantNames || {} };
             });
             this.wikiSections = articles.docs.filter(x => isWikiDocId(x.id)).map(x => {
-                const p = parseBodyJson(x.data().body);
+                const p = parseBodyJson(x.data().body, x.data().temp);
                 return { id: x.id, ...x.data(), sectionId: p.sectionId || x.id.replace(/^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
             });
         },
@@ -940,10 +955,10 @@ function adminDashboard() {
             const merged = { ...this.users.find(x => x.id === uid), ...v };
             await updateDoc(docsRef(profileDocId(uid)), {
                 title: (merged.displayName || 'User').slice(0, 100),
-                body: safeBody(encodeProfileBody(merged)),
                 photoURL: merged.photoURL?.startsWith('https://') ? merged.photoURL : '',
                 bodyIsHTML: false,
-                updatedAt: serverTimestamp()
+                updatedAt: serverTimestamp(),
+                ...encodeProfileBody(merged)
             });
             if (v.admin) await setDoc(doc(db, COLLECTIONS.ADMINS, uid), { appointedAt: serverTimestamp() }).catch(e => console.error('Failed to add admin', e));
             else await deleteDoc(doc(db, COLLECTIONS.ADMINS, uid)).catch(e => console.error('Failed to remove admin', e));
