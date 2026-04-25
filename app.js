@@ -134,10 +134,17 @@ function makeDocShape({ kind, authorId, title = '', body = '', photoURL = '', pa
 }
 
 function parseProfileData(d, uid) {
-    let payload;
-    try { payload = d?.body ? JSON.parse(d.body) : {}; } catch { payload = { bio: d?.body }; }
+    let payload = {};
+    let bio = (d?.body || '').trim();
+    const metaMatch = bio.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
+    if (metaMatch) {
+        try { payload = JSON.parse(metaMatch[1]); bio = bio.replace(metaMatch[0], '').trim(); } catch(e) {}
+    } else {
+        try { payload = JSON.parse(bio); bio = payload.bio || ''; } catch(e) {}
+    }
     return {
         uid,
+        bio,
         displayName: payload.displayName || d?.title || 'Unknown User',
         handle: payload.handle || '',
         photoURL: payload.photoURL || d?.photoURL || DEFAULT_PROFILE_PIC,
@@ -146,31 +153,46 @@ function parseProfileData(d, uid) {
     };
 }
 
-const encodeProfileBody = data => JSON.stringify({
-    displayName: data.displayName || '',
-    handle: data.handle || '',
-    email: data.email || '',
-    customCSS: data.customCSS || '',
-    themePreference: data.themePreference || DEFAULT_THEME_NAME,
-    fontScaling: data.fontScaling || 'normal',
-    backgroundImage: data.backgroundImage || '',
-    glassColor: data.glassColor || '',
-    glassOpacity: Number.isFinite(data.glassOpacity) ? data.glassOpacity : 0.95,
-    glassBlur: Number.isFinite(data.glassBlur) ? data.glassBlur : null,
-    discordId: data.discordId || '',
-    discordTag: data.discordTag || '',
-    discordPic: data.discordPic || '',
-    discordURL: data.discordURL || '',
-    githubPic: data.githubPic || '',
-    githubURL: data.githubURL || ''
-});
+const encodeProfileBody = (data, optBio) => {
+    const meta = {
+        displayName: data.displayName || '',
+        handle: data.handle || '',
+        email: data.email || '',
+        customCSS: data.customCSS || '',
+        themePreference: data.themePreference || DEFAULT_THEME_NAME,
+        fontScaling: data.fontScaling || 'normal',
+        backgroundImage: data.backgroundImage || '',
+        glassColor: data.glassColor || '',
+        glassOpacity: Number.isFinite(data.glassOpacity) ? data.glassOpacity : 0.95,
+        glassBlur: Number.isFinite(data.glassBlur) ? data.glassBlur : null,
+        discordId: data.discordId || '',
+        discordTag: data.discordTag || '',
+        discordPic: data.discordPic || '',
+        discordURL: data.discordURL || '',
+        githubPic: data.githubPic || '',
+        githubURL: data.githubURL || ''
+    };
+    const b = optBio !== undefined ? optBio : (data.bio || '');
+    const cleanBio = b.replace(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
+    return `${cleanBio}\n\n<!-- ARCATOR_META:${JSON.stringify(meta)} -->`;
+};
 
 const safeBody = value => (value || '').toString().trim() || '...';
 const parseBodyJson = body => {
-    try { return JSON.parse(body || '{}'); } catch { return {}; }
+    if (!body) return {};
+    const str = String(body);
+    const metaMatch = str.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
+    if (metaMatch) {
+         try {
+             const payload = JSON.parse(metaMatch[1]);
+             payload.content = str.replace(metaMatch[0], '').trim();
+             return payload;
+         } catch(e) {}
+    }
+    try { return JSON.parse(str); } catch { return { content: str }; }
 };
-const pagePayload = (slug, content, authorId) => safeBody(JSON.stringify({ type: 'page', slug, content, authorId }));
-const wikiPayload = (sectionId, content, allowedEditors = []) => safeBody(JSON.stringify({ type: 'wiki', sectionId, content, allowedEditors }));
+const pagePayload = (slug, content, authorId) => safeBody(`${content || ''}\n\n<!-- ARCATOR_META:${JSON.stringify({ type: 'page', slug, authorId, content: undefined })} -->`);
+const wikiPayload = (sectionId, content, allowedEditors = []) => safeBody(`${content || ''}\n\n<!-- ARCATOR_META:${JSON.stringify({ type: 'wiki', sectionId, allowedEditors, content: undefined })} -->`);
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;

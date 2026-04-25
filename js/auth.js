@@ -9,6 +9,7 @@ import {
   GoogleAuthProvider,
   linkWithPopup,
   onAuthStateChanged,
+  onSnapshot,
   runTransaction,
   sendEmailVerification,
   signInWithEmailAndPassword,
@@ -100,11 +101,21 @@ document.addEventListener('alpine:init', () => {
     // Profile management
     async saveProfile(uid, data) {
       const ref = doc(db, 'docs', `u_${uid}`);
-      const body = JSON.stringify({
-        ...JSON.parse(this.profile?.body || '{}'),
-        ...data,
-        updatedAt: new Date().toISOString()
-      });
+      let prevMeta = {};
+      let bio = data.bio !== undefined ? data.bio : (this.profile?.bio || '');
+      
+      const rawBody = this.profile?.body || '';
+      const metaMatch = rawBody.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
+      if (metaMatch) { try { prevMeta = JSON.parse(metaMatch[1]); } catch(e){} }
+      else { try { prevMeta = JSON.parse(rawBody); } catch(e){} }
+      
+      const meta = { ...prevMeta, ...data, updatedAt: new Date().toISOString() };
+      delete meta.bio;
+      delete meta.id;
+      
+      const cleanBio = bio.replace(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
+      const body = `${cleanBio}\n\n<!-- ARCATOR_META:${JSON.stringify(meta)} -->`;
+
       await updateDoc(ref, {
         title: (data.displayName || this.user?.displayName || 'User').slice(0, 100),
         body: body,
@@ -142,13 +153,14 @@ async function ensureProfile(u) {
     if (snap.exists()) {
       return;
     }
-    const initialBody = JSON.stringify({
+    const meta = {
       displayName: _pendingDisplayName || u.displayName || 'New User',
       handle: _pendingHandle || '',
       glassColor: '#000000',
       glassOpacity: 0.95,
       themePreference: 'dark'
-    });
+    };
+    const initialBody = `\n\n<!-- ARCATOR_META:${JSON.stringify(meta)} -->`;
     tx.set(ref, {
       kind: 'profile',
       authorId: u.uid,
@@ -213,7 +225,19 @@ onAuthStateChanged(auth, async (u) => {
         }
         const data = snap.data();
         let bodyData = {};
-        try { bodyData = JSON.parse(data.body); } catch(e) { bodyData = { bio: data.body }; }
+        let bio = (data.body || '').trim();
+        const metaMatch = bio.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
+        
+        if (metaMatch) {
+            try { bodyData = JSON.parse(metaMatch[1]); bio = bio.replace(metaMatch[0], '').trim(); } catch(e) {}
+        } else {
+            try { bodyData = JSON.parse(bio); bio = bodyData.bio || ''; } catch(e) { bodyData = { bio }; }
+        }
+        bodyData.bio = bio;
+
+        if (!bodyData.glassColor || bodyData.glassColor.trim() === '') {
+            bodyData.glassColor = '#000000';
+        }
 
         const profile = { ...data, ...bodyData, id: snap.id };
         store.profile = profile;

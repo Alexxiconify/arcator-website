@@ -45,8 +45,10 @@ async function migrate() {
         const title = payload.displayName || payload.handle || 'Unknown User';
         const photoURL = payload.photoURL || '';
         
-        // Ensure body stringified correctly
-        const bodyContent = JSON.stringify(payload);
+        let metaObj = { ...payload };
+        delete metaObj.bio;
+        const cleanBio = (payload.bio || '').toString().replace(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
+        const bodyContent = `${cleanBio}\n\n<!-- ARCATOR_META:${JSON.stringify(metaObj)} -->`;
         
         // Build the new document format for `docs` collection
         const newDoc = {
