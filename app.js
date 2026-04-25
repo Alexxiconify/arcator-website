@@ -12,12 +12,18 @@ import './js/glitch.js';
 import './js/auth.js';
 // Delay Alpine dependent logic until it's ready
 let Alpine, Swal, Quill;
-document.addEventListener('alpine:init', () => {
-    Alpine = globalThis.Alpine;
-    Swal = globalThis.Swal;
-    Quill = globalThis.Quill;
+
+const registerAll = () => {
+    registerUsersStore(); 
+    registerPageWikiManagement(); 
+    registerForumData(); 
+    registerWikiApp(); 
+    registerPagesData(); 
+    registerAdminDashboard(); 
+    registerResourcesData(); 
+    registerMessageData();
     
-    // Auth state sync
+    // Direct store sync
     Alpine.effect(() => {
         const s = Alpine.store('auth');
         if (s && !s.loading) {
@@ -25,8 +31,36 @@ document.addEventListener('alpine:init', () => {
         }
     });
 
-    registerAll();
-});
+    // Custom Directives
+    Alpine.directive('spinner', (el, { modifiers, expression }, { evaluateLater, effect }) => {
+        const getLoading = evaluateLater(expression);
+        const isSm = modifiers.includes('sm');
+        const sizeClass = isSm ? 'spinner-border-sm' : '';
+        const containerClasses = isSm ? ['text-center', 'py-1'] : ['d-flex', 'justify-content-center', 'align-items-center', 'vh-80'];
+
+        el.classList.add(...containerClasses);
+        el.innerHTML = `<div class="spinner-border text-primary ${sizeClass}" role="status"></div>`;
+
+        effect(() => {
+            getLoading(loading => updateSpinnerState(el, loading, isSm));
+        });
+    });
+};
+
+const initAlpine = () => {
+    if (globalThis.AlpineInitialized) return;
+    Alpine = globalThis.Alpine;
+    Swal = globalThis.Swal;
+    Quill = globalThis.Quill;
+    
+    if (Alpine) {
+        registerAll();
+        globalThis.AlpineInitialized = true;
+    }
+};
+
+document.addEventListener('alpine:init', initAlpine);
+if (globalThis.Alpine) initAlpine();
 const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
 
@@ -150,33 +184,29 @@ const randomIdentity = () => { const adj = ['Happy', 'Lucky', 'Sunny', 'Clever',
 const NAV_HTML = `
 <nav class="arc-nav" aria-label="Main">
   <menu>
-    <li><a href="./index.html" class="arc-nav-brand">Arcator</a></li>
-    <li class="arc-nav-group">
-        <a href="./wiki.html"><i class="bi bi-book me-1"></i>Wiki</a>
-        <a href="./forms.html"><i class="bi bi-chat-square-dots me-1"></i>Forums</a>
-        <a href="./pages.html"><i class="bi bi-file-earmark-text me-1"></i>Pages</a>
-        <a href="./resources.html"><i class="bi bi-box-seam me-1"></i>Resources</a>
+    <li><a href="/index.html" class="arc-nav-brand fw-bold">Arcator</a></li>
+    <li class="arc-nav-group d-flex">
+        <a href="/wiki.html"><i class="bi bi-book"></i> Wiki</a>
+        <a href="/forms.html"><i class="bi bi-chat-square-dots"></i> Forums</a>
+        <a href="/pages.html"><i class="bi bi-file-earmark-text"></i> Pages</a>
+        <a href="/resources.html"><i class="bi bi-box-seam"></i> Resources</a>
     </li>
-    <li class="arc-nav-group secondary">
+    <li class="arc-nav-group d-flex secondary flex-grow-1 justify-content-center">
         <a href="https://jylina.arcator.co.uk/hub" target="_blank">Hub</a>
         <a href="https://jylina.arcator.co.uk/stats" target="_blank">Stats</a>
         <a href="https://jylina.arcator.co.uk/soulvis" target="_blank">Soul Vis</a>
         <a href="https://jylina.arcator.co.uk/socialgraph" target="_blank">Social Graph</a>
+        <a href="https://jylina.arcator.co.uk/ssmp" target="_blank">SSMP Maps</a>
     </li>
-    <li class="arc-nav-group social">
+    <li class="arc-nav-group d-flex social">
         <a href="https://discord.gg/GwArgw2" title="Discord" target="_blank"><i class="bi bi-discord"></i></a>
-        <a href="https://github.com/Arcator" title="GitHub" target="_blank"><i class="bi bi-github"></i></a>
+        <a href="https://codeberg.org/Arcator" title="Codeberg" target="_blank"><i class="bi bi-git"></i></a>
     </li>
-    <li class="d-none" id="admin-link"><a href="./mod.html" class="text-warning">Admin</a></li>
-    <li class="arc-nav-separator"></li>
-    <li class="arc-nav-footer-items d-flex align-items-center gap-3">
-        <a href="https://jylina.arcator.co.uk/ssmp" target="_blank" class="small text-secondary">SSMP Maps</a>
-        <span class="arc-copyright small text-muted">© 2026 Arcator</span>
-    </li>
+    <li class="d-none" id="admin-link"><a href="/mod.html" class="text-warning">Admin</a></li>
     <li class="arc-user-section">
-      <a href="./users.html" id="sign-in-btn" class="btn btn-sm btn-primary">Sign In</a>
-      <a href="./users.html" class="d-none arc-profile-link" id="user-profile-link">
-        <img src="./defaultuser.png" class="avatar-sm rounded-circle" alt="Profile" id="user-avatar" style="width:32px;height:32px;object-fit:cover;">
+      <a href="/users.html" id="sign-in-btn" class="btn btn-sm btn-primary">Sign In</a>
+      <a href="/users.html" class="d-none arc-profile-link" id="user-profile-link">
+        <img src="/defaultuser.png" class="avatar-sm rounded-circle" alt="Profile" id="user-avatar" style="width:32px;height:32px;object-fit:cover;">
       </a>
     </li>
   </menu>
@@ -187,9 +217,10 @@ function initLayout() {
     if (nav) {
         nav.innerHTML = NAV_HTML;
         const cur = location.pathname.split('/').pop() || 'index.html';
+        const curRoot = '/' + cur;
         nav.querySelectorAll('menu a').forEach(l => {
             const href = l.getAttribute('href');
-            if (href === `./${cur}` || (cur === 'index.html' && href === './index.html')) {
+            if (href === curRoot || href === cur || (cur === 'index.html' && (href === '/' || href === '/index.html'))) {
                 l.setAttribute('aria-current', 'page');
             }
         });
@@ -901,25 +932,7 @@ function registerResourcesData() {
     Alpine.data('resourcesData', resourcesData);
 }
 
-function registerAll() {
-    registerUsersStore(); registerPageWikiManagement(); registerForumData(); registerWikiApp(); registerPagesData(); registerAdminDashboard(); registerResourcesData(); registerMessageData();
-}
-
-document.addEventListener('alpine:init', () => {
-    Alpine.directive('spinner', (el, { modifiers, expression }, { evaluateLater, effect }) => {
-        const getLoading = evaluateLater(expression);
-        const isSm = modifiers.includes('sm');
-        const sizeClass = isSm ? 'spinner-border-sm' : '';
-        const containerClasses = isSm ? ['text-center', 'py-1'] : ['d-flex', 'justify-content-center', 'align-items-center', 'vh-80'];
-
-        el.classList.add(...containerClasses);
-        el.innerHTML = `<div class="spinner-border text-primary ${sizeClass}" role="status"></div>`;
-
-        effect(() => {
-            getLoading(loading => updateSpinnerState(el, loading, isSm));
-        });
-    });
-});
+// Cleanup removed registerAll call here as it's moved to initAlpine
 
 function updateSpinnerState(el, loading, isSm) {
     if (loading) {
@@ -928,7 +941,11 @@ function updateSpinnerState(el, loading, isSm) {
         el.style.setProperty('display', 'none', 'important');
     }
 }
-document.addEventListener('DOMContentLoaded', initLayout);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLayout);
+} else {
+    initLayout();
+}
 
 const projectId = "arcator-v2";
 const appId = "1:171774915460:web:2fc364da8a1bd095eae3d1";

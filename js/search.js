@@ -11,12 +11,13 @@ export function indexDoc(d) {
   if (!d || (d.kind === 'message' && !d.body?.trim())) {
     return;
   }
-  const href =
-    d.kind === 'profile'
-      ? `/profile/${d.authorId}`
-      : d.kind === 'message'
-        ? d.parent.startsWith('u_') ? `/profile/${d.parent.slice(2)}` : `/docs/${d.parent}`
-        : `/docs/${d.id}`;
+  let href = `/docs/${d.id}`;
+  if (d.kind === 'profile') {
+    href = `/profile/${d.authorId}`;
+  } else if (d.kind === 'message') {
+    const isProfile = d.parent.startsWith('u_');
+    href = isProfile ? `/profile/${d.parent.slice(2)}` : `/docs/${d.parent}`;
+  }
   const entry = {
     id: d.id,
     title: d.title ?? '',
@@ -65,4 +66,7 @@ export function searchDocs(query) {
       boostDocument: (_, __, f) => (f.kind === 'message' ? 0.5 : 1),
     })
     .slice(0, 15);
+}
+export function markSearchReady() {
+  console.log('Search index is ready.');
 }

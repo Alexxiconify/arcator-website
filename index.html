@@ -138,39 +138,47 @@
 
             <!-- Iframe Views -->
             <div x-show="tab === 'steam'" class="fade-in">
-                <div class="glass-card p-0 overflow-hidden">
-                    <header class="p-3 d-flex justify-content-between align-items-center">
-                        <h5 class="m-0">Steam Store</h5>
-                        <button class="btn-sm outline" @click="tab = 'games'">Back</button>
-                    </header>
-                    <iframe src="https://store.steampowered.com" style="width:100%; height:80vh; border:none;" title="External Site - Steam Store"></iframe>
+                <div class="glass-card p-5 text-center">
+                    <i class="bi bi-steam display-1 mb-4 text-primary"></i>
+                    <h2 class="fw-bold">Steam Store</h2>
+                    <p class="text-secondary mb-4">Security protocols on the Steam Store prevent it from being embedded. Please launch it in a new tab to browse games.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-secondary" @click="tab = 'games'">Back</button>
+                        <a href="https://store.steampowered.com" target="_blank" class="btn btn-primary">Launch Steam</a>
+                    </div>
                 </div>
             </div>
             <div x-show="tab === 'minecraft'" class="fade-in">
-                <div class="glass-card p-0 overflow-hidden">
-                    <header class="p-3 d-flex justify-content-between align-items-center">
-                        <h5 class="m-0">Minecraft</h5>
-                        <button class="btn-sm outline" @click="tab = 'games'">Back</button>
-                    </header>
-                    <iframe src="https://www.minecraft.net" style="width:100%; height:80vh; border:none;" title="External Site - Minecraft"></iframe>
+                <div class="glass-card p-5 text-center">
+                    <i class="bi bi-controller display-1 mb-4 text-success"></i>
+                    <h2 class="fw-bold">Minecraft</h2>
+                    <p class="text-secondary mb-4">Official Minecraft resources must be accessed directly for security and account management.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-secondary" @click="tab = 'games'">Back</button>
+                        <a href="https://www.minecraft.net" target="_blank" class="btn btn-primary">Launch Minecraft.net</a>
+                    </div>
                 </div>
             </div>
             <div x-show="tab === 'terraria'" class="fade-in">
-                <div class="glass-card p-0 overflow-hidden">
-                    <header class="p-3 d-flex justify-content-between align-items-center">
-                        <h5 class="m-0">Terraria (Steam)</h5>
-                        <button class="btn-sm outline" @click="tab = 'games'">Back</button>
-                    </header>
-                    <iframe src="https://store.steampowered.com/app/105600/Terraria/" style="width:100%; height:80vh; border:none;" title="External Site - Terraria Steam Page"></iframe>
+                <div class="glass-card p-5 text-center">
+                    <i class="bi bi-steam display-1 mb-4 text-info"></i>
+                    <h2 class="fw-bold">Terraria on Steam</h2>
+                    <p class="text-secondary mb-4">Direct Steam game pages cannot be framed. View the Terraria community or purchase the game via the button below.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-secondary" @click="tab = 'games'">Back</button>
+                        <a href="https://store.steampowered.com/app/105600/Terraria/" target="_blank" class="btn btn-primary">View on Steam</a>
+                    </div>
                 </div>
             </div>
             <div x-show="tab === 'amongus'" class="fade-in">
-                <div class="glass-card p-0 overflow-hidden">
-                    <header class="p-3 d-flex justify-content-between align-items-center">
-                        <h5 class="m-0">Among Us (Steam)</h5>
-                        <button class="btn-sm outline" @click="tab = 'games'">Back</button>
-                    </header>
-                    <iframe src="https://store.steampowered.com/app/945360/Among_Us/" style="width:100%; height:80vh; border:none;" title="External Site - Among Us Steam Page"></iframe>
+                <div class="glass-card p-5 text-center">
+                    <i class="bi bi-steam display-1 mb-4 text-danger"></i>
+                    <h2 class="fw-bold">Among Us on Steam</h2>
+                    <p class="text-secondary mb-4">Direct Steam game pages cannot be framed. View the Among Us community or purchase the game via the button below.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-secondary" @click="tab = 'games'">Back</button>
+                        <a href="https://store.steampowered.com/app/945360/Among_Us/" target="_blank" class="btn btn-primary">View on Steam</a>
+                    </div>
                 </div>
             </div>
 
@@ -226,9 +234,7 @@
     </div>
 </div>
 
-<!-- Footer fully removed as per request -->
-
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 <script type="module" src="/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 </body>
 </html>

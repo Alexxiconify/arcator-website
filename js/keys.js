@@ -34,6 +34,7 @@ const dialog = document.getElementById('keys-help');
 let gTimer = null;
 
 function setG(on) {
+  if (!indicator) return;
   indicator.hidden = !on;
   clearTimeout(gTimer);
   if (on) {
@@ -47,7 +48,13 @@ function focusCard(dir) {
     return;
   }
   const cur = cards.indexOf(document.activeElement);
-  const next = cards.at(cur < 0 ? (dir > 0 ? 0 : -1) : cur + dir);
+  let nextIndex;
+  if (cur < 0) {
+    nextIndex = dir > 0 ? 0 : cards.length - 1;
+  } else {
+    nextIndex = (cur + dir + cards.length) % cards.length;
+  }
+  const next = cards[nextIndex];
   next?.focus({ preventScroll: true });
   next?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -74,7 +81,7 @@ document.addEventListener('keydown', (e) => {
 
   const { key } = e;
 
-  if (!indicator.hidden) {
+  if (indicator && !indicator.hidden) {
     setG(false);
     const dest = G_CHORDS[key];
     if (dest) {
