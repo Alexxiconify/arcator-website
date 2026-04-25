@@ -2,6 +2,9 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js';
 import { createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, unlink, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js';
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
+import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
+import './js/keys.js';
+import './js/glitch.js';
 
 const cfg = { apiKey: "AIzaSyAYzo2zbIZwq9PYZmsXI6_RTnzbNSEpzwQ", authDomain: "arcator-v2.firebaseapp.com", databaseURL: "https://arcator-v2-default-rtdb.firebaseio.com", projectId: "arcator-v2", storageBucket: "arcator-v2.firebasestorage.app", messagingSenderId: "171774915460", appId: "1:171774915460:web:97b95c10b81fe4c7eae3d1", measurementId: "G-36VY36ECG5" };
 const app = initializeApp(cfg);
@@ -140,7 +143,7 @@ function registerAuthStore() {
             });
         },
 
-        async checkAdmin(uid) { return this.isAdmin; },
+        async checkAdmin() { return this.isAdmin; },
 
         async login(email, password) {
             const result = await signInWithEmailAndPassword(auth, email, password);
@@ -152,7 +155,7 @@ function registerAuthStore() {
             const { user } = await createUserWithEmailAndPassword(auth, email, password);
             const photoURL = generateProfilePic(displayName);
             await updateProfile(user, { displayName, photoURL });
-            const profile = { uid: user.uid, displayName, email, photoURL, handle, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), themePreference: DEFAULT_THEME };
+            const profile = { uid: user.uid, displayName, email, photoURL, handle, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), themePreference: DEFAULT_THEME_NAME };
             await setDoc(doc(db, COLLECTIONS.USER_PROFILES, user.uid), profile);
             return { user, profile };
         },
@@ -207,7 +210,7 @@ function registerAuthStore() {
             const photoURL = result.user.photoURL || generateProfilePic(displayName);
             await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), {
                 uid: result.user.uid, displayName, email: result.user.email || '', photoURL, handle,
-                themePreference: DEFAULT_THEME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: providerName
+                themePreference: DEFAULT_THEME_NAME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: providerName
             });
         },
 
@@ -281,9 +284,11 @@ function forumData() {
         async loadThreads() {
             const snap = await getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc')));
             this.threads = await Promise.all(snap.docs.map(d => this.mapThreadDoc(d)));
+            this.threads.forEach(t => indexDoc({ kind: 'thread', id: t.id, title: t.title, body: (t.description || '').replace(/<[^>]+>/g, ' ') }));
             const ids = this.getUniqueAuthorIds();
             await Promise.all(ids.map(fetchAuthor));
             this.loading = false;
+            markSearchReady();
         },
         getUniqueAuthorIds() {
             const authors = this.threads.map(t => t.authorId);
@@ -326,7 +331,7 @@ function forumData() {
         },
         getReplies(t, pid) { return t.comments.filter(c => c.parentCommentId === pid); },
         async softDeleteThread(t) { if (confirm(t.censored ? 'Un-censor?' : 'Censor?')) { await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), { censored: !t.censored }); t.censored = !t.censored; } },
-        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.FORMS, id)); this.threads = this.threads.filter(t => t.id !== id); } },
+        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.FORMS, id)); removeDoc(id); this.threads = this.threads.filter(t => t.id !== id); } },
         async postComment(fid) {
             const t = this.threads.find(t => t.id === fid); if (!t?.quill) return;
             const c = t.quill.root.innerHTML; if (!c || c === '<p><br></p>') return;
@@ -484,6 +489,7 @@ function registerPageWikiManagement() {
         async deletePage(id, cb) {
             if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) {
                 await deleteDoc(doc(db, COLLECTIONS.PAGES, id));
+                removeDoc(id);
                 if (cb) { cb(); }
                 Swal.fire('Deleted', 'Page has been deleted.', 'success');
             }
@@ -517,6 +523,7 @@ function registerPageWikiManagement() {
         async deleteWikiSection(id, cb) {
             if ((await Swal.fire({ title: 'Delete Wiki Section?', text: 'This cannot be undone!', icon: 'warning', showCancelButton: true })).isConfirmed) {
                 await deleteDoc(doc(db, COLLECTIONS.WIKI_PAGES, id));
+                removeDoc(id);
                 if (cb) { cb(); }
                 Swal.fire('Deleted', 'Section removed.', 'success');
             }
@@ -533,11 +540,12 @@ function wikiApp() {
         async init() {
             await firebaseReadyPromise;
             const snap = await getDocs(collection(db, COLLECTIONS.WIKI_PAGES));
-            snap.forEach(d => { const data = d.data(); this.tabContent[d.id] = data.content; this.tabMeta[d.id] = { allowedEditors: data.allowedEditors || [], updatedAt: data.updatedAt }; });
+            snap.forEach(d => { const data = d.data(); this.tabContent[d.id] = data.content; this.tabMeta[d.id] = { allowedEditors: data.allowedEditors || [], updatedAt: data.updatedAt }; indexDoc({ kind: 'wiki', id: d.id, title: this.tabs.find(t => t.id === d.id)?.label ?? d.id, body: (data.content || '').replace(/<[^>]+>/g, ' ') }); });
             this.loading = false; this.$nextTick(() => this.renderTab(this.tab));
+            markSearchReady();
         },
         renderTab(id) { const el = document.querySelector(`.wiki-content[data-tab="${id}"]`); if (el && this.tabContent[id]) { el.innerHTML = this.tabContent[id]; el.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); } },
-        selectTab(id) { this.tab = id; this.$nextTick(() => this.renderTab(id)); },
+        selectTab(id) { document.startViewTransition ? document.startViewTransition(() => { this.tab = id; this.$nextTick(() => this.renderTab(id)); }) : (this.tab = id, this.$nextTick(() => this.renderTab(id))); },
         async editCurrentTab() {
             const content = this.tabContent[this.tab] || '';
             const { value } = await Swal.fire({ title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`, width: '900px', html: `<textarea id="wiki-edit" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('wiki-edit').value = content; }, preConfirm: () => document.getElementById('wiki-edit').value });
@@ -557,7 +565,7 @@ function pagesData() {
         get isAdmin() { return Alpine.store('auth')?.isAdmin; },
         get canEdit() { return this.currentUser && (this.isAdmin || this.currentPage?.authorId === this.currentUser.uid); },
         async init() { await firebaseReadyPromise; await this.loadPagesList(); if (this.currentPageId) await this.loadSinglePage(this.currentPageId); },
-        async loadPagesList() { const snap = await getDocs(query(collection(db, COLLECTIONS.PAGES), orderBy('createdAt', 'desc'))); this.pages = snap.docs.map(d => ({ id: d.id, ...d.data() })); if (!this.currentPageId) this.loading = false; },
+        async loadPagesList() { const snap = await getDocs(query(collection(db, COLLECTIONS.PAGES), orderBy('createdAt', 'desc'))); this.pages = snap.docs.map(d => ({ id: d.id, ...d.data() })); this.pages.forEach(p => indexDoc({ kind: 'page', id: p.id, title: p.title, body: (p.content || '').replace(/<[^>]+>/g, ' ') })); if (!this.currentPageId) this.loading = false; markSearchReady(); },
         async loadSinglePage(id) {
             const snap = await getDoc(doc(db, COLLECTIONS.PAGES, id));
             if (snap.exists()) { this.currentPage = { id: snap.id, ...snap.data() }; document.title = `${this.currentPage.title || 'Page'} - Arcator`; await this.loadAuthor(this.currentPage.createdBy || this.currentPage.authorId); }
@@ -568,7 +576,7 @@ function pagesData() {
         renderContent(c) { if (!c) { return ''; } const isHtml = /<[a-z][\s\S]*>/i.test(c); return DOMPurify.sanitize(isHtml ? c : marked.parse(c)); },
         async createPage() { await Alpine.store('mgmt').createPage(() => this.loadPagesList()); },
         async editPage() { if (this.currentPage) await Alpine.store('mgmt').editPage(this.currentPage, () => this.loadSinglePage(this.currentPage.id)); },
-        async deletePage() { if (this.currentPage) await Alpine.store('mgmt').deletePage(this.currentPage.id, () => globalThis.location.href = 'pages.html'); }
+        async deletePage() { if (this.currentPage) await Alpine.store('mgmt').deletePage(this.currentPage.id, () => { const go = () => { globalThis.location.href = 'pages.html'; }; document.startViewTransition ? document.startViewTransition(go) : go(); }); }
     };
 }
 function registerPagesData() { Alpine.data('pagesData', pagesData); }
@@ -740,7 +748,7 @@ function registerAll() {
 }
 
 document.addEventListener('alpine:init', () => {
-    Alpine.directive('spinner', (el, { value, modifiers, expression }, { evaluateLater, effect }) => {
+    Alpine.directive('spinner', (el, { modifiers, expression }, { evaluateLater, effect }) => {
         const getLoading = evaluateLater(expression);
         const isSm = modifiers.includes('sm');
         const sizeClass = isSm ? 'spinner-border-sm' : '';
@@ -750,7 +758,7 @@ document.addEventListener('alpine:init', () => {
         el.innerHTML = `<div class="spinner-border text-primary ${sizeClass}" role="status"></div>`;
 
         effect(() => {
-            getLoading(loading => this.updateSpinnerState(el, loading, isSm));
+            getLoading(loading => updateSpinnerState(el, loading, isSm));
         });
     });
     registerAll();
