@@ -104,7 +104,7 @@
                                 <div class="col-md-8 p-4">
                                     <h4>Steam Games</h4>
                                     <p class="text-secondary">Discover thousands of games on Steam, from indie gems to AAA titles.</p>
-                                    <a href="https://store.steampowered.com" role="button" target="_blank" rel="noopener">Browse Steam</a>
+                                    <button class="btn btn-primary" @click="tab = 'steam'">Browse Steam</button>
                                 </div>
                             </article>
                         </div>
@@ -113,7 +113,7 @@
                                 <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/1672970/header.jpg" alt="Minecraft">
                                 <h5>Minecraft</h5>
                                 <p class="text-secondary">Create, explore, and survive in an infinite blocky world.</p>
-                                <a href="https://www.minecraft.net" role="button" target="_blank" rel="noopener">Play</a>
+                                <button class="btn btn-sm outline" @click="tab = 'minecraft'">Play</button>
                             </article>
                         </div>
                         <div class="col-md-4">
@@ -121,7 +121,7 @@
                                 <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/105600/header.jpg" alt="Terraria">
                                 <h5>Terraria</h5>
                                 <p class="text-secondary">Dig, fight, explore, and build in this 2D adventure!</p>
-                                <a href="https://store.steampowered.com/app/105600/Terraria/" role="button" target="_blank" rel="noopener">Play</a>
+                                <button class="btn btn-sm outline" @click="tab = 'terraria'">Play</button>
                             </article>
                         </div>
                         <div class="col-md-4">
@@ -129,10 +129,48 @@
                                 <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/945360/header.jpg" alt="Among Us">
                                 <h5>Among Us</h5>
                                 <p class="text-secondary">Work together or deceive everyone as an impostor.</p>
-                                <a href="https://store.steampowered.com/app/945360/Among_Us/" role="button" target="_blank" rel="noopener">Play</a>
+                                <button class="btn btn-sm outline" @click="tab = 'amongus'">Play</button>
                             </article>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Iframe Views -->
+            <div x-show="tab === 'steam'" class="fade-in">
+                <div class="glass-card p-0 overflow-hidden">
+                    <header class="p-3 d-flex justify-content-between align-items-center">
+                        <h5 class="m-0">Steam Store</h5>
+                        <button class="btn-sm outline" @click="tab = 'games'">Back</button>
+                    </header>
+                    <iframe src="https://store.steampowered.com" style="width:100%; height:80vh; border:none;" title="External Site - Steam Store"></iframe>
+                </div>
+            </div>
+            <div x-show="tab === 'minecraft'" class="fade-in">
+                <div class="glass-card p-0 overflow-hidden">
+                    <header class="p-3 d-flex justify-content-between align-items-center">
+                        <h5 class="m-0">Minecraft</h5>
+                        <button class="btn-sm outline" @click="tab = 'games'">Back</button>
+                    </header>
+                    <iframe src="https://www.minecraft.net" style="width:100%; height:80vh; border:none;" title="External Site - Minecraft"></iframe>
+                </div>
+            </div>
+            <div x-show="tab === 'terraria'" class="fade-in">
+                <div class="glass-card p-0 overflow-hidden">
+                    <header class="p-3 d-flex justify-content-between align-items-center">
+                        <h5 class="m-0">Terraria (Steam)</h5>
+                        <button class="btn-sm outline" @click="tab = 'games'">Back</button>
+                    </header>
+                    <iframe src="https://store.steampowered.com/app/105600/Terraria/" style="width:100%; height:80vh; border:none;" title="External Site - Terraria Steam Page"></iframe>
+                </div>
+            </div>
+            <div x-show="tab === 'amongus'" class="fade-in">
+                <div class="glass-card p-0 overflow-hidden">
+                    <header class="p-3 d-flex justify-content-between align-items-center">
+                        <h5 class="m-0">Among Us (Steam)</h5>
+                        <button class="btn-sm outline" @click="tab = 'games'">Back</button>
+                    </header>
+                    <iframe src="https://store.steampowered.com/app/945360/Among_Us/" style="width:100%; height:80vh; border:none;" title="External Site - Among Us Steam Page"></iframe>
                 </div>
             </div>
 
@@ -188,7 +226,7 @@
     </div>
 </div>
 
-<div id="footer-placeholder"></div>
+<!-- Footer fully removed as per request -->
 
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 <script type="module" src="./app.js"></script>

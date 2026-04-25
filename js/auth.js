@@ -1,6 +1,5 @@
 import intersect from 'https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/+esm';
 import morph from 'https://cdn.jsdelivr.net/npm/@alpinejs/morph@3.x.x/+esm';
-import Alpine from 'https://cdn.jsdelivr.net/npm/alpinejs@3/dist/module.esm.js';
 import { PROFILE_STUB_BODY } from './constants.js';
 import {
   auth,
@@ -9,6 +8,7 @@ import {
   doc,
   GithubAuthProvider,
   GoogleAuthProvider,
+  linkWithPopup,
   onAuthStateChanged,
   runTransaction,
   sendEmailVerification,
@@ -17,11 +17,14 @@ import {
   signInWithPopup,
   signOut,
   srvTs,
+  unlink,
+  updateDoc,
   updateProfile,
 } from './firebase.js';
+import { cacheUser, updateTheme } from './ui.js';
 import { safePhoto } from './sanitize.js';
 
-window.Alpine = Alpine;
+const { Alpine } = globalThis;
 
 Alpine.plugin(morph);
 Alpine.plugin(intersect);
@@ -43,6 +46,9 @@ document.addEventListener('alpine:init', () => {
     },
     get canWrite() {
       return this.phase === 'verified';
+    },
+    get isAdmin() {
+      return this.admin === true;
     },
 
     signInGoogle: () => signInWithPopup(auth, new GoogleAuthProvider()),
@@ -192,6 +198,7 @@ onAuthStateChanged(auth, async (u) => {
       }
     : null;
   store.phase = u ? (u.emailVerified ? 'verified' : 'unverified') : 'signed-out';
+  store.loading = !!u; // Set loading true if we have a user and need to fetch profile
 
   if (u) {
     const [claimsResult, profileSnap] = await Promise.allSettled([
@@ -211,12 +218,29 @@ onAuthStateChanged(auth, async (u) => {
       } catch (e) {
         bodyData = { bio: data.body };
       }
-      store.profile = {
+      const profile = {
         ...data,
         ...bodyData,
         id: profileSnap.value.id
       };
+      store.profile = profile;
+      
+      // Apply theme and cache
+      updateTheme(
+        profile.themePreference, 
+        profile.fontScaling, 
+        profile.customCSS, 
+        profile.backgroundImage, 
+        profile.glassColor, 
+        profile.glassOpacity, 
+        profile.glassBlur
+      );
+      cacheUser(u, profile);
     }
+    store.loading = false;
+  } else {
+      store.profile = null;
+      store.loading = false;
   }
 });
 

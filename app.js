@@ -4,14 +4,12 @@ import {
   db, auth, srvTs as serverTimestamp, deleteField,
   collection, doc, query, where, orderBy, limit, startAfter,
   getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  onSnapshot, runTransaction, writeBatch, getCountFromServer, FieldPath,
-  onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword,
-  createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut,
-  GoogleAuthProvider, GithubAuthProvider 
+  onSnapshot, runTransaction, writeBatch, getCountFromServer, FieldPath
 } from './js/firebase.js';
 import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
 import './js/keys.js';
 import './js/glitch.js';
+import './js/auth.js';
 const { Alpine, Swal, Quill } = globalThis;
 const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
@@ -133,17 +131,51 @@ const escapeHtml = str => {
 };
 const generateProfilePic = name => { const colors = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2'], canvas = document.createElement('canvas'); canvas.width = canvas.height = 200; const ctx = canvas.getContext('2d'), hash = [...name].reduce((a, c) => a + c.codePointAt(0), 0); ctx.fillStyle = colors[Math.abs(hash) % colors.length]; ctx.fillRect(0, 0, 200, 200); ctx.fillStyle = '#FFF'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), 100, 100); return canvas.toDataURL('image/png'); };
 const randomIdentity = () => { const adj = ['Happy', 'Lucky', 'Sunny', 'Clever', 'Swift', 'Bright', 'Cool', 'Smart'], noun = ['Fox', 'Bear', 'Wolf', 'Eagle', 'Hawk', 'Tiger', 'Lion', 'Owl']; const a = adj[Math.floor(Math.random() * adj.length)], n = noun[Math.floor(Math.random() * noun.length)]; return { displayName: `${a} ${n}`, handle: `${a.toLowerCase()}${n}${Math.floor(Math.random() * 1000)}` }; };
-const NAV_HTML = `<nav class="arc-nav" aria-label="Main"><menu><li><a href="./index.html" class="arc-nav-brand">Arcator</a></li><li><a href="./wiki.html">Wiki</a></li><li><a href="./forms.html">Forums</a></li><li><a href="./pages.html">Pages</a></li><li><a href="./resources.html">Resources</a></li><li><a href="https://jylina.arcator.co.uk/hub">Hub Maps</a></li><li><a href="https://jylina.arcator.co.uk/stats">Stats</a></li><li><a href="https://discord.gg/GwArgw2">Discord</a></li><li><a href="https://apollo.arcator.co.uk/standalone/souls/">Soul Vis</a></li><li><a href="https://apollo.arcator.co.uk/standalone/joins.html">Social Graph</a></li><li class="d-none" id="admin-link"><a href="./mod.html">Admin</a></li><li class="arc-user-section"><a href="./users.html" id="sign-in-btn">Sign In</a><a href="./users.html" class="d-none arc-profile-link" id="user-profile-link"><img src="./defaultuser.png" class="avatar-sm" alt="Profile" id="user-avatar"></a></li></menu></nav>`;
-const FOOTER_HTML = `<footer class="arc-footer"><div class="container-fluid px-4 arc-footer-inner"><div class="d-flex gap-3"><a href="https://jylina.arcator.co.uk/ssmp" class="text-secondary text-decoration-none" target="_blank" rel="noopener">SSMP Blue Maps</a><a href="https://wiki.arcator.co.uk" class="text-secondary text-decoration-none" target="_blank" rel="noopener">Wiki</a></div><span class="text-secondary">© 2026 Arcator</span></div></footer>`;
+const NAV_HTML = `
+<nav class="arc-nav" aria-label="Main">
+  <menu>
+    <li><a href="./index.html" class="arc-nav-brand">Arcator</a></li>
+    <li><a href="./wiki.html">Wiki</a></li>
+    <li><a href="./forms.html">Forums</a></li>
+    <li><a href="./pages.html">Pages</a></li>
+    <li><a href="./resources.html">Resources</a></li>
+    <li><a href="https://jylina.arcator.co.uk/hub">Hub</a></li>
+    <li><a href="https://jylina.arcator.co.uk/stats">Stats</a></li>
+    <li><a href="https://discord.gg/GwArgw2">Discord</a></li>
+    <li class="d-none" id="admin-link"><a href="./mod.html">Admin</a></li>
+    <li class="arc-nav-separator"></li>
+    <li class="arc-nav-footer-items">
+        <a href="https://jylina.arcator.co.uk/ssmp" target="_blank">SSMP Maps</a>
+        <span class="arc-copyright">© 2026 Arcator</span>
+    </li>
+    <li class="arc-user-section">
+      <a href="./users.html" id="sign-in-btn">Sign In</a>
+      <a href="./users.html" class="d-none arc-profile-link" id="user-profile-link">
+        <img src="./defaultuser.png" class="avatar-sm" alt="Profile" id="user-avatar">
+      </a>
+    </li>
+  </menu>
+</nav>`;
+
 function initLayout() {
-    const nav = document.getElementById('navbar-placeholder'), foot = document.getElementById('footer-placeholder');
+    const nav = document.getElementById('navbar-placeholder');
     if (nav) {
         nav.innerHTML = NAV_HTML;
         const cur = location.pathname.split('/').pop() || 'index.html';
-        nav.querySelectorAll('menu a').forEach(l => (l.getAttribute('href') === `./${cur}` || (cur === 'index.html' && l.getAttribute('href') === './index.html')) && l.setAttribute('aria-current', 'page'));
+        nav.querySelectorAll('menu a').forEach(l => {
+            const href = l.getAttribute('href');
+            if (href === `./${cur}` || (cur === 'index.html' && href === './index.html')) {
+                l.setAttribute('aria-current', 'page');
+            }
+        });
     }
-    if (foot) foot.innerHTML = FOOTER_HTML;
-    if (globalThis.Alpine) { const s = Alpine.store('auth'); s && !s.loading && updateUserSection(s.user, s.profile, s.isAdmin); }
+    
+    if (globalThis.Alpine) {
+        const s = Alpine.store('auth');
+        if (s && !s.loading) {
+            updateUserSection(s.user, s.profile, s.isAdmin);
+        }
+    }
 }
 function updateUserSection(u, p, isAdmin = false) {
     const btn = document.getElementById('sign-in-btn'), link = document.getElementById('user-profile-link'), av = document.getElementById('user-avatar'), adm = document.getElementById('admin-link');
@@ -157,19 +189,7 @@ function updateUserSection(u, p, isAdmin = false) {
         if (adm) adm.classList.add('d-none');
     }
 }
-const cacheUser = (u, p) => localStorage.setItem('arcator_user_cache', JSON.stringify({ uid: u.uid, displayName: p?.displayName || u.displayName, photoURL: p?.photoURL || u.photoURL, themePreference: p?.themePreference || 'dark', fontScaling: p?.fontScaling || 'normal', backgroundImage: p?.backgroundImage, glassColor: p?.glassColor, glassOpacity: p?.glassOpacity, glassBlur: p?.glassBlur }));
-const updateTheme = (t = 'dark', f = 'normal', css = '', bg = '', gc = '', go = 0.95, gb = '') => {
-    const r = document.documentElement;
-    r.dataset.theme = t; r.dataset.fontSize = f;
-    document.body.style.backgroundImage = bg ? `url('${bg}')` : '';
-    if (gc && go) {
-        const rgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(gc);
-        if (rgb) { r.style.setProperty('--glass-bg', `rgba(${Number.parseInt(rgb[1], 16)}, ${Number.parseInt(rgb[2], 16)}, ${Number.parseInt(rgb[3], 16)}, ${go})`); }
-    } else { r.style.removeProperty('--glass-bg'); }
-    let s = document.getElementById('custom-css-style');
-    if (!s) { s = document.createElement('style'); s.id = 'custom-css-style'; document.head.appendChild(s); }
-    s.textContent = (css || '') + (gb ? ` .glass-card, .card { backdrop-filter: blur(${gb}px) !important; } body::before { backdrop-filter: blur(${Math.max(0, gb - 5)}px) !important; }` : '');
-};
+/** Theme management moved to js/ui.js **/
 
 function registerUsersStore() {
     Alpine.store('users', {
@@ -193,188 +213,7 @@ function registerUsersStore() {
 const fetchAuthor = uid => Alpine.store('users').fetch(uid);
 const getAuthor = uid => Alpine.store('users').get(uid);
 
-function registerAuthStore() {
-    Alpine.store('auth', {
-        user: null,
-        profile: null,
-        loading: true,
-        isAdmin: false,
-
-        async init() {
-            const cached = localStorage.getItem('arcator_user_cache');
-            if (cached) {
-                try {
-                    const data = JSON.parse(cached);
-                    this.user = { uid: data.uid, ...data };
-                    this.profile = data;
-                    updateTheme(data.themePreference, data.fontScaling, data.customCSS, data.backgroundImage, data.glassColor, data.glassOpacity, data.glassBlur);
-                    updateUserSection(this.user, this.profile, false);
-                } catch (e) {
-                    console.warn('Failed to parse cached user data:', e);
-                }
-            }
-
-            onAuthStateChanged(auth, async (u) => {
-                this.user = u;
-                if (u) {
-                    try {
-                        const snap = await getDoc(docsRef(profileDocId(u.uid)));
-                        if (snap.exists()) {
-                            this.profile = parseProfileData(snap.data(), u.uid);
-                            cacheUser(u, this.profile);
-                            updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS, this.profile.backgroundImage, this.profile.glassColor, this.profile.glassOpacity, this.profile.glassBlur);
-                        }
-                        const result = await u.getIdTokenResult();
-                        this.isAdmin = result?.claims?.admin === true;
-                    } catch (e) {
-                        console.error(`Profile load error for docs/${profileDocId(u.uid)}:`, e.code, e.message);
-                    }
-                } else {
-                    this.profile = null;
-                    this.isAdmin = false;
-                    localStorage.removeItem('arcator_user_cache');
-                }
-                this.loading = false;
-                updateUserSection(this.user, this.profile, this.isAdmin);
-            });
-        },
-
-        async checkAdmin() { return this.isAdmin; },
-
-        async login(email, password) {
-            const result = await signInWithEmailAndPassword(auth, email, password);
-            return result.user;
-        },
-
-        async signup(email, password, displayName, handle) {
-            const { user } = await createUserWithEmailAndPassword(auth, email, password);
-            const photoURL = generateProfilePic(displayName);
-            await updateProfile(user, { displayName, photoURL });
-            const profile = {
-                uid: user.uid,
-                displayName,
-                email,
-                handle,
-                photoURL: '',
-                themePreference: DEFAULT_THEME_NAME,
-                fontScaling: 'normal'
-            };
-            await setDoc(docsRef(profileDocId(user.uid)), makeDocShape({
-                kind: DOC_KIND.PROFILE,
-                authorId: user.uid,
-                title: displayName,
-                body: safeBody(encodeProfileBody(profile)),
-                photoURL: ''
-            }));
-            return { user, profile };
-        },
-
-        async logout() {
-            await signOut(auth);
-            this.user = null;
-            this.profile = null;
-            localStorage.removeItem('arcator_user_cache');
-            updateUserSection(null, null, false);
-        },
-
-        async loginWithProvider(providerName) {
-            const provider = this.getProvider(providerName);
-            const result = await signInWithPopup(auth, provider);
-
-            if (providerName === 'discord') {
-                await this.syncDiscordData(result);
-            }
-
-            if (result._tokenResponse?.isNewUser) {
-                await this.initializeNewUser(result, providerName);
-            }
-            return result.user;
-        },
-
-        async syncDiscordData(result) {
-            const accessToken = result._tokenResponse?.accessToken;
-            if (!accessToken) { return; }
-            try {
-                const resp = await fetch('https://discord.com/api/v10/users/@me', {
-                    headers: { Authorization: `Bearer ${accessToken}` }
-                });
-                if (resp.ok) {
-                    const d = await resp.json();
-                    const profileRef = docsRef(profileDocId(result.user.uid));
-                    const profileSnap = await getDoc(profileRef);
-                    if (!profileSnap.exists()) { return; }
-                    const current = parseProfileData(profileSnap.data(), result.user.uid);
-                    current.discordId = d.id;
-                    current.discordTag = `${d.username}#${d.discriminator}`;
-                    current.discordPic = d.avatar ? `https://cdn.discordapp.com/avatars/${d.id}/${d.avatar}.png` : '';
-                    await updateDoc(profileRef, {
-                        title: (current.displayName || 'User').slice(0, 100),
-                        body: safeBody(encodeProfileBody(current)),
-                        photoURL: current.photoURL?.startsWith('https://') ? current.photoURL : '',
-                        bodyIsHTML: false,
-                        updatedAt: serverTimestamp()
-                    });
-                }
-            } catch (e) {
-                console.error('Failed to fetch Discord user data', e);
-            }
-        },
-
-        async initializeNewUser(result, providerName) {
-            const { displayName: rn, handle } = randomIdentity();
-            const displayName = result.user.displayName || rn;
-            const photoURL = result.user.photoURL?.startsWith('https://') ? result.user.photoURL : '';
-            const profile = {
-                uid: result.user.uid,
-                displayName,
-                email: result.user.email || '',
-                photoURL,
-                handle,
-                provider: providerName,
-                themePreference: DEFAULT_THEME_NAME,
-                fontScaling: 'normal'
-            };
-            await setDoc(docsRef(profileDocId(result.user.uid)), makeDocShape({
-                kind: DOC_KIND.PROFILE,
-                authorId: result.user.uid,
-                title: displayName,
-                body: safeBody(encodeProfileBody(profile)),
-                photoURL
-            }));
-        },
-
-        async saveProfile(uid, profileData) {
-            const safeData = { ...profileData };
-            delete safeData.admin; delete safeData.role; delete safeData.staff; delete safeData.uid; delete safeData.createdAt;
-            const merged = { ...this.profile, ...safeData };
-            await updateDoc(docsRef(profileDocId(uid)), {
-                title: (merged.displayName || this.user?.displayName || 'User').slice(0, 100),
-                body: safeBody(encodeProfileBody(merged)),
-                photoURL: merged.photoURL?.startsWith('https://') ? merged.photoURL : '',
-                bodyIsHTML: false,
-                updatedAt: serverTimestamp()
-            });
-            this.profile = { ...this.profile, ...safeData };
-            cacheUser(this.user, this.profile);
-            updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
-            updateUserSection(this.user, this.profile, this.isAdmin);
-        },
-
-        getProvider(name) {
-            switch (name) {
-                case 'google': { const g = new GoogleAuthProvider(); g.setCustomParameters({ prompt: 'select_account' }); return g; }
-                case 'github': return new GithubAuthProvider();
-                case 'twitter': return new TwitterAuthProvider();
-                case 'apple': return new OAuthProvider('apple.com');
-                case 'discord': return new OAuthProvider('oidc.oidc.discord');
-            }
-        },
-
-        async linkProvider(providerName) { await linkWithPopup(auth.currentUser, this.getProvider(providerName)); this.user = auth.currentUser; },
-        async unlinkProvider(providerId) { await unlink(auth.currentUser, providerId); this.user = auth.currentUser; },
-        isProviderLinked(providerId) { return this.user?.providerData?.some(p => p.providerId === providerId) || false; }
-    });
-}
+/** Auth store moved to js/auth.js **/
 
 // Helper for SweetAlert + Quill
 async function promptEditor(title, html = '', initialContent = '', placeholder = '') {
@@ -1054,6 +893,12 @@ document.addEventListener('alpine:init', () => {
         effect(() => {
             getLoading(loading => updateSpinnerState(el, loading, isSm));
         });
+    });
+    Alpine.effect(() => {
+        const s = Alpine.store('auth');
+        if (s && !s.loading) {
+            updateUserSection(s.user, s.profile, s.isAdmin);
+        }
     });
     registerAll();
 });
