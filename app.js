@@ -24,7 +24,17 @@ const getWikiIcon = (id) => {
         mcadmin: 'bi-shield-lock',
         growth: 'bi-graph-up'
     };
-    return icons[id] || 'bi-file-text';
+    const key = (id || '').toLowerCase();
+    if (key.includes('home') || key.includes('welcome')) return icons.home;
+    if (key.includes('growth')) return icons.growth;
+    if (key.includes('machine')) return icons.machines;
+    if (key.includes('staff')) return icons.staff;
+    if (key.includes('donations')) return 'bi-cash-coin';
+    if (key.includes('mcadmin')) return icons.mcadmin;
+    if (key.includes('sysadmin')) return icons.sysadmin;
+    if (key.includes('server')) return icons.servers;
+    if (key.includes('software')) return icons.software;
+    return 'bi-file-text';
 };
 
 const registerAll = () => {
@@ -102,8 +112,8 @@ const COLLECTIONS = {
 const DOC_KIND = { ARTICLE: 'article', PROFILE: 'profile', MESSAGE: 'message' };
 const profileDocId = uid => `u_${uid}`;
 const pageDocId = slug => `pg_${(slug || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
-const wikiDocId = id => `wk_${(id || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
-const isWikiDocId = id => typeof id === 'string' && id.startsWith('wk_');
+const wikiDocId = id => `~w2601-${(id || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
+const isWikiDocId = id => typeof id === 'string' && (id.startsWith('wk_') || id.startsWith('wiki_') || id.startsWith('~w'));
 const isPageDocId = id => typeof id === 'string' && id.startsWith('pg_');
 const docsCollection = () => collection(db, COLLECTIONS.DOCS);
 const docsRef = id => doc(db, COLLECTIONS.DOCS, id);
@@ -205,8 +215,8 @@ const parseBodyJson = body => {
     }
     try { return JSON.parse(str); } catch { return { content: str }; }
 };
-const pagePayload = (slug, content, authorId) => safeBody(`${content || ''}\n\n<!-- ARCATOR_META:${JSON.stringify({ type: 'page', slug, authorId, content: undefined })} -->`);
-const wikiPayload = (sectionId, content, allowedEditors = []) => safeBody(`${content || ''}\n\n<!-- ARCATOR_META:${JSON.stringify({ type: 'wiki', sectionId, allowedEditors, content: undefined })} -->`);
+const pagePayload = (slug, content, authorId) => safeBody(`${content || ''}<!-- ARCATOR_META:${JSON.stringify({ type: 'page', slug, authorId, content: undefined })} -->`);
+const wikiPayload = (sectionId, content, allowedEditors = []) => safeBody(`${content || ''}<!-- ARCATOR_META:${JSON.stringify({ type: 'wiki', sectionId, allowedEditors, content: undefined })} -->`);
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
@@ -698,8 +708,7 @@ function registerPageWikiManagement() {
 
 function wikiApp() {
     return {
-        tab: 'home', loading: true, newTabs: [], legacyTabs: [], tabContent: {}, tabMeta: {},
-        get tabs() { return [...this.newTabs, ...this.legacyTabs]; },
+        tab: 'home', loading: true, tabs: [], tabContent: {}, tabMeta: {},
         get currentUser() { return Alpine.store('auth')?.user; },
         get isAdmin() { return Alpine.store('auth')?.isAdmin; },
         get canEdit() { return this.currentUser && (this.isAdmin || this.tabMeta[this.tab]?.allowedEditors?.includes(this.currentUser.uid)); },
@@ -711,40 +720,70 @@ function wikiApp() {
                 const docs = [];
                 snap.forEach(d => {
                     const id = d.id;
-                    if (id.startsWith('wk_') || id.startsWith('wiki_')) {
+                    if (id.startsWith('wk_') || id.startsWith('wiki_') || id.startsWith('~w')) {
                         docs.push({ id: d.id, ...d.data() });
                     }
                 });
 
                 docs.forEach(doc => {
                     const payload = parseBodyJson(doc.body);
-                    const sectionId = doc.id.replace(/^wk_/, '').replace(/^wiki_/, '');
+                    let sectionId = doc.id;
+                    if (sectionId.startsWith('wk_')) sectionId = sectionId.substring(3);
+                    else if (sectionId.startsWith('wiki_')) sectionId = sectionId.substring(5);
+                    else if (sectionId.startsWith('~w')) sectionId = sectionId.replace(/^~w\d*-/, '');
+
                     const content = payload.content || doc.body;
-                    const isNew = payload.isNew || doc.id.startsWith('wk_');
-                    
                     this.tabContent[sectionId] = content;
                     this.tabMeta[sectionId] = { ...payload, docId: doc.id };
 
-                    const tabObj = { id: sectionId, label: doc.title || (sectionId.charAt(0).toUpperCase() + sectionId.slice(1)), icon: getWikiIcon(sectionId) };
-                    if (isNew) { this.newTabs.push(tabObj); }
-                    else { this.legacyTabs.push(tabObj); }
+                    this.tabs.push({ 
+                        id: sectionId, 
+                        label: doc.title || (sectionId.charAt(0).toUpperCase() + sectionId.slice(1)), 
+                        icon: getWikiIcon(sectionId) 
+                    });
                 });
 
-                this.newTabs.sort((a, b) => a.label.localeCompare(b.label));
-                this.legacyTabs.sort((a, b) => a.label.localeCompare(b.label));
+                const coreOrder = ['home', 'machines', 'growth', 'mcadmin', 'servers', 'software', 'staff', 'sysadmin'];
+                this.tabs.sort((a, b) => {
+                    const aMeta = this.tabMeta[a.id] || {};
+                    const bMeta = this.tabMeta[b.id] || {};
+                    const aIsCore = aMeta.docId?.startsWith('~w2601-');
+                    const bIsCore = bMeta.docId?.startsWith('~w2601-');
 
-                if (this.tabs.length > 0 && !this.tabs.find(t => t.id === this.tab)) {
+                    if (aIsCore && bIsCore) {
+                        const aIdx = coreOrder.indexOf(a.id);
+                        const bIdx = coreOrder.indexOf(b.id);
+                        return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+                    }
+                    if (aIsCore) return -1;
+                    if (bIsCore) return 1;
+                    return a.label.localeCompare(b.label);
+                });
+
+                const urlParams = new URL(globalThis.location.href).searchParams;
+                const queryPage = urlParams.get('page') || urlParams.get('tab');
+                if (queryPage && this.tabContent[queryPage]) {
+                    this.tab = queryPage;
+                } else if (!this.tabContent[this.tab] && this.tabs.length > 0) {
                     this.tab = this.tabs[0].id;
                 }
+
+                this.loading = false;
                 this.$nextTick(() => this.renderTab(this.tab));
             } catch (err) {
-                console.error("Wiki init error:", err);
-            } finally {
+                console.error("Wiki error:", err);
                 this.loading = false;
+            } finally {
                 markSearchReady();
             }
         },
-        renderTab(id) { const el = document.querySelector(`.wiki-content[data-tab="${id}"]`); if (el && this.tabContent[id]) { el.innerHTML = this.tabContent[id]; el.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); } },
+        renderTab(id) { 
+            const container = document.getElementById('wiki-main-container');
+            if (container && this.tabContent[id]) { 
+                container.innerHTML = typeof marked !== 'undefined' ? marked.parse(this.tabContent[id]) : this.tabContent[id]; 
+                container.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); 
+            } 
+        },
         isTransitioning: false,
         selectTab(id) {
             if (this.tab === id || this.isTransitioning) return;

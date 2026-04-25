@@ -9,9 +9,8 @@
 ## WIKI
 
 - `docs/` COLLECTION
-- NEW: `wk_*` + `isNew: true`
-- LEGACY: `wiki_*`
-- SIDEBAR SPLIT
+- ID: `wk_*`, `wiki_*`, `~w*`
+- UNIFIED LIST
 
 ## DATA
 
