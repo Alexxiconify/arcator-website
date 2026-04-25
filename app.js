@@ -1,7 +1,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js';
 import { createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, unlink, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js';
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, initializeFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
+import { addDoc, collection, deleteDoc, doc, getCountFromServer, getDoc, getDocs, initializeFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
 import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
 import './js/keys.js';
 import './js/glitch.js';
@@ -186,7 +186,6 @@ function registerUsersStore() {
         },
         get(uid) {
             if (this.cache[uid]) return this.cache[uid];
-            let Alpine;
             const s = Alpine.store('auth');
             if (s?.user?.uid === uid && s.profile) return s.profile;
             return { displayName: 'Unknown', photoURL: './defaultuser.png' };
@@ -347,7 +346,7 @@ function registerAuthStore() {
         async saveProfile(uid, profileData) {
             const safeData = { ...profileData };
             delete safeData.admin; delete safeData.role; delete safeData.staff; delete safeData.uid; delete safeData.createdAt;
-            const merged = { ...(this.profile || {}), ...safeData };
+            const merged = { ...this.profile, ...safeData };
             await updateDoc(docsRef(profileDocId(uid)), {
                 title: (merged.displayName || this.user?.displayName || 'User').slice(0, 100),
                 body: safeBody(encodeProfileBody(merged)),
@@ -422,7 +421,7 @@ function forumData() {
             const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('createdAt', 'desc')));
             this.threads = await Promise.all(snap.docs.map(d => this.mapThreadDoc(d)));
             this.threads = this.threads.filter(t => !isPageDocId(t.id) && !isWikiDocId(t.id));
-            this.threads.forEach(t => indexDoc({ kind: 'thread', id: t.id, title: t.title, body: (t.description || '').replace(/<[^>]+>/g, ' ') }));
+            this.threads.forEach(t => indexDoc({ kind: 'thread', id: t.id, title: t.title, body: (t.description || '').replaceAll(/<[^>]+>/g, ' ') }));
             const ids = this.getUniqueAuthorIds();
             await Promise.all(ids.map(fetchAuthor));
             this.loading = false;
@@ -437,21 +436,18 @@ function forumData() {
         },
         async mapThreadDoc(d) {
             const raw = d.data();
-            const data = {
+            const q = query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', d.id));
+            const countSnap = await getCountFromServer(q);
+            return {
                 id: d.id,
                 ...raw,
                 description: raw.body || '',
-                expanded: true,
+                expanded: false,
                 comments: [],
+                commentCount: countSnap.data().count,
                 loadingComments: false,
                 quill: null
             };
-            const cSnap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', d.id), orderBy('createdAt', 'asc')));
-            data.comments = cSnap.docs.map(cd => {
-                const c = cd.data();
-                return { id: cd.id, ...c, content: c.body || '', parentCommentId: null };
-            });
-            return data;
         },
         getAuthor, fetchAuthor, formatDate,
         getThreadMeta(t) {
@@ -482,10 +478,11 @@ function forumData() {
         },
         async toggleThread(t) {
             t.expanded = !t.expanded;
-            if (t.expanded && !t.comments.length) {
+            if (t.expanded && !t.comments.length && t.commentCount > 0) {
                 t.loadingComments = true;
                 const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', t.id), orderBy('createdAt', 'asc')));
                 t.comments = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
+                t.commentCount = t.comments.length;
                 await Promise.all([...new Set(t.comments.map(c => c.authorId).filter(Boolean))].map(fetchAuthor));
                 t.loadingComments = false;
             }
@@ -521,20 +518,20 @@ function forumData() {
             batch.update(docsRef(fid), { lastReplyAt: serverTimestamp() });
             await batch.commit();
             t.quill.root.innerHTML = '';
-            t.comments = (await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', fid), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
+            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', fid), orderBy('createdAt', 'asc')));
+            t.comments = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
+            t.commentCount = t.comments.length;
         },
         async vote(fid, c, type) {
             const u = Alpine.store('auth').user; if (!u) return Swal.fire('Error', 'Sign in to vote', 'error');
-            const r = { ...(c.reactions || {}) };
+            const r = { ...c.reactions };
             const uid = u.uid;
-            const mine = { ...(r[uid] || {}) };
+            const mine = { ...r[uid] };
             if (type === 'up' || type === 'down') {
                 const other = type === 'up' ? 'down' : 'up';
                 if (mine[type]) delete mine[type];
                 else { mine[type] = true; delete mine[other]; }
-            } else {
-                if (mine[type]) delete mine[type]; else mine[type] = true;
-            }
+            } else if (mine[type]) delete mine[type]; else mine[type] = true;
             r[uid] = mine;
             await updateDoc(docsRef(c.id), { reactions: r });
             c.reactions = r;
@@ -575,13 +572,20 @@ function forumData() {
                 }));
                 batch.update(docsRef(t.id), { lastReplyAt: serverTimestamp() });
                 await batch.commit();
-                t.comments = (await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', t.id), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
+                const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', t.id), orderBy('createdAt', 'asc')));
+                t.comments = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
+                t.commentCount = t.comments.length;
             }
         },
         async deleteComment(fid, cid) {
             if (!confirm('Delete?')) return;
             await deleteDoc(docsRef(cid));
-            const t = this.threads.find(t => t.id === fid); if (t) t.comments = (await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', fid), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
+            const t = this.threads.find(t => t.id === fid);
+            if (t) {
+                const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', fid), orderBy('createdAt', 'asc')));
+                t.comments = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
+                t.commentCount = t.comments.length;
+            }
         },
         async editThread(t) {
             const { value: v } = await Swal.fire({
@@ -772,7 +776,7 @@ function wikiApp() {
                 const sectionId = payload.sectionId || d.id.replace(/^wk_/, '');
                 this.tabContent[sectionId] = payload.content || '';
                 this.tabMeta[sectionId] = { allowedEditors: payload.allowedEditors || [], updatedAt: data.updatedAt, docId: d.id };
-                indexDoc({ kind: 'wiki', id: sectionId, title: this.tabs.find(t => t.id === sectionId)?.label ?? sectionId, body: (payload.content || '').replace(/<[^>]+>/g, ' ') });
+                indexDoc({ kind: 'wiki', id: sectionId, title: this.tabs.find(t => t.id === sectionId)?.label ?? sectionId, body: (payload.content || '').replaceAll(/<[^>]+>/g, ' ') });
             });
             this.loading = false; this.$nextTick(() => this.renderTab(this.tab));
             markSearchReady();
@@ -809,7 +813,7 @@ function pagesData() {
                     const payload = parseBodyJson(raw.body);
                     return { id: d.id, ...raw, slug: payload.slug || d.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
                 });
-            this.pages.forEach(p => indexDoc({ kind: 'page', id: p.id, title: p.title, body: (p.content || '').replace(/<[^>]+>/g, ' ') }));
+            this.pages.forEach(p => indexDoc({ kind: 'page', id: p.id, title: p.title, body: (p.content || '').replaceAll(/<[^>]+>/g, ' ') }));
             if (!this.currentPageId) this.loading = false;
             markSearchReady();
         },
@@ -825,9 +829,9 @@ function pagesData() {
             this.loading = false;
         },
         async loadAuthor(uid) {
-            if (!uid) { return; }
-            const snap = await getDoc(docsRef(profileDocId(uid)));
-            this.authorName = snap.exists() ? (parseProfileData(snap.data(), uid).displayName || 'Unknown') : uid;
+            if (!uid) return;
+            await Alpine.store('users').fetch(uid);
+            this.authorName = Alpine.store('users').get(uid).displayName || 'Unknown';
         },
         formatDate: ts => formatDate(ts),
         renderContent(c) { if (!c) { return ''; } const isHtml = /<[a-z][\s\S]*>/i.test(c); return DOMPurify.sanitize(isHtml ? c : marked.parse(c)); },
@@ -850,7 +854,7 @@ function adminDashboard() {
             return this.users.filter(u => (u.displayName?.toLowerCase().includes(l)) || (u.email?.toLowerCase().includes(l)));
         },
         get recentActivity() {
-            const acts = [...this.threads.map(t => ({ id: t.id, text: `New thread: ${t.title}`, time: t.createdAt, icon: 'bi-chat-square-text text-warning' })), ...this.dms.map(d => ({ id: d.id, text: `Message in ${d.participantNames ? Object.values(d.participantNames).join(', ') : 'Conversation'}`, time: d.lastMessageTime, icon: 'bi-envelope text-info' }))];
+            const acts = [...this.threads.map(t => ({ id: t.id, text: `New thread: ${t.title}`, time: t.createdAt, icon: 'bi-chat-square-text text-warning' })), ...this.dms.map(d => ({ id: d.id, text: `Message in ${d.participantNames ? Object.values(d.participantNames).join(', ') : 'Conversation'}`, time: d.lastReplyAt, icon: 'bi-envelope text-info' }))];
             return [...acts].sort((a, b) => (b.time?.seconds || 0) - (a.time?.seconds || 0)).slice(0, 5);
         },
         async init() {
@@ -878,7 +882,7 @@ function adminDashboard() {
                 return { id: x.id, ...x.data(), sectionId: p.sectionId || x.id.replace(/^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
             });
         },
-        getAuthorName(uid) { const u = this.users.find(x => x.id === uid); return u ? (u.displayName || u.email) : 'Unknown'; },
+        getAuthorName(uid) { return Alpine.store('users').get(uid).displayName || 'Unknown'; },
         getDMName(dm) { return (dm.name && dm.name !== 'Chat') ? dm.name : dm.participants.map(id => this.getAuthorName(id)).join(', '); },
         formatDate: ts => formatDate(ts),
         async createPage() { await Alpine.store('mgmt').createPage(() => this.refreshAll()); },
@@ -917,7 +921,7 @@ function adminDashboard() {
             };
         },
         async saveUserEdit(uid, v) {
-            const merged = { ...(this.users.find(x => x.id === uid) || {}), ...v };
+            const merged = { ...this.users.find(x => x.id === uid), ...v };
             await updateDoc(docsRef(profileDocId(uid)), {
                 title: (merged.displayName || 'User').slice(0, 100),
                 body: safeBody(encodeProfileBody(merged)),
@@ -1043,6 +1047,7 @@ document.addEventListener('alpine:init', () => {
     });
     registerAll();
 });
+
 function updateSpinnerState(el, loading, isSm) {
     if (loading) {
         el.style.setProperty('display', isSm ? 'block' : 'flex', 'important');
@@ -1050,7 +1055,6 @@ function updateSpinnerState(el, loading, isSm) {
         el.style.setProperty('display', 'none', 'important');
     }
 }
-if (globalThis.Alpine) { registerAll(); }
 document.addEventListener('DOMContentLoaded', initLayout);
 
 export { app, auth, db, projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection };
