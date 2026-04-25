@@ -1,21 +1,18 @@
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js';
-import { createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, unlink, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js';
-import { addDoc, collection, deleteDoc, doc, getCountFromServer, getDoc, getDocs, initializeFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
+
+import { 
+  db, auth, srvTs as serverTimestamp, deleteField,
+  collection, doc, query, where, orderBy, limit, startAfter,
+  getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+  onSnapshot, runTransaction, writeBatch, getCountFromServer, FieldPath,
+  onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut,
+  GoogleAuthProvider, GithubAuthProvider 
+} from './js/firebase.js';
 import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
 import './js/keys.js';
 import './js/glitch.js';
-import Alpine from 'alpinejs';
-import Swal from 'sweetalert2';
-import Quill from 'quill';
-
-const cfg = { apiKey: "AIzaSyAYzo2zbIZwq9PYZmsXI6_RTnzbNSEpzwQ", authDomain: "arcator-v2.firebaseapp.com", databaseURL: "https://arcator-v2-default-rtdb.firebaseio.com", projectId: "arcator-v2", storageBucket: "arcator-v2.firebasestorage.app", messagingSenderId: "171774915460", appId: "1:171774915460:web:97b95c10b81fe4c7eae3d1", measurementId: "G-36VY36ECG5" };
-const app = initializeApp(cfg);
-app.automaticDataCollectionEnabled = false;
-const auth = getAuth(app);
-const db = initializeFirestore(app, {});
-const projectId = cfg.projectId;
-const appId = cfg.appId;
+const { Alpine, Swal, Quill } = globalThis;
 const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
 
@@ -91,6 +88,7 @@ function parseProfileData(d, uid) {
         uid,
         displayName: d?.title || payload.displayName || 'Unknown User',
         photoURL: d?.photoURL || payload.photoURL || DEFAULT_PROFILE_PIC,
+        glassColor: payload.glassColor || '#000000',
         ...payload
     };
 }
@@ -226,9 +224,11 @@ function registerAuthStore() {
                             cacheUser(u, this.profile);
                             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS, this.profile.backgroundImage, this.profile.glassColor, this.profile.glassOpacity, this.profile.glassBlur);
                         }
-                        const token = await u.getIdTokenResult();
-                        this.isAdmin = token?.claims?.admin === true;
-                    } catch (e) { console.error('Profile load error:', e); }
+                        const result = await u.getIdTokenResult();
+                        this.isAdmin = result?.claims?.admin === true;
+                    } catch (e) {
+                        console.error(`Profile load error for docs/${profileDocId(u.uid)}:`, e.code, e.message);
+                    }
                 } else {
                     this.profile = null;
                     this.isAdmin = false;
@@ -782,7 +782,17 @@ function wikiApp() {
             markSearchReady();
         },
         renderTab(id) { const el = document.querySelector(`.wiki-content[data-tab="${id}"]`); if (el && this.tabContent[id]) { el.innerHTML = this.tabContent[id]; el.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); } },
-        selectTab(id) { document.startViewTransition ? document.startViewTransition(() => { this.tab = id; this.$nextTick(() => this.renderTab(id)); }) : (this.tab = id, this.$nextTick(() => this.renderTab(id))); },
+        selectTab(id) {
+            if (document.startViewTransition) {
+                document.startViewTransition(() => {
+                    this.tab = id;
+                    this.$nextTick(() => this.renderTab(id));
+                });
+            } else {
+                this.tab = id;
+                this.$nextTick(() => this.renderTab(id));
+            }
+        },
         async editCurrentTab() {
             const content = this.tabContent[this.tab] || '';
             const { value } = await Swal.fire({ title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`, width: '900px', html: `<textarea id="wiki-edit" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('wiki-edit').value = content; }, preConfirm: () => document.getElementById('wiki-edit').value });
@@ -1028,7 +1038,7 @@ function registerResourcesData() {
 }
 
 function registerAll() {
-    registerAuthStore(); registerUsersStore(); registerPageWikiManagement(); registerForumData(); registerWikiApp(); registerPagesData(); registerAdminDashboard(); registerResourcesData(); registerMessageData();
+    registerUsersStore(); registerPageWikiManagement(); registerForumData(); registerWikiApp(); registerPagesData(); registerAdminDashboard(); registerResourcesData(); registerMessageData();
 }
 
 document.addEventListener('alpine:init', () => {
@@ -1057,6 +1067,7 @@ function updateSpinnerState(el, loading, isSm) {
 }
 document.addEventListener('DOMContentLoaded', initLayout);
 
-export { app, auth, db, projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection };
-export { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, linkWithCredential, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, TwitterAuthProvider, EmailAuthProvider, signOut, updateProfile, sendPasswordResetEmail, unlink, onAuthStateChanged, onIdTokenChanged } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js';
-export { increment, startAfter, limit, where, deleteDoc, orderBy, query, onSnapshot, updateDoc, getDocs, addDoc, getDoc, setDoc, serverTimestamp, collection, collectionGroup, doc } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
+const projectId = "arcator-v2";
+const appId = "1:171774915460:web:2fc364da8a1bd095eae3d1";
+
+export { auth, db, projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection };

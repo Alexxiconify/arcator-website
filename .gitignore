@@ -12,3 +12,18 @@ codeql-custom-queries-javascript/
 firebase.json
 firestore.indexes.json
 firestore.rules
+
+# Sensitive / Local Data
+.env
+.env.local
+.env.*.local
+.firebase/
+firebase-debug.log*
+*.log
+service-account.json
+credentials.json
+auth-key.json
+.DS_Store
+Thumbs.db
+backup/
+Website-main.zip

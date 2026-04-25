@@ -5,52 +5,64 @@ const ms = new MiniSearch({
   storeFields: ['title', 'kind', 'href', 'body'],
 });
 
-let readyResolve;
-export const searchReady = new Promise(r => readyResolve = r);
-
-let readySections = 0;
-export function markSearchReady() {
-  if (++readySections >= 3) readyResolve();
-}
-
-// Map as ordered LRU: O(1) insert/delete/check; insertion order = oldest→newest
-const _recents = new Map();
-const MAX_RECENTS = 12;
+const _recentIds = [];
 
 export function indexDoc(d) {
-  const isPage = d.kind === 'page';
+  if (!d || (d.kind === 'message' && !d.body?.trim())) {
+    return;
+  }
   const href =
-    d.kind === 'thread' ? './forms.html'
-    : d.kind === 'wiki'   ? './wiki.html'
-    : `./pages.html?id=${d.id}`;
-
+    d.kind === 'profile'
+      ? `/profile/${d.authorId}`
+      : d.kind === 'message'
+        ? d.parent.startsWith('u_') ? `/profile/${d.parent.slice(2)}` : `/docs/${d.parent}`
+        : `/docs/${d.id}`;
   const entry = {
     id: d.id,
     title: d.title ?? '',
-    body: isPage ? (d.body ?? '').slice(0, 2000) : '',
+    body: (d.body ?? '').slice(0, 2000),
     kind: d.kind,
     href,
   };
   ms.has(d.id) ? ms.replace(entry) : ms.add(entry);
+  if (d.kind !== 'message') {
+    const i = _recentIds.indexOf(d.id);
+    if (i !== -1) {
+      _recentIds.splice(i, 1);
+    }
+    _recentIds.unshift(d.id);
+    if (_recentIds.length > 12) {
+      _recentIds.pop();
+    }
+  }
+}
 
-  _recents.delete(d.id);
-  _recents.set(d.id, true);
-  if (_recents.size > MAX_RECENTS) _recents.delete(_recents.keys().next().value);
+// Lightweight index for author stubs loaded by hydrateAuthors.
+// Does not overwrite a full profile already indexed by indexDoc.
+export function indexStub(uid, title) {
+  const id = `u_${uid}`;
+  if (!ms.has(id)) {
+    ms.add({ id, title, body: '', kind: 'profile', href: `/profile/${uid}` });
+  }
 }
 
 export function recentResults() {
-  return [..._recents.keys()].reverse().map(id => ms.getStoredFields(id)).filter(Boolean);
+  return _recentIds.map((id) => ms.getStoredFields(id)).filter(Boolean);
 }
 
 export function removeDoc(id) {
-  if (ms.has(id)) ms.remove({ id, ...ms.getStoredFields(id) });
-  _recents.delete(id);
+  if (ms.has(id)) ms.remove({ id });
+  const i = _recentIds.indexOf(id);
+  if (i !== -1) _recentIds.splice(i, 1);
 }
 
 export function searchDocs(query) {
-  return ms.search(query, {
-    prefix: true,
-    fuzzy: 0.2,
-    boost: { title: 3 },
-  }).slice(0, 15);
+  return ms
+    .search(query, {
+      prefix: true,
+      fuzzy: 0.2,
+      boost: { title: 3 },
+      boostDocument: (_, __, f) => (f.kind === 'message' ? 0.5 : 1),
+    })
+    .slice(0, 15);
 }

@@ -252,179 +252,181 @@ async function pageGlitch(el, opts = {}) {
     return;
   }
 
-  const overlay = document.createElement("canvas");
-  overlay.width = sourceCanvas.width || window.innerWidth;
-  overlay.height = sourceCanvas.height || window.innerHeight;
-  overlay.style.cssText =
-    "position:fixed;inset:0;z-index:10000;width:100vw;height:100vh;pointer-events:none;";
-  document.body.appendChild(overlay);
+  {
+      const overlay = document.createElement("canvas");
+      overlay.width = sourceCanvas.width || window.innerWidth;
+      overlay.height = sourceCanvas.height || window.innerHeight;
+      overlay.style.cssText =
+        "position:fixed;inset:0;z-index:10000;width:100vw;height:100vh;pointer-events:none;";
+      document.body.appendChild(overlay);
 
-  const gl = overlay.getContext("webgl2");
-  if (!gl) {
-    console.error("WebGL2 not available");
-    overlay.remove();
-    onDone?.();
-    return;
-  }
-  gl.getExtension("EXT_color_buffer_float");
-
-  // Scale drawing buffer to physical pixels so scanlines land on individual
-  // physical pixels. Capped at MAX_TEXTURE_SIZE to prevent FBO failures on
-  // large or very high-DPI screens.
-  const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-  const dprScale = Math.min(dpr, maxTex / Math.max(overlay.width, overlay.height));
-  if (dprScale > 1) {
-    overlay.width = Math.floor(overlay.width * dprScale);
-    overlay.height = Math.floor(overlay.height * dprScale);
-  }
-
-  const vs = compileShader(gl, gl.VERTEX_SHADER, VERT);
-  const fs = compileShader(gl, gl.FRAGMENT_SHADER, FRAG);
-  const compFs = compileShader(gl, gl.FRAGMENT_SHADER, FRAG_COMP);
-  const prog = createProgram(gl, vs, fs);
-  const compProg = createProgram(gl, vs, compFs);
-
-  const quad = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, quad);
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
-    gl.STATIC_DRAW,
-  );
-  gl.enableVertexAttribArray(0);
-  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-  let sourceTex;
-  try {
-    sourceTex = uploadTexture(gl, 0, sourceCanvas, false);
-  } catch (_) {
-    // tainted canvas fallback: use noise as diffuse
-    const noise = generateHeightmap(dtSize);
-    sourceTex = uploadTexture(gl, 0, noise, true, dtSize, dtSize);
-  }
-
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-  const hmap = generateHeightmap(dtSize);
-  const dispTex = uploadTexture(gl, 1, hmap, true, dtSize, dtSize, true);
-
-  // Glitch program uniforms (units 0, 1)
-  gl.useProgram(prog);
-  gl.uniform1i(gl.getUniformLocation(prog, 'tDiffuse'), 0);
-  gl.uniform1i(gl.getUniformLocation(prog, 'tDisp'), 1);
-  const u = {};
-  for (const name of ['byp', 'amount', 'angle', 'seed', 'seed_x', 'seed_y', 'distortion_x', 'distortion_y', 'col_s']) {
-    u[name] = gl.getUniformLocation(prog, name);
-  }
-
-  // Composite program uniforms (units 2, 3)
-  gl.useProgram(compProg);
-  gl.uniform1i(gl.getUniformLocation(compProg, 'tCurr'), 2);
-  gl.uniform1i(gl.getUniformLocation(compProg, 'tPrev'), 3);
-  const ucTemporal = gl.getUniformLocation(compProg, 'temporal');
-
-  // Ping-pong FBOs for temporal channel offset
-  const fboA = createFBO(gl, overlay.width, overlay.height);
-  const fboB = createFBO(gl, overlay.width, overlay.height);
-  let ping = fboA, pong = fboB;
-
-  // createFBO clobbers TEXTURE0 — restore intended bindings
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, sourceTex);
-  gl.activeTexture(gl.TEXTURE1);
-  gl.bindTexture(gl.TEXTURE_2D, dispTex);
-
-  let curF = 0;
-  let randX = randInt(120, 240);
-  let hmapFrame = 0;
-  gl.viewport(0, 0, overlay.width, overlay.height);
-
-  const interval = 1000 / fps;
-  let elapsed = 0;
-  let lastTime = performance.now();
-  let rafId;
-
-  function frame(now) {
-    rafId = requestAnimationFrame(frame);
-    const dt = now - lastTime;
-    if (dt < interval) return;
-    lastTime = now - (dt % interval);
-    elapsed += interval;
-
-    const env = Math.sin((elapsed / duration) * Math.PI);
-
-    // Pass 1: glitch → ping FBO
-    gl.bindFramebuffer(gl.FRAMEBUFFER, ping.fbo);
-    gl.useProgram(prog);
-    gl.uniform1f(u.seed, Math.random());
-    gl.uniform1f(u.col_s, Math.random() * 0.05 * env);
-
-    let temporal = 0;
-    if (curF % randX === 0 || wild) {
-      gl.uniform1i(u.byp, 0);
-      gl.uniform1f(u.amount, (Math.random() / 30.0) * env);
-      gl.uniform1f(u.angle, randFloat(-Math.PI, Math.PI));
-      gl.uniform1f(u.seed_x, randFloat(-env, env));
-      gl.uniform1f(u.seed_y, randFloat(-env, env));
-      gl.uniform1f(u.distortion_x, randFloat(0.0, 1.0));
-      gl.uniform1f(u.distortion_y, randFloat(0.0, 1.0));
-      curF = 0;
-      randX = randInt(120, 240);
-      if (hmapFrame % 2 === 0) {
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, dispTex);
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, dtSize, dtSize, gl.RGB, gl.FLOAT, generateHeightmap(dtSize));
+      const gl = overlay.getContext("webgl2");
+      if (!gl) {
+        console.error("WebGL2 not available");
+        overlay.remove();
+        if (onDone) onDone();
+        return;
       }
-      hmapFrame++;
-      temporal = env * 0.18;
-    } else if (curF % randX < randX / 5) {
-      gl.uniform1i(u.byp, 0);
-      gl.uniform1f(u.amount, (Math.random() / 90.0) * env);
-      gl.uniform1f(u.angle, randFloat(-Math.PI, Math.PI));
-      gl.uniform1f(u.seed_x, randFloat(-0.3, 0.3));
-      gl.uniform1f(u.seed_y, randFloat(-0.3, 0.3));
-      gl.uniform1f(u.distortion_x, randFloat(0.0, 1.0));
-      gl.uniform1f(u.distortion_y, randFloat(0.0, 1.0));
-      temporal = env * 0.09;
-    } else {
-      gl.uniform1i(u.byp, 1);
-      temporal = env * 0.03;
-    }
-    curF++;
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.getExtension("EXT_color_buffer_float");
 
-    // Pass 2: composite curr+prev → screen
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.useProgram(compProg);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, ping.tex);
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, pong.tex);
-    gl.uniform1f(ucTemporal, temporal);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+      // Scale drawing buffer to physical pixels so scanlines land on individual
+      // physical pixels. Capped at MAX_TEXTURE_SIZE to prevent FBO failures on
+      // large or very high-DPI screens.
+      const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+      const dprScale = Math.min(dpr, maxTex / Math.max(overlay.width, overlay.height));
+      if (dprScale > 1) {
+        overlay.width = Math.floor(overlay.width * dprScale);
+        overlay.height = Math.floor(overlay.height * dprScale);
+      }
 
-    [ping, pong] = [pong, ping];
+      const vs = compileShader(gl, gl.VERTEX_SHADER, VERT);
+      const fs = compileShader(gl, gl.FRAGMENT_SHADER, FRAG);
+      const compFs = compileShader(gl, gl.FRAGMENT_SHADER, FRAG_COMP);
+      const prog = createProgram(gl, vs, fs);
+      const compProg = createProgram(gl, vs, compFs);
 
-    if (elapsed >= duration) {
-      cancelAnimationFrame(rafId);
-      gl.deleteProgram(prog);
-      gl.deleteProgram(compProg);
-      gl.deleteShader(vs);
-      gl.deleteShader(fs);
-      gl.deleteShader(compFs);
-      gl.deleteTexture(sourceTex);
-      gl.deleteTexture(dispTex);
-      gl.deleteBuffer(quad);
-      gl.deleteFramebuffer(fboA.fbo);
-      gl.deleteTexture(fboA.tex);
-      gl.deleteFramebuffer(fboB.fbo);
-      gl.deleteTexture(fboB.tex);
-      overlay.remove();
-      onDone?.();
-    }
+      const quad = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+        gl.STATIC_DRAW,
+      );
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      let sourceTex;
+      try {
+        sourceTex = uploadTexture(gl, 0, sourceCanvas, false);
+      } catch (_) {
+        // tainted canvas fallback: use noise as diffuse
+        const noise = generateHeightmap(dtSize);
+        sourceTex = uploadTexture(gl, 0, noise, true, dtSize, dtSize);
+      }
+
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      const hmap = generateHeightmap(dtSize);
+      const dispTex = uploadTexture(gl, 1, hmap, true, dtSize, dtSize, true);
+
+      // Glitch program uniforms (units 0, 1)
+      gl.useProgram(prog);
+      gl.uniform1i(gl.getUniformLocation(prog, 'tDiffuse'), 0);
+      gl.uniform1i(gl.getUniformLocation(prog, 'tDisp'), 1);
+      const u = {};
+      for (const name of ['byp', 'amount', 'angle', 'seed', 'seed_x', 'seed_y', 'distortion_x', 'distortion_y', 'col_s']) {
+        u[name] = gl.getUniformLocation(prog, name);
+      }
+
+      // Composite program uniforms (units 2, 3)
+      gl.useProgram(compProg);
+      gl.uniform1i(gl.getUniformLocation(compProg, 'tCurr'), 2);
+      gl.uniform1i(gl.getUniformLocation(compProg, 'tPrev'), 3);
+      const ucTemporal = gl.getUniformLocation(compProg, 'temporal');
+
+      // Ping-pong FBOs for temporal channel offset
+      const fboA = createFBO(gl, overlay.width, overlay.height);
+      const fboB = createFBO(gl, overlay.width, overlay.height);
+      let ping = fboA, pong = fboB;
+
+      // createFBO clobbers TEXTURE0 — restore intended bindings
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, sourceTex);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, dispTex);
+
+      let curF = 0;
+      let randX = randInt(120, 240);
+      let hmapFrame = 0;
+      gl.viewport(0, 0, overlay.width, overlay.height);
+
+      const interval = 1000 / fps;
+      let elapsed = 0;
+      let lastTime = performance.now();
+      let rafId;
+
+      function frame(now) {
+        rafId = requestAnimationFrame(frame);
+        const dt = now - lastTime;
+        if (dt < interval) return;
+        lastTime = now - (dt % interval);
+        elapsed += interval;
+
+        const env = Math.sin((elapsed / duration) * Math.PI);
+
+        // Pass 1: glitch → ping FBO
+        gl.bindFramebuffer(gl.FRAMEBUFFER, ping.fbo);
+        gl.useProgram(prog);
+        gl.uniform1f(u.seed, Math.random());
+        gl.uniform1f(u.col_s, Math.random() * 0.05 * env);
+
+        let temporal = 0;
+        if (curF % randX === 0 || wild) {
+          gl.uniform1i(u.byp, 0);
+          gl.uniform1f(u.amount, (Math.random() / 30.0) * env);
+          gl.uniform1f(u.angle, randFloat(-Math.PI, Math.PI));
+          gl.uniform1f(u.seed_x, randFloat(-env, env));
+          gl.uniform1f(u.seed_y, randFloat(-env, env));
+          gl.uniform1f(u.distortion_x, randFloat(0.0, 1.0));
+          gl.uniform1f(u.distortion_y, randFloat(0.0, 1.0));
+          curF = 0;
+          randX = randInt(120, 240);
+          if (hmapFrame % 2 === 0) {
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, dispTex);
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, dtSize, dtSize, gl.RGB, gl.FLOAT, generateHeightmap(dtSize));
+          }
+          hmapFrame++;
+          temporal = env * 0.18;
+        } else if (curF % randX < randX / 5) {
+          gl.uniform1i(u.byp, 0);
+          gl.uniform1f(u.amount, (Math.random() / 90.0) * env);
+          gl.uniform1f(u.angle, randFloat(-Math.PI, Math.PI));
+          gl.uniform1f(u.seed_x, randFloat(-0.3, 0.3));
+          gl.uniform1f(u.seed_y, randFloat(-0.3, 0.3));
+          gl.uniform1f(u.distortion_x, randFloat(0.0, 1.0));
+          gl.uniform1f(u.distortion_y, randFloat(0.0, 1.0));
+          temporal = env * 0.09;
+        } else {
+          gl.uniform1i(u.byp, 1);
+          temporal = env * 0.03;
+        }
+        curF++;
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        // Pass 2: composite curr+prev → screen
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.useProgram(compProg);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, ping.tex);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, pong.tex);
+        gl.uniform1f(ucTemporal, temporal);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        [ping, pong] = [pong, ping];
+
+        if (elapsed >= duration) {
+          cancelAnimationFrame(rafId);
+          gl.deleteProgram(prog);
+          gl.deleteProgram(compProg);
+          gl.deleteShader(vs);
+          gl.deleteShader(fs);
+          gl.deleteShader(compFs);
+          gl.deleteTexture(sourceTex);
+          gl.deleteTexture(dispTex);
+          gl.deleteBuffer(quad);
+          gl.deleteFramebuffer(fboA.fbo);
+          gl.deleteTexture(fboA.tex);
+          gl.deleteFramebuffer(fboB.fbo);
+          gl.deleteTexture(fboB.tex);
+          overlay.remove();
+          if (onDone) onDone();
+        }
+      }
+      playGlitchAudio(duration);
+      rafId = requestAnimationFrame(frame);
   }
-  playGlitchAudio(duration);
-  rafId = requestAnimationFrame(frame);
 }
 
 window.pageGlitch = pageGlitch;
