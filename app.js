@@ -1,10 +1,13 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js';
 import { createUserWithEmailAndPassword, getAuth, GithubAuthProvider, GoogleAuthProvider, OAuthProvider, TwitterAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, linkWithPopup, unlink, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js';
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, increment, initializeFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, initializeFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';
 import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
 import './js/keys.js';
 import './js/glitch.js';
+import Alpine from 'alpinejs';
+import Swal from 'sweetalert2';
+import Quill from 'quill';
 
 const cfg = { apiKey: "AIzaSyAYzo2zbIZwq9PYZmsXI6_RTnzbNSEpzwQ", authDomain: "arcator-v2.firebaseapp.com", databaseURL: "https://arcator-v2-default-rtdb.firebaseio.com", projectId: "arcator-v2", storageBucket: "arcator-v2.firebasestorage.app", messagingSenderId: "171774915460", appId: "1:171774915460:web:97b95c10b81fe4c7eae3d1", measurementId: "G-36VY36ECG5" };
 const app = initializeApp(cfg);
@@ -16,7 +19,107 @@ const appId = cfg.appId;
 const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
 
-const COLLECTIONS = { USERS: 'user_profiles', USER_PROFILES: 'user_profiles', FORMS: 'forms', SUBMISSIONS: (formId) => `forms/${formId}/submissions`, CONVERSATIONS: 'conversations', CONV_MESSAGES: (convId) => `conversations/${convId}/messages`, THEMES: 'custom_themes', PAGES: 'temp_pages', WIKI_CONFIG: 'wiki_config', WIKI_PAGES: 'wiki_pages' };
+const COLLECTIONS = {
+    DOCS: 'docs',
+    ADMINS: 'admins',
+    BANS: 'bans',
+    GLOBAL: 'global',
+    USERS: 'docs',
+    USER_PROFILES: 'docs',
+    FORMS: 'docs',
+    SUBMISSIONS: () => 'docs',
+    CONVERSATIONS: 'docs',
+    CONV_MESSAGES: () => 'docs',
+    THEMES: 'docs',
+    PAGES: 'docs',
+    WIKI_CONFIG: 'docs',
+    WIKI_PAGES: 'docs'
+};
+
+const DOC_KIND = { ARTICLE: 'article', PROFILE: 'profile', MESSAGE: 'message' };
+const profileDocId = uid => `u_${uid}`;
+const pageDocId = slug => `pg_${(slug || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
+const wikiDocId = id => `wk_${(id || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
+const isWikiDocId = id => typeof id === 'string' && id.startsWith('wk_');
+const isPageDocId = id => typeof id === 'string' && id.startsWith('pg_');
+const docsCollection = () => collection(db, COLLECTIONS.DOCS);
+const docsRef = id => doc(db, COLLECTIONS.DOCS, id);
+
+function makeDocShape({ kind, authorId, title = '', body = '', photoURL = '', parent = null, allowReplies = false, allowPublicEdits = false, pinned = false, featured = false, spoiler = false }) {
+    const isProfile = kind === DOC_KIND.PROFILE;
+    const isMessage = kind === DOC_KIND.MESSAGE;
+    const isArticle = kind === DOC_KIND.ARTICLE;
+
+    // Enforce validPhotoURL: empty or https://... up to 492 chars
+    const safePhotoURL = (photoURL || '').startsWith('https://') ? photoURL.slice(0, 492) : '';
+
+    const base = {
+        kind,
+        authorId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        // Rule: Message title empty. Article max 500. Profile max 100.
+        title: (() => {
+            if (isMessage) return '';
+            if (isArticle) return title.slice(0, 500);
+            return title.slice(0, 100);
+        })(),
+        body,
+        // Rule: Message photoURL empty.
+        photoURL: isMessage ? '' : safePhotoURL,
+        // Rule: allowReplies == false unless article/profile
+        allowReplies: (isArticle || isProfile) ? !!allowReplies : false,
+        // Rule: allowPublicEdits == false unless article
+        allowPublicEdits: isArticle ? !!allowPublicEdits : false,
+        pinned: !!pinned,
+        featured: !!featured,
+        spoiler: !!spoiler,
+        reactions: {},
+        lastReplyAt: serverTimestamp(),
+        bodyIsHTML: false
+    };
+    if (isMessage) {
+        return { ...base, parent: parent || '' };
+    }
+    return base;
+}
+
+function parseProfileData(d, uid) {
+    let payload;
+    try { payload = d?.body ? JSON.parse(d.body) : {}; } catch { payload = {}; }
+    return {
+        uid,
+        displayName: d?.title || payload.displayName || 'Unknown User',
+        photoURL: d?.photoURL || payload.photoURL || DEFAULT_PROFILE_PIC,
+        ...payload
+    };
+}
+
+const encodeProfileBody = data => JSON.stringify({
+    displayName: data.displayName || '',
+    handle: data.handle || '',
+    email: data.email || '',
+    customCSS: data.customCSS || '',
+    themePreference: data.themePreference || DEFAULT_THEME_NAME,
+    fontScaling: data.fontScaling || 'normal',
+    backgroundImage: data.backgroundImage || '',
+    glassColor: data.glassColor || '',
+    glassOpacity: Number.isFinite(data.glassOpacity) ? data.glassOpacity : 0.95,
+    glassBlur: Number.isFinite(data.glassBlur) ? data.glassBlur : null,
+    discordId: data.discordId || '',
+    discordTag: data.discordTag || '',
+    discordPic: data.discordPic || '',
+    discordURL: data.discordURL || '',
+    githubPic: data.githubPic || '',
+    githubURL: data.githubURL || ''
+});
+
+const safeBody = value => (value || '').toString().trim() || '...';
+const parseBodyJson = body => {
+    try { return JSON.parse(body || '{}'); } catch { return {}; }
+};
+const pagePayload = (slug, content, authorId) => safeBody(JSON.stringify({ type: 'page', slug, content, authorId }));
+const wikiPayload = (sectionId, content, allowedEditors = []) => safeBody(JSON.stringify({ type: 'wiki', sectionId, content, allowedEditors }));
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
 const getCurrentUser = () => auth.currentUser;
@@ -76,13 +179,14 @@ function registerUsersStore() {
         async fetch(uid) {
             if (!uid || this.cache[uid]) return;
             try {
-                const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid));
-                const data = snap.exists() ? snap.data() : { displayName: 'Unknown User', photoURL: './defaultuser.png', uid };
+                const snap = await getDoc(docsRef(profileDocId(uid)));
+                const data = snap.exists() ? parseProfileData(snap.data(), uid) : { displayName: 'Unknown User', photoURL: './defaultuser.png', uid };
                 this.cache = { ...this.cache, [uid]: data };
             } catch (e) { console.error(`Fetch error ${uid}:`, e); }
         },
         get(uid) {
             if (this.cache[uid]) return this.cache[uid];
+            let Alpine;
             const s = Alpine.store('auth');
             if (s?.user?.uid === uid && s.profile) return s.profile;
             return { displayName: 'Unknown', photoURL: './defaultuser.png' };
@@ -117,21 +221,14 @@ function registerAuthStore() {
                 this.user = u;
                 if (u) {
                     try {
-                        const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, u.uid));
+                        const snap = await getDoc(docsRef(profileDocId(u.uid)));
                         if (snap.exists()) {
-                            this.profile = snap.data();
+                            this.profile = parseProfileData(snap.data(), u.uid);
                             cacheUser(u, this.profile);
                             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS, this.profile.backgroundImage, this.profile.glassColor, this.profile.glassOpacity, this.profile.glassBlur);
-
-                            // Check admins collection for source of truth
-                            try {
-                                const adminSnap = await getDoc(doc(db, 'admins', u.uid));
-                                this.isAdmin = adminSnap.exists();
-                            } catch (e) {
-                                console.error('Admin check failed:', e);
-                                this.isAdmin = false;
-                            }
                         }
+                        const token = await u.getIdTokenResult();
+                        this.isAdmin = token?.claims?.admin === true;
                     } catch (e) { console.error('Profile load error:', e); }
                 } else {
                     this.profile = null;
@@ -147,7 +244,6 @@ function registerAuthStore() {
 
         async login(email, password) {
             const result = await signInWithEmailAndPassword(auth, email, password);
-            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => { });
             return result.user;
         },
 
@@ -155,8 +251,22 @@ function registerAuthStore() {
             const { user } = await createUserWithEmailAndPassword(auth, email, password);
             const photoURL = generateProfilePic(displayName);
             await updateProfile(user, { displayName, photoURL });
-            const profile = { uid: user.uid, displayName, email, photoURL, handle, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), themePreference: DEFAULT_THEME_NAME };
-            await setDoc(doc(db, COLLECTIONS.USER_PROFILES, user.uid), profile);
+            const profile = {
+                uid: user.uid,
+                displayName,
+                email,
+                handle,
+                photoURL: '',
+                themePreference: DEFAULT_THEME_NAME,
+                fontScaling: 'normal'
+            };
+            await setDoc(docsRef(profileDocId(user.uid)), makeDocShape({
+                kind: DOC_KIND.PROFILE,
+                authorId: user.uid,
+                title: displayName,
+                body: safeBody(encodeProfileBody(profile)),
+                photoURL: ''
+            }));
             return { user, profile };
         },
 
@@ -178,8 +288,6 @@ function registerAuthStore() {
 
             if (result._tokenResponse?.isNewUser) {
                 await this.initializeNewUser(result, providerName);
-            } else {
-                await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), { lastLoginAt: serverTimestamp() }).catch(() => { });
             }
             return result.user;
         },
@@ -193,11 +301,20 @@ function registerAuthStore() {
                 });
                 if (resp.ok) {
                     const d = await resp.json();
-                    await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), {
-                        discordId: d.id,
-                        discordTag: `${d.username}#${d.discriminator}`,
-                        discordPic: d.avatar ? `https://cdn.discordapp.com/avatars/${d.id}/${d.avatar}.png` : null
-                    }, { merge: true });
+                    const profileRef = docsRef(profileDocId(result.user.uid));
+                    const profileSnap = await getDoc(profileRef);
+                    if (!profileSnap.exists()) { return; }
+                    const current = parseProfileData(profileSnap.data(), result.user.uid);
+                    current.discordId = d.id;
+                    current.discordTag = `${d.username}#${d.discriminator}`;
+                    current.discordPic = d.avatar ? `https://cdn.discordapp.com/avatars/${d.id}/${d.avatar}.png` : '';
+                    await updateDoc(profileRef, {
+                        title: (current.displayName || 'User').slice(0, 100),
+                        body: safeBody(encodeProfileBody(current)),
+                        photoURL: current.photoURL?.startsWith('https://') ? current.photoURL : '',
+                        bodyIsHTML: false,
+                        updatedAt: serverTimestamp()
+                    });
                 }
             } catch (e) {
                 console.error('Failed to fetch Discord user data', e);
@@ -207,17 +324,37 @@ function registerAuthStore() {
         async initializeNewUser(result, providerName) {
             const { displayName: rn, handle } = randomIdentity();
             const displayName = result.user.displayName || rn;
-            const photoURL = result.user.photoURL || generateProfilePic(displayName);
-            await setDoc(doc(db, COLLECTIONS.USER_PROFILES, result.user.uid), {
-                uid: result.user.uid, displayName, email: result.user.email || '', photoURL, handle,
-                themePreference: DEFAULT_THEME_NAME, createdAt: serverTimestamp(), lastLoginAt: serverTimestamp(), provider: providerName
-            });
+            const photoURL = result.user.photoURL?.startsWith('https://') ? result.user.photoURL : '';
+            const profile = {
+                uid: result.user.uid,
+                displayName,
+                email: result.user.email || '',
+                photoURL,
+                handle,
+                provider: providerName,
+                themePreference: DEFAULT_THEME_NAME,
+                fontScaling: 'normal'
+            };
+            await setDoc(docsRef(profileDocId(result.user.uid)), makeDocShape({
+                kind: DOC_KIND.PROFILE,
+                authorId: result.user.uid,
+                title: displayName,
+                body: safeBody(encodeProfileBody(profile)),
+                photoURL
+            }));
         },
 
         async saveProfile(uid, profileData) {
             const safeData = { ...profileData };
             delete safeData.admin; delete safeData.role; delete safeData.staff; delete safeData.uid; delete safeData.createdAt;
-            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, uid), safeData);
+            const merged = { ...(this.profile || {}), ...safeData };
+            await updateDoc(docsRef(profileDocId(uid)), {
+                title: (merged.displayName || this.user?.displayName || 'User').slice(0, 100),
+                body: safeBody(encodeProfileBody(merged)),
+                photoURL: merged.photoURL?.startsWith('https://') ? merged.photoURL : '',
+                bodyIsHTML: false,
+                updatedAt: serverTimestamp()
+            });
             this.profile = { ...this.profile, ...safeData };
             cacheUser(this.user, this.profile);
             updateTheme(this.profile.themePreference, this.profile.fontScaling, this.profile.customCSS);
@@ -282,8 +419,9 @@ function forumData() {
             });
         },
         async loadThreads() {
-            const snap = await getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc')));
+            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('createdAt', 'desc')));
             this.threads = await Promise.all(snap.docs.map(d => this.mapThreadDoc(d)));
+            this.threads = this.threads.filter(t => !isPageDocId(t.id) && !isWikiDocId(t.id));
             this.threads.forEach(t => indexDoc({ kind: 'thread', id: t.id, title: t.title, body: (t.description || '').replace(/<[^>]+>/g, ' ') }));
             const ids = this.getUniqueAuthorIds();
             await Promise.all(ids.map(fetchAuthor));
@@ -298,9 +436,21 @@ function forumData() {
             return [...new Set([...authors, ...commentAuthors].filter(Boolean))];
         },
         async mapThreadDoc(d) {
-            const data = { id: d.id, ...d.data(), expanded: true, comments: [], loadingComments: false, quill: null };
-            const cSnap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(d.id)), orderBy('createdAt', 'asc')));
-            data.comments = cSnap.docs.map(cd => ({ id: cd.id, ...cd.data() }));
+            const raw = d.data();
+            const data = {
+                id: d.id,
+                ...raw,
+                description: raw.body || '',
+                expanded: true,
+                comments: [],
+                loadingComments: false,
+                quill: null
+            };
+            const cSnap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', d.id), orderBy('createdAt', 'asc')));
+            data.comments = cSnap.docs.map(cd => {
+                const c = cd.data();
+                return { id: cd.id, ...c, content: c.body || '', parentCommentId: null };
+            });
             return data;
         },
         getAuthor, fetchAuthor, formatDate,
@@ -316,55 +466,97 @@ function forumData() {
             if (!this.quill) { return; }
             const u = Alpine.store('auth').user;
             if (!u) { return; }
-            await addDoc(collection(db, COLLECTIONS.FORMS), { ...this.newThread, description: this.quill.root.innerHTML, authorId: u.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), commentCount: 0, votes: 0 });
+            await addDoc(docsCollection(), makeDocShape({
+                kind: DOC_KIND.ARTICLE,
+                authorId: u.uid,
+                title: this.newThread.title || 'Untitled',
+                body: safeBody(this.quill.root.innerHTML),
+                photoURL: '',
+                allowReplies: true,
+                allowPublicEdits: false,
+                pinned: false,
+                featured: false,
+                spoiler: false
+            }));
             this.showCreateModal = false; this.newThread = { title: '', category: '', tags: '' }; this.quill.root.innerHTML = ''; this.loadThreads();
         },
         async toggleThread(t) {
             t.expanded = !t.expanded;
             if (t.expanded && !t.comments.length) {
                 t.loadingComments = true;
-                const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), orderBy('createdAt', 'asc')));
-                t.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', t.id), orderBy('createdAt', 'asc')));
+                t.comments = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
                 await Promise.all([...new Set(t.comments.map(c => c.authorId).filter(Boolean))].map(fetchAuthor));
                 t.loadingComments = false;
             }
         },
-        getReplies(t, pid) { return t.comments.filter(c => c.parentCommentId === pid); },
-        async softDeleteThread(t) { if (confirm(t.censored ? 'Un-censor?' : 'Censor?')) { await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), { censored: !t.censored }); t.censored = !t.censored; } },
-        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.FORMS, id)); removeDoc(id); this.threads = this.threads.filter(t => t.id !== id); } },
+        getReplies() { return []; },
+        async softDeleteThread(t) {
+            if (confirm(t.spoiler ? 'Un-censor?' : 'Censor?')) {
+                await updateDoc(docsRef(t.id), {
+                    allowReplies: t.allowReplies !== false,
+                    allowPublicEdits: t.allowPublicEdits === true,
+                    pinned: t.pinned === true,
+                    featured: t.featured === true,
+                    spoiler: !t.spoiler,
+                    updatedAt: serverTimestamp()
+                });
+                t.spoiler = !t.spoiler;
+            }
+        },
+        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(docsRef(id)); removeDoc(id); this.threads = this.threads.filter(t => t.id !== id); } },
         async postComment(fid) {
             const t = this.threads.find(t => t.id === fid); if (!t?.quill) return;
             const c = t.quill.root.innerHTML; if (!c || c === '<p><br></p>') return;
             const batch = writeBatch(db);
-            const newCommentRef = doc(collection(db, COLLECTIONS.SUBMISSIONS(fid)));
-            batch.set(newCommentRef, { content: c, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp(), parentCommentId: null });
-            batch.update(doc(db, COLLECTIONS.FORMS, fid), { commentCount: increment(1) });
+            const newCommentRef = doc(docsCollection());
+            batch.set(newCommentRef, makeDocShape({
+                kind: DOC_KIND.MESSAGE,
+                authorId: Alpine.store('auth').user.uid,
+                parent: fid,
+                title: '',
+                body: safeBody(c),
+                photoURL: ''
+            }));
+            batch.update(docsRef(fid), { lastReplyAt: serverTimestamp() });
             await batch.commit();
-            t.quill.root.innerHTML = ''; t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(fid)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
+            t.quill.root.innerHTML = '';
+            t.comments = (await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', fid), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
         },
         async vote(fid, c, type) {
             const u = Alpine.store('auth').user; if (!u) return Swal.fire('Error', 'Sign in to vote', 'error');
-            const r = c.reactions || {}, uid = u.uid;
-            if (type === 'up' || type === 'down') { const k = `${type}_${uid}`, o = type === 'up' ? `down_${uid}` : `up_${uid}`; if (r[k]) delete r[k]; else { r[k] = true; delete r[o]; } }
-            else { const k = `${type}_${uid}`, was = r[k]; Object.keys(r).forEach(x => { const [e, id] = x.split('_'); if (id === uid && e !== 'up' && e !== 'down') delete r[x]; }); if (!was) r[k] = true; }
-            await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(fid), c.id), { reactions: r }); c.reactions = r;
+            const r = { ...(c.reactions || {}) };
+            const uid = u.uid;
+            const mine = { ...(r[uid] || {}) };
+            if (type === 'up' || type === 'down') {
+                const other = type === 'up' ? 'down' : 'up';
+                if (mine[type]) delete mine[type];
+                else { mine[type] = true; delete mine[other]; }
+            } else {
+                if (mine[type]) delete mine[type]; else mine[type] = true;
+            }
+            r[uid] = mine;
+            await updateDoc(docsRef(c.id), { reactions: r });
+            c.reactions = r;
         },
-        hasVoted(c, t) { const u = Alpine.store('auth').user; return u && c.reactions?.[`${t}_${u.uid}`]; },
+        hasVoted(c, t) { const u = Alpine.store('auth').user; return Boolean(u && c.reactions?.[u.uid]?.[t]); },
         getVoteScore(c) {
             if (!c.reactions) { return 0; }
             let s = 0;
-            for (const k of Object.keys(c.reactions)) {
-                if (k.startsWith('up_')) { s++; }
-                if (k.startsWith('down_')) { s--; }
+            for (const uid of Object.keys(c.reactions)) {
+                if (c.reactions[uid]?.up) { s++; }
+                if (c.reactions[uid]?.down) { s--; }
             }
             return s;
         },
         getReactions(c) {
             if (!c.reactions) { return {}; }
             const res = {};
-            for (const k of Object.keys(c.reactions)) {
-                const e = k.split('_')[0];
-                if (e !== 'up' && e !== 'down') { res[e] = (res[e] || 0) + 1; }
+            for (const uid of Object.keys(c.reactions)) {
+                const mine = c.reactions[uid] || {};
+                for (const e of Object.keys(mine)) {
+                    if (e !== 'up' && e !== 'down' && mine[e]) { res[e] = (res[e] || 0) + 1; }
+                }
             }
             return res;
         },
@@ -372,20 +564,24 @@ function forumData() {
             const c = await promptEditor('Reply', '', '', 'Write reply...');
             if (c) {
                 const batch = writeBatch(db);
-                const newCommentRef = doc(collection(db, COLLECTIONS.SUBMISSIONS(t.id)));
-                batch.set(newCommentRef, { content: c, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp(), parentCommentId: p.parentCommentId || p.id });
-                batch.update(doc(db, COLLECTIONS.FORMS, t.id), { commentCount: increment(1) });
+                const newCommentRef = doc(docsCollection());
+                batch.set(newCommentRef, makeDocShape({
+                    kind: DOC_KIND.MESSAGE,
+                    authorId: Alpine.store('auth').user.uid,
+                    parent: t.id,
+                    title: '',
+                    body: safeBody(c),
+                    photoURL: ''
+                }));
+                batch.update(docsRef(t.id), { lastReplyAt: serverTimestamp() });
                 await batch.commit();
-                t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
+                t.comments = (await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', t.id), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
             }
         },
         async deleteComment(fid, cid) {
             if (!confirm('Delete?')) return;
-            const batch = writeBatch(db);
-            batch.update(doc(db, COLLECTIONS.FORMS, fid), { commentCount: increment(-1) });
-            batch.delete(doc(db, COLLECTIONS.SUBMISSIONS(fid), cid));
-            await batch.commit();
-            const t = this.threads.find(t => t.id === fid); if (t) t.comments = (await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(fid)), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data() }));
+            await deleteDoc(docsRef(cid));
+            const t = this.threads.find(t => t.id === fid); if (t) t.comments = (await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', fid), orderBy('createdAt', 'asc')))).docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
         },
         async editThread(t) {
             const { value: v } = await Swal.fire({
@@ -404,10 +600,13 @@ function forumData() {
                     document.getElementById('ed-thread-content').value
                 ]
             });
-            if (v) { await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), { title: v[0], tags: v[1], category: v[2], description: v[3], updatedAt: serverTimestamp() }); Object.assign(t, { title: v[0], tags: v[1], category: v[2], description: v[3] }); }
+            if (v) {
+                await updateDoc(docsRef(t.id), { title: (v[0] || '').slice(0, 500), body: safeBody(v[3]), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                Object.assign(t, { title: v[0], tags: v[1], category: v[2], description: v[3] });
+            }
         },
-        async editComment(fid, c) { const res = await promptEditor('Edit', '', c.content); if (res) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(fid), c.id), { content: res }); c.content = res; } },
-        async censorComment(fid, c) { const res = await promptEditor('Redact', '', c.content); if (res) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(fid), c.id), { content: res, censored: true }); c.content = res; c.censored = true; } }
+        async editComment(fid, c) { const res = await promptEditor('Edit', '', c.content); if (res) { await updateDoc(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); c.content = res; } },
+        async censorComment(fid, c) { const res = await promptEditor('Redact', '', c.content); if (res) { await updateDoc(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); c.content = res; c.censored = true; } }
     };
 }
 function registerForumData() {
@@ -420,8 +619,20 @@ function messageData() {
         init() { this.$watch('$store.auth.user', u => u ? this.loadConversations() : (this.conversations = [], this.selectedConv = null)); if (Alpine.store('auth').user) this.loadConversations(); },
         async loadConversations() {
             const u = Alpine.store('auth').user; if (!u) return;
-            const snap = await getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), where('participants', 'array-contains', u.uid)));
-            this.conversations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('updatedAt', 'desc')));
+            this.conversations = snap.docs
+                .map(d => {
+                    let payload = {};
+                    try { payload = JSON.parse(d.data().body || '{}'); } catch { payload = {}; }
+                    return {
+                        id: d.id,
+                        ...d.data(),
+                        name: d.data().title,
+                        participants: Array.isArray(payload.participants) ? payload.participants : [],
+                        participantNames: payload.participantNames || {}
+                    };
+                })
+                .filter(c => c.id.startsWith('cv_') && c.participants.includes(u.uid));
             await Promise.all([...new Set(this.conversations.flatMap(c => c.participants))].map(fetchAuthor));
         },
         getAuthor, fetchAuthor, formatDate,
@@ -433,32 +644,42 @@ function messageData() {
         },
         async selectConv(c) {
             this.selectedConv = c; if (this.unsubscribe) this.unsubscribe();
-            const q = query(collection(db, COLLECTIONS.CONV_MESSAGES(c.id)), orderBy('createdAt', 'asc'));
+            const q = query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', c.id), orderBy('createdAt', 'asc'));
             this.unsubscribe = onSnapshot(q, snap => this.handleMessageSnapshot(snap));
         },
         handleMessageSnapshot(snap) {
-            this.messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            this.messages = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', senderId: d.data().authorId }));
             this.$nextTick(() => this.scrollToBottom());
         },
         scrollToBottom() { const el = document.getElementById('msg-list'); if (el) el.scrollTop = el.scrollHeight; },
         async sendMessage() {
             if (!this.newMessage.trim() || !this.selectedConv) return;
-            const u = Alpine.store('auth').user, batch = writeBatch(db), newMsgRef = doc(collection(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id)));
-            batch.set(newMsgRef, { content: this.newMessage, senderId: u.uid, createdAt: serverTimestamp() });
-            batch.update(doc(db, COLLECTIONS.CONVERSATIONS, this.selectedConv.id), { lastMessage: this.newMessage, lastMessageTime: serverTimestamp() });
+            const u = Alpine.store('auth').user, batch = writeBatch(db), newMsgRef = doc(docsCollection());
+            batch.set(newMsgRef, makeDocShape({ kind: DOC_KIND.MESSAGE, authorId: u.uid, parent: this.selectedConv.id, title: '', body: safeBody(this.newMessage), photoURL: '' }));
+            batch.update(docsRef(this.selectedConv.id), { lastReplyAt: serverTimestamp() });
             await batch.commit(); this.newMessage = '';
         },
-        async deleteMessage(id) { if (confirm('Delete?')) await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), id)); },
-        async editMessage(m) { const c = await promptEditor('Edit', '', m.content); if (c) await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(this.selectedConv.id), m.id), { content: c }); },
+        async deleteMessage(id) { if (confirm('Delete?')) await deleteDoc(docsRef(id)); },
+        async editMessage(m) { const c = await promptEditor('Edit', '', m.content); if (c) await updateDoc(docsRef(m.id), { title: '', body: safeBody(c), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); },
         async createConversation() {
-            const snap = await getDocs(collection(db, COLLECTIONS.USER_PROFILES)), u = Alpine.store('auth').user, others = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.id !== u.uid);
+            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.PROFILE), orderBy('title', 'asc'))), u = Alpine.store('auth').user, others = snap.docs.map(d => ({ id: d.data().authorId, ...parseProfileData(d.data(), d.data().authorId) })).filter(x => x.id !== u.uid);
             if (!others.length) return Swal.fire('No users', '', 'info');
             const opts = others.map(x => `<option value="${x.id}">${x.displayName || x.email}</option>`).join('');
             const { value: id } = await Swal.fire({ title: 'New Conversation', html: `<select id="new-conv">${opts}</select>`, preConfirm: () => document.getElementById('new-conv').value, showCancelButton: true });
             if (id) {
                 const ex = this.conversations.find(c => c.participants.includes(id) && c.participants.length === 2);
                 if (ex) return this.selectConv(ex);
-                await addDoc(collection(db, COLLECTIONS.CONVERSATIONS), { participants: [u.uid, id], createdAt: serverTimestamp(), lastMessageTime: serverTimestamp() });
+                const me = getAuthor(u.uid).displayName || 'Me';
+                const other = getAuthor(id).displayName || 'User';
+                await setDoc(docsRef(`cv_${crypto.randomUUID()}`), makeDocShape({
+                    kind: DOC_KIND.ARTICLE,
+                    authorId: u.uid,
+                    title: `${me}, ${other}`,
+                    body: safeBody(JSON.stringify({ participants: [u.uid, id], participantNames: { [u.uid]: me, [id]: other } })),
+                    photoURL: '',
+                    allowReplies: true,
+                    allowPublicEdits: false
+                }));
                 this.loadConversations();
             }
         }
@@ -471,9 +692,10 @@ function registerMessageData() {
 function registerPageWikiManagement() {
     Alpine.store('mgmt', {
         async createPage(cb) {
-            const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="mb-2" placeholder="Title"><input id="np-slug" class="mb-2" placeholder="Slug"><textarea id="np-content" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, authorId: Alpine.store('auth').user.uid, createdAt: serverTimestamp() }) });
+            const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="mb-2" placeholder="Title"><input id="np-slug" class="mb-2" placeholder="Slug"><textarea id="np-content" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, authorId: Alpine.store('auth').user.uid }) });
             if (v) {
-                await addDoc(collection(db, COLLECTIONS.PAGES), v);
+                const id = pageDocId(v.slug);
+                await setDoc(docsRef(id), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: v.authorId, title: v.title || 'Untitled', body: pagePayload(v.slug, v.content, v.authorId), photoURL: '', allowReplies: false, allowPublicEdits: false }));
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Page created', 'success');
             }
@@ -481,14 +703,14 @@ function registerPageWikiManagement() {
         async editPage(p, cb) {
             const { value: v } = await Swal.fire({ title: 'Edit Page', width: '800px', html: `<input id="ep-title" class="mb-2" placeholder="Title"><input id="ep-slug" class="mb-2" placeholder="Slug"><textarea id="ep-content" class="font-monospace" rows="15" placeholder="HTML Content"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ep-title').value = p.title; document.getElementById('ep-slug').value = p.slug; document.getElementById('ep-content').value = p.content; }, preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() }) });
             if (v) {
-                await updateDoc(doc(db, COLLECTIONS.PAGES, p.id), v);
+                await updateDoc(docsRef(p.id), { title: (v.title || '').slice(0, 500), body: pagePayload(v.slug, v.content, p.authorId), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Page updated', 'success');
             }
         },
         async deletePage(id, cb) {
             if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) {
-                await deleteDoc(doc(db, COLLECTIONS.PAGES, id));
+                await deleteDoc(docsRef(id));
                 removeDoc(id);
                 if (cb) { cb(); }
                 Swal.fire('Deleted', 'Page has been deleted.', 'success');
@@ -497,7 +719,8 @@ function registerPageWikiManagement() {
         async createWikiSection(cb) {
             const { value: v } = await Swal.fire({ title: 'Create Wiki Section', html: '<input id="nw-id" class="mb-2" placeholder="Section ID (e.g. servers)"><textarea id="nw-content" class="font-monospace" rows="12" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ id: document.getElementById('nw-id').value.toLowerCase().replaceAll(/\s+/g, '-'), content: document.getElementById('nw-content').value }) });
             if (v?.id) {
-                await setDoc(doc(db, COLLECTIONS.WIKI_PAGES, v.id), { content: v.content, allowedEditors: [], updatedAt: serverTimestamp() });
+                const uid = Alpine.store('auth').user?.uid;
+                await setDoc(docsRef(wikiDocId(v.id)), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: uid, title: v.id, body: wikiPayload(v.id, v.content, []), photoURL: '', allowReplies: false, allowPublicEdits: false }));
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section created', 'success');
             }
@@ -505,7 +728,8 @@ function registerPageWikiManagement() {
         async editWikiSection(s, cb) {
             const { value: v } = await Swal.fire({ title: `Edit: ${escapeHtml(s.id)}`, width: '900px', html: `<textarea id="ew-content" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ew-content').value = s.content || ''; }, preConfirm: () => document.getElementById('ew-content').value });
             if (v !== undefined) {
-                await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, s.id), { content: v, updatedAt: serverTimestamp() });
+                const payload = parseBodyJson(s.body);
+                await updateDoc(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), body: wikiPayload(payload.sectionId || s.id, v, payload.allowedEditors || []), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section updated', 'success');
             }
@@ -515,14 +739,15 @@ function registerPageWikiManagement() {
             const opts = users.map(u => `<option value="${escapeHtml(u.id)}" ${cur.includes(u.id) ? 'selected' : ''}>${escapeHtml(u.displayName || u.email)}</option>`).join('');
             const { value: v } = await Swal.fire({ title: `Allowed Editors: ${escapeHtml(s.id)}`, html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" multiple size="10">${opts}</select>`, showCancelButton: true, preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value) });
             if (v !== undefined) {
-                await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, s.id), { allowedEditors: v, updatedAt: serverTimestamp() });
+                const payload = parseBodyJson(s.body);
+                await updateDoc(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), body: wikiPayload(payload.sectionId || s.id, payload.content || '', v), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Editors updated', 'success');
             }
         },
         async deleteWikiSection(id, cb) {
             if ((await Swal.fire({ title: 'Delete Wiki Section?', text: 'This cannot be undone!', icon: 'warning', showCancelButton: true })).isConfirmed) {
-                await deleteDoc(doc(db, COLLECTIONS.WIKI_PAGES, id));
+                await deleteDoc(docsRef(id));
                 removeDoc(id);
                 if (cb) { cb(); }
                 Swal.fire('Deleted', 'Section removed.', 'success');
@@ -539,8 +764,16 @@ function wikiApp() {
         get canEdit() { return this.currentUser && (this.isAdmin || this.tabMeta[this.tab]?.allowedEditors?.includes(this.currentUser.uid)); },
         async init() {
             await firebaseReadyPromise;
-            const snap = await getDocs(collection(db, COLLECTIONS.WIKI_PAGES));
-            snap.forEach(d => { const data = d.data(); this.tabContent[d.id] = data.content; this.tabMeta[d.id] = { allowedEditors: data.allowedEditors || [], updatedAt: data.updatedAt }; indexDoc({ kind: 'wiki', id: d.id, title: this.tabs.find(t => t.id === d.id)?.label ?? d.id, body: (data.content || '').replace(/<[^>]+>/g, ' ') }); });
+            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE)));
+            snap.forEach(d => {
+                if (!isWikiDocId(d.id)) { return; }
+                const data = d.data();
+                const payload = parseBodyJson(data.body);
+                const sectionId = payload.sectionId || d.id.replace(/^wk_/, '');
+                this.tabContent[sectionId] = payload.content || '';
+                this.tabMeta[sectionId] = { allowedEditors: payload.allowedEditors || [], updatedAt: data.updatedAt, docId: d.id };
+                indexDoc({ kind: 'wiki', id: sectionId, title: this.tabs.find(t => t.id === sectionId)?.label ?? sectionId, body: (payload.content || '').replace(/<[^>]+>/g, ' ') });
+            });
             this.loading = false; this.$nextTick(() => this.renderTab(this.tab));
             markSearchReady();
         },
@@ -550,7 +783,9 @@ function wikiApp() {
             const content = this.tabContent[this.tab] || '';
             const { value } = await Swal.fire({ title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`, width: '900px', html: `<textarea id="wiki-edit" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('wiki-edit').value = content; }, preConfirm: () => document.getElementById('wiki-edit').value });
             if (value !== undefined) {
-                await updateDoc(doc(db, COLLECTIONS.WIKI_PAGES, this.tab), { content: value, updatedAt: serverTimestamp() });
+                const meta = this.tabMeta[this.tab] || {};
+                const docId = meta.docId || wikiDocId(this.tab);
+                await updateDoc(docsRef(docId), { title: this.tab.slice(0, 500), body: wikiPayload(this.tab, value, meta.allowedEditors || []), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
                 this.tabContent[this.tab] = value; this.renderTab(this.tab); Swal.fire('Saved', 'Wiki section updated', 'success');
             }
         }
@@ -565,13 +800,35 @@ function pagesData() {
         get isAdmin() { return Alpine.store('auth')?.isAdmin; },
         get canEdit() { return this.currentUser && (this.isAdmin || this.currentPage?.authorId === this.currentUser.uid); },
         async init() { await firebaseReadyPromise; await this.loadPagesList(); if (this.currentPageId) await this.loadSinglePage(this.currentPageId); },
-        async loadPagesList() { const snap = await getDocs(query(collection(db, COLLECTIONS.PAGES), orderBy('createdAt', 'desc'))); this.pages = snap.docs.map(d => ({ id: d.id, ...d.data() })); this.pages.forEach(p => indexDoc({ kind: 'page', id: p.id, title: p.title, body: (p.content || '').replace(/<[^>]+>/g, ' ') })); if (!this.currentPageId) this.loading = false; markSearchReady(); },
+        async loadPagesList() {
+            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('createdAt', 'desc')));
+            this.pages = snap.docs
+                .filter(d => isPageDocId(d.id))
+                .map(d => {
+                    const raw = d.data();
+                    const payload = parseBodyJson(raw.body);
+                    return { id: d.id, ...raw, slug: payload.slug || d.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
+                });
+            this.pages.forEach(p => indexDoc({ kind: 'page', id: p.id, title: p.title, body: (p.content || '').replace(/<[^>]+>/g, ' ') }));
+            if (!this.currentPageId) this.loading = false;
+            markSearchReady();
+        },
         async loadSinglePage(id) {
-            const snap = await getDoc(doc(db, COLLECTIONS.PAGES, id));
-            if (snap.exists()) { this.currentPage = { id: snap.id, ...snap.data() }; document.title = `${this.currentPage.title || 'Page'} - Arcator`; await this.loadAuthor(this.currentPage.createdBy || this.currentPage.authorId); }
+            const snap = await getDoc(docsRef(id));
+            if (snap.exists()) {
+                const raw = snap.data();
+                const payload = parseBodyJson(raw.body);
+                this.currentPage = { id: snap.id, ...raw, slug: payload.slug || snap.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
+                document.title = `${this.currentPage.title || 'Page'} - Arcator`;
+                await this.loadAuthor(this.currentPage.authorId);
+            }
             this.loading = false;
         },
-        async loadAuthor(uid) { if (!uid) { return; } const snap = await getDoc(doc(db, COLLECTIONS.USER_PROFILES, uid)); this.authorName = snap.exists() ? (snap.data().displayName || snap.data().email || 'Unknown') : uid; },
+        async loadAuthor(uid) {
+            if (!uid) { return; }
+            const snap = await getDoc(docsRef(profileDocId(uid)));
+            this.authorName = snap.exists() ? (parseProfileData(snap.data(), uid).displayName || 'Unknown') : uid;
+        },
         formatDate: ts => formatDate(ts),
         renderContent(c) { if (!c) { return ''; } const isHtml = /<[a-z][\s\S]*>/i.test(c); return DOMPurify.sanitize(isHtml ? c : marked.parse(c)); },
         async createPage() { await Alpine.store('mgmt').createPage(() => this.loadPagesList()); },
@@ -602,8 +859,24 @@ function adminDashboard() {
             Alpine.effect(async () => { const s = Alpine.store('auth'); if (!s.loading) { if (s.user) { this.currentUser = s.user; this.isAdmin = s.isAdmin; if (this.isAdmin) await this.refreshAll(); } this.loading = false; } });
         },
         async refreshAll() {
-            const [u, p, t, d, w] = await Promise.all([getDocs(collection(db, COLLECTIONS.USER_PROFILES)), getDocs(collection(db, COLLECTIONS.PAGES)), getDocs(query(collection(db, COLLECTIONS.FORMS), orderBy('createdAt', 'desc'))), getDocs(query(collection(db, COLLECTIONS.CONVERSATIONS), orderBy('lastMessageTime', 'desc'))), getDocs(collection(db, COLLECTIONS.WIKI_PAGES))]);
-            this.users = u.docs.map(x => ({ id: x.id, ...x.data() })); this.pages = p.docs.map(x => ({ id: x.id, ...x.data() })); this.threads = t.docs.map(x => ({ id: x.id, ...x.data() })); this.dms = d.docs.map(x => ({ id: x.id, ...x.data() })); this.wikiSections = w.docs.map(x => ({ id: x.id, ...x.data() }));
+            const [profiles, articles] = await Promise.all([
+                getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.PROFILE))),
+                getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('createdAt', 'desc')))
+            ]);
+            this.users = profiles.docs.map(x => ({ id: x.data().authorId, docId: x.id, ...parseProfileData(x.data(), x.data().authorId) }));
+            this.pages = articles.docs.filter(x => isPageDocId(x.id)).map(x => {
+                const p = parseBodyJson(x.data().body);
+                return { id: x.id, ...x.data(), slug: p.slug || x.id.replace(/^pg_/, ''), content: p.content || '', authorId: p.authorId || x.data().authorId };
+            });
+            this.threads = articles.docs.filter(x => !isPageDocId(x.id) && !isWikiDocId(x.id) && !x.id.startsWith('cv_')).map(x => ({ id: x.id, ...x.data(), description: x.data().body || '' }));
+            this.dms = articles.docs.filter(x => x.id.startsWith('cv_')).map(x => {
+                const p = parseBodyJson(x.data().body);
+                return { id: x.id, ...x.data(), participants: p.participants || [], participantNames: p.participantNames || {} };
+            });
+            this.wikiSections = articles.docs.filter(x => isWikiDocId(x.id)).map(x => {
+                const p = parseBodyJson(x.data().body);
+                return { id: x.id, ...x.data(), sectionId: p.sectionId || x.id.replace(/^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
+            });
         },
         getAuthorName(uid) { const u = this.users.find(x => x.id === uid); return u ? (u.displayName || u.email) : 'Unknown'; },
         getDMName(dm) { return (dm.name && dm.name !== 'Chat') ? dm.name : dm.participants.map(id => this.getAuthorName(id)).join(', '); },
@@ -644,49 +917,56 @@ function adminDashboard() {
             };
         },
         async saveUserEdit(uid, v) {
-            await updateDoc(doc(db, COLLECTIONS.USER_PROFILES, uid), v);
-            if (v.admin) await setDoc(doc(db, 'admins', uid), { appointedAt: serverTimestamp() }).catch(e => console.error("Failed to add admin", e));
-            else await deleteDoc(doc(db, 'admins', uid)).catch(e => console.error("Failed to remove admin", e));
+            const merged = { ...(this.users.find(x => x.id === uid) || {}), ...v };
+            await updateDoc(docsRef(profileDocId(uid)), {
+                title: (merged.displayName || 'User').slice(0, 100),
+                body: safeBody(encodeProfileBody(merged)),
+                photoURL: merged.photoURL?.startsWith('https://') ? merged.photoURL : '',
+                bodyIsHTML: false,
+                updatedAt: serverTimestamp()
+            });
+            if (v.admin) await setDoc(doc(db, COLLECTIONS.ADMINS, uid), { appointedAt: serverTimestamp() }).catch(e => console.error('Failed to add admin', e));
+            else await deleteDoc(doc(db, COLLECTIONS.ADMINS, uid)).catch(e => console.error('Failed to remove admin', e));
             this.refreshAll(); Swal.fire('Success', 'User updated', 'success');
         },
         async editThread(t) {
             const { value: v } = await Swal.fire({ title: 'Edit Thread', html: `<input id="et-title" class="mb-2" placeholder="Title"><input id="et-tags" class="mb-2" placeholder="Tags"><select id="et-cat" class="mb-2"><option value="General">General</option><option value="Announcements">Announcements</option><option value="Support">Support</option><option value="Gaming">Gaming</option><option value="Discussion">Discussion</option></select><div class="form-check text-start mb-2"><input type="checkbox" id="et-locked"><label >Lock</label></div><textarea id="et-desc" rows="5"></textarea>`, didOpen: () => { document.getElementById('et-title').value = t.title; document.getElementById('et-tags').value = t.tags || ''; document.getElementById('et-cat').value = t.category || 'General'; document.getElementById('et-locked').checked = t.locked || false; document.getElementById('et-desc').value = t.description; }, showCancelButton: true, preConfirm: () => ({ title: document.getElementById('et-title').value, tags: document.getElementById('et-tags').value, category: document.getElementById('et-cat').value, locked: document.getElementById('et-locked').checked, description: document.getElementById('et-desc').value }) });
-            if (v) { await updateDoc(doc(db, COLLECTIONS.FORMS, t.id), v); this.refreshAll(); }
+            if (v) { await updateDoc(docsRef(t.id), { title: (v.title || '').slice(0, 500), body: safeBody(v.description), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); this.refreshAll(); }
         },
-        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.FORMS, id)); this.refreshAll(); } },
+        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(docsRef(id)); this.refreshAll(); } },
         async viewThread(t) {
-            const snap = await getDocs(query(collection(db, COLLECTIONS.SUBMISSIONS(t.id)), orderBy('createdAt', 'asc'))), Html = snap.docs.map(d => this.renderCommentForAdmin(t.id, d)).join('');
+            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', t.id), orderBy('createdAt', 'asc'))), Html = snap.docs.map(d => this.renderCommentForAdmin(t.id, d)).join('');
             Swal.fire({ title: escapeHtml(t.title), html: `<div class="text-start">${DOMPurify.sanitize(t.description)}</div><hr><div class="text-start admin-list-scroll">${Html || 'No comments'}</div>`, width: 800, didOpen: () => this.setupAdminCommentEvents(Swal.getHtmlContainer(), t.id, snap.docs) });
         },
         renderCommentForAdmin(tid, d) {
             const data = d.data();
-            return `<div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25"><div class="d-flex justify-content-between"><small class="text-info">${escapeHtml(this.getAuthorName(data.authorId))}</small><small class="text-muted">${this.formatDate(data.createdAt)}</small></div><div class="my-1">${DOMPurify.sanitize(data.content)}</div><div class="d-flex gap-2 justify-content-end"><button class="btn-sm btn-outline-secondary py-0 edit-comment-btn" data-tid="${tid}" data-cid="${d.id}">Edit</button><button class="btn-sm btn-outline-danger py-0 del-comment-btn" data-tid="${tid}" data-cid="${d.id}">Del</button></div></div>`;
+            return `<div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25"><div class="d-flex justify-content-between"><small class="text-info">${escapeHtml(this.getAuthorName(data.authorId))}</small><small class="text-muted">${this.formatDate(data.createdAt)}</small></div><div class="my-1">${DOMPurify.sanitize(data.body || '')}</div><div class="d-flex gap-2 justify-content-end"><button class="btn-sm btn-outline-secondary py-0 edit-comment-btn" data-tid="${tid}" data-cid="${d.id}">Edit</button><button class="btn-sm btn-outline-danger py-0 del-comment-btn" data-tid="${tid}" data-cid="${d.id}">Del</button></div></div>`;
         },
         setupAdminCommentEvents(container, tid, docs) {
             container.querySelectorAll('.edit-comment-btn').forEach(btn => btn.onclick = () => this.dispatchEditComment(btn.dataset.cid, tid, docs));
             container.querySelectorAll('.del-comment-btn').forEach(btn => btn.onclick = () => this.dispatchDeleteComment(btn.dataset.cid, tid));
         },
-        dispatchEditComment(cid, tid, docs) { const d = docs.find(x => x.id === cid); if (d) document.dispatchEvent(new CustomEvent('admin-edit-comment', { detail: { tid, cid: d.id, content: d.data().content } })); },
+        dispatchEditComment(cid, tid, docs) { const d = docs.find(x => x.id === cid); if (d) document.dispatchEvent(new CustomEvent('admin-edit-comment', { detail: { tid, cid: d.id, content: d.data().body || '' } })); },
         dispatchDeleteComment(cid, tid) { document.dispatchEvent(new CustomEvent('admin-del-comment', { detail: { tid, cid } })); },
         async viewDM(dm) {
-            const snap = await getDocs(query(collection(db, COLLECTIONS.CONV_MESSAGES(dm.id)), orderBy('createdAt', 'asc'))), Html = snap.docs.map(d => this.renderMessageForAdmin(dm, d)).join('');
+            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', dm.id), orderBy('createdAt', 'asc'))), Html = snap.docs.map(d => this.renderMessageForAdmin(dm, d)).join('');
             Swal.fire({ title: 'Conversation Log', html: `<div class="text-start admin-list-scroll">${Html || 'No messages'}</div>`, width: 600, didOpen: () => this.setupAdminMessageEvents(Swal.getHtmlContainer(), dm.id, snap.docs) });
         },
         renderMessageForAdmin(dm, d) {
-            const data = d.data(), s = dm.participantNames ? dm.participantNames[data.senderId] : this.getAuthorName(data.senderId);
-            return `<div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25"><div class="d-flex justify-content-between"><small class="text-info">${escapeHtml(s)}</small><small class="text-muted">${this.formatDate(data.createdAt)}</small></div><div class="my-1">${DOMPurify.sanitize(data.content)}</div><div class="d-flex gap-2 justify-content-end"><button class="btn-sm btn-outline-secondary py-0 edit-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Edit</button><button class="btn-sm btn-outline-danger py-0 del-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Del</button></div></div>`;
+            const data = d.data(), s = dm.participantNames ? dm.participantNames[data.authorId] : this.getAuthorName(data.authorId);
+            return `<div class="mb-2 p-2 border rounded border-secondary bg-dark bg-opacity-25"><div class="d-flex justify-content-between"><small class="text-info">${escapeHtml(s)}</small><small class="text-muted">${this.formatDate(data.createdAt)}</small></div><div class="my-1">${DOMPurify.sanitize(data.body || '')}</div><div class="d-flex gap-2 justify-content-end"><button class="btn-sm btn-outline-secondary py-0 edit-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Edit</button><button class="btn-sm btn-outline-danger py-0 del-msg-btn" data-cid="${dm.id}" data-mid="${d.id}">Del</button></div></div>`;
         },
         setupAdminMessageEvents(container, cid, docs) {
             container.querySelectorAll('.edit-msg-btn').forEach(btn => btn.onclick = () => this.dispatchEditMessage(btn.dataset.mid, cid, docs));
             container.querySelectorAll('.del-msg-btn').forEach(btn => btn.onclick = () => this.dispatchDeleteMessage(btn.dataset.mid, cid));
         },
-        dispatchEditMessage(mid, cid, docs) { const d = docs.find(x => x.id === mid); if (d) document.dispatchEvent(new CustomEvent('admin-edit-msg', { detail: { cid, mid: d.id, content: d.data().content } })); },
+        dispatchEditMessage(mid, cid, docs) { const d = docs.find(x => x.id === mid); if (d) document.dispatchEvent(new CustomEvent('admin-edit-msg', { detail: { cid, mid: d.id, content: d.data().body || '' } })); },
         dispatchDeleteMessage(mid, cid) { document.dispatchEvent(new CustomEvent('admin-del-msg', { detail: { cid, mid } })); },
-        async deleteDM(id) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.CONVERSATIONS, id)); this.refreshAll(); } },
-        async deleteMessage(cid, mid) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.CONV_MESSAGES(cid), mid)); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
-        async editMessage(cid, m) { const res = await promptEditor('Edit', '', m.content); if (res) { await updateDoc(doc(db, COLLECTIONS.CONV_MESSAGES(cid), m.id), { content: res }); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
-        async deleteComment(tid, cid) { if (confirm('Delete?')) { await deleteDoc(doc(db, COLLECTIONS.SUBMISSIONS(tid), cid)); await updateDoc(doc(db, COLLECTIONS.FORMS, tid), { commentCount: increment(-1) }); const t = this.threads.find(x => x.id === tid); if (t) this.viewThread(t); } },
-        async editComment(tid, c) { const res = await promptEditor('Edit', '', c.content); if (res) { await updateDoc(doc(db, COLLECTIONS.SUBMISSIONS(tid), c.id), { content: res }); const t = this.threads.find(x => x.id === tid); if (t) this.viewThread(t); } }
+        async deleteDM(id) { if (confirm('Delete?')) { await deleteDoc(docsRef(id)); this.refreshAll(); } },
+        async deleteMessage(cid, mid) { if (confirm('Delete?')) { await deleteDoc(docsRef(mid)); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
+        async editMessage(cid, m) { const res = await promptEditor('Edit', '', m.content); if (res) { await updateDoc(docsRef(m.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
+        async deleteComment(tid, cid) { if (confirm('Delete?')) { await deleteDoc(docsRef(cid)); const t = this.threads.find(x => x.id === tid); if (t) this.viewThread(t); } },
+        async editComment(tid, c) { const res = await promptEditor('Edit', '', c.content); if (res) { await updateDoc(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); const t = this.threads.find(x => x.id === tid); if (t) this.viewThread(t); } }
     };
 }
 function registerAdminDashboard() { Alpine.data('adminDashboard', adminDashboard); }
