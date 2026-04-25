@@ -34,13 +34,13 @@
                             <i class="bi bi-shield-lock fs-1 text-warning mb-3"></i>
                             <h2>Access Denied</h2>
                             <p class="text-muted">You do not have permission to view this page.</p>
-                            <a href="./index.html" role="button" class="mt-3">Go Home</a>
+                            <a href="./index.html" class="mt-3 btn">Go Home</a>
                         </div>
                     </div>
                 </template>
                 <div x-show="!loading && isAdmin" x-transition.opacity>
                     <header class="d-flex justify-content-between align-items-center mb-4">
-                        <div><h2 class="fw-bold mb-1" x-text="pageTitle"></h2><p class="text-muted m-0">Welcome back, Admin.</p></div>
+                        <div><h2 class="fw-bold mb-1" x-text="pageTitle">Admin Dashboard</h2><p class="text-muted m-0">Welcome back, Admin.</p></div>
                         <div class="d-flex align-items-center gap-3">
                             <button class="btn-outline-light btn-sm" @click="refreshAll" title="Refresh Data"><i class="bi bi-arrow-clockwise"></i></button>
                             <div class="d-flex align-items-center gap-2 glass-card px-3 py-2 rounded-pill">
@@ -51,7 +51,7 @@
                     </header>
                     <div x-show="tab === 'dashboard'" class="row g-4">
                         <template x-for="stat in stats" :key="stat.label">
-                            <div class="col-md-3"><div class="glass-card p-4 hover-card"><h6 class="text-muted text-uppercase mb-2" x-text="stat.label"></h6><h2 class="fw-bold mb-0" x-text="stat.value">0</h2><i :class="stat.icon + ' ' + stat.color" class="position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i></div></div>
+                            <div class="col-md-3"><div class="glass-card p-4 hover-card"><h6 class="text-muted text-uppercase mb-2" x-text="stat.label">Stats</h6><h2 class="fw-bold mb-0" x-text="stat.value">0</h2><i :class="stat.icon + ' ' + stat.color" class="position-absolute top-0 end-0 m-3 fs-1 opacity-25"></i></div></div>
                         </template>
                         <div class="col-md-8">
                             <div class="glass-card p-4 h-100">
@@ -109,7 +109,7 @@
                                     <thead><tr><th>Title</th><th>Slug</th><th>Actions</th></tr></thead>
                                     <tbody>
                                         <template x-for="page in pages" :key="page.id">
-                                            <tr><td x-text="page.title"></td><td><code class="text-info" x-text="'/' + page.slug"></code></td><td><div class="btn-group btn-group-sm"><a :href="'./pages.html?id=' + page.id" target="_blank" role="button" class="btn-outline-secondary"><i class="bi bi-eye"></i></a><button class="btn-outline-primary" @click="editPage(page)"><i class="bi bi-pencil"></i></button><button class="btn-outline-danger" @click="deletePage(page.id)"><i class="bi bi-trash"></i></button></div></td></tr>
+                                            <tr><td x-text="page.title">Page Title</td><td><code class="text-info" x-text="'/' + page.slug">/slug</code></td><td><div class="btn-group btn-group-sm"><a :href="'./pages.html?id=' + page.id" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-eye"></i></a><button class="btn-outline-primary" @click="editPage(page)"><i class="bi bi-pencil"></i></button><button class="btn-outline-danger" @click="deletePage(page.id)"><i class="bi bi-trash"></i></button></div></td></tr>
                                         </template>
                                     </tbody>
                                 </table>
@@ -124,7 +124,7 @@
                                     <thead><tr><th>Section ID</th><th>Allowed Editors</th><th>Last Updated</th><th>Actions</th></tr></thead>
                                     <tbody>
                                         <template x-for="section in wikiSections" :key="section.id">
-                                            <tr><td><code class="text-info" x-text="section.id"></code></td><td><span class="badge bg-secondary" x-text="section.allowedEditors?.length ? section.allowedEditors.length + ' users' : 'Admins only'"></span></td><td x-text="formatDate(section.updatedAt)"></td><td><div class="btn-group btn-group-sm"><a :href="'./wiki.html#' + section.id" target="_blank" role="button" class="btn-outline-secondary"><i class="bi bi-eye"></i></a><button class="btn-outline-primary" @click="editWikiSection(section)"><i class="bi bi-pencil"></i></button><button class="btn-outline-info" @click="manageWikiEditors(section)"><i class="bi bi-people"></i></button><button class="btn-outline-danger" @click="deleteWikiSection(section.id)"><i class="bi bi-trash"></i></button></div></td></tr>
+                                            <tr><td><code class="text-info" x-text="section.id">ID</code></td><td><span class="badge bg-secondary" x-text="section.allowedEditors?.length ? section.allowedEditors.length + ' users' : 'Admins only'">Admins only</span></td><td x-text="formatDate(section.updatedAt)">Date</td><td><div class="btn-group btn-group-sm"><a :href="'./wiki.html#' + section.id" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-eye"></i></a><button class="btn-outline-primary" @click="editWikiSection(section)"><i class="bi bi-pencil"></i></button><button class="btn-outline-info" @click="manageWikiEditors(section)"><i class="bi bi-people"></i></button><button class="btn-outline-danger" @click="deleteWikiSection(section.id)"><i class="bi bi-trash"></i></button></div></td></tr>
                                         </template>
                                     </tbody>
                                 </table>
@@ -163,8 +163,7 @@
             </div>
         </main>
     </div>
-    <div id="footer-placeholder"></div>
-    <script type="module" src="./app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
+    <script type="module" src="/app.js"></script>
 </body>
 </html>

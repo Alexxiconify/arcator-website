@@ -148,7 +148,12 @@ input[type="checkbox"][role="switch"] { width: 2.5rem; }
 .arc-nav menu { display: flex; align-items: center; max-width: 1100px; margin-inline: auto; list-style: none; font: 700 16px/1 sans-serif; padding: 0; }
 .arc-nav menu a { display: grid; place-items: center; height: var(--nav-h); padding-inline: 13px; color: #e0d0d0; text-decoration: none; text-shadow: 2px 2px 4px #000; }
 .arc-nav menu a:hover, .arc-nav menu a[aria-current] { color: #fff; }
-.arc-nav-brand { font-weight: 700; }
+.arc-nav-group { display: flex; align-items: center; gap: 5px; }
+.arc-nav-group.secondary { border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px; margin-left: 10px; }
+.arc-nav-group.social { margin-left: auto; gap: 12px; }
+.arc-nav-group.social a { padding-inline: 8px; opacity: 0.8; }
+.arc-nav-group.social a:hover { opacity: 1; }
+.arc-nav-brand { font-weight: 700; margin-right: 15px; }
 .arc-profile-link { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
 .arc-user-section { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
 

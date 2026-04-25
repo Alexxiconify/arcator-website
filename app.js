@@ -1,16 +1,32 @@
 
 
 import { 
-  db, auth, srvTs as serverTimestamp, deleteField,
-  collection, doc, query, where, orderBy, limit, startAfter,
+  db, auth, srvTs as serverTimestamp,
+  collection, doc, query, where, orderBy,
   getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  onSnapshot, runTransaction, writeBatch, getCountFromServer, FieldPath
+  onSnapshot, writeBatch, getCountFromServer
 } from './js/firebase.js';
 import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
 import './js/keys.js';
 import './js/glitch.js';
 import './js/auth.js';
-const { Alpine, Swal, Quill } = globalThis;
+// Delay Alpine dependent logic until it's ready
+let Alpine, Swal, Quill;
+document.addEventListener('alpine:init', () => {
+    Alpine = globalThis.Alpine;
+    Swal = globalThis.Swal;
+    Quill = globalThis.Quill;
+    
+    // Auth state sync
+    Alpine.effect(() => {
+        const s = Alpine.store('auth');
+        if (s && !s.loading) {
+            updateUserSection(s.user, s.profile, s.isAdmin);
+        }
+    });
+
+    registerAll();
+});
 const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
 
@@ -135,23 +151,32 @@ const NAV_HTML = `
 <nav class="arc-nav" aria-label="Main">
   <menu>
     <li><a href="./index.html" class="arc-nav-brand">Arcator</a></li>
-    <li><a href="./wiki.html">Wiki</a></li>
-    <li><a href="./forms.html">Forums</a></li>
-    <li><a href="./pages.html">Pages</a></li>
-    <li><a href="./resources.html">Resources</a></li>
-    <li><a href="https://jylina.arcator.co.uk/hub">Hub</a></li>
-    <li><a href="https://jylina.arcator.co.uk/stats">Stats</a></li>
-    <li><a href="https://discord.gg/GwArgw2">Discord</a></li>
-    <li class="d-none" id="admin-link"><a href="./mod.html">Admin</a></li>
+    <li class="arc-nav-group">
+        <a href="./wiki.html"><i class="bi bi-book me-1"></i>Wiki</a>
+        <a href="./forms.html"><i class="bi bi-chat-square-dots me-1"></i>Forums</a>
+        <a href="./pages.html"><i class="bi bi-file-earmark-text me-1"></i>Pages</a>
+        <a href="./resources.html"><i class="bi bi-box-seam me-1"></i>Resources</a>
+    </li>
+    <li class="arc-nav-group secondary">
+        <a href="https://jylina.arcator.co.uk/hub" target="_blank">Hub</a>
+        <a href="https://jylina.arcator.co.uk/stats" target="_blank">Stats</a>
+        <a href="https://jylina.arcator.co.uk/soulvis" target="_blank">Soul Vis</a>
+        <a href="https://jylina.arcator.co.uk/socialgraph" target="_blank">Social Graph</a>
+    </li>
+    <li class="arc-nav-group social">
+        <a href="https://discord.gg/GwArgw2" title="Discord" target="_blank"><i class="bi bi-discord"></i></a>
+        <a href="https://github.com/Arcator" title="GitHub" target="_blank"><i class="bi bi-github"></i></a>
+    </li>
+    <li class="d-none" id="admin-link"><a href="./mod.html" class="text-warning">Admin</a></li>
     <li class="arc-nav-separator"></li>
-    <li class="arc-nav-footer-items">
-        <a href="https://jylina.arcator.co.uk/ssmp" target="_blank">SSMP Maps</a>
-        <span class="arc-copyright">© 2026 Arcator</span>
+    <li class="arc-nav-footer-items d-flex align-items-center gap-3">
+        <a href="https://jylina.arcator.co.uk/ssmp" target="_blank" class="small text-secondary">SSMP Maps</a>
+        <span class="arc-copyright small text-muted">© 2026 Arcator</span>
     </li>
     <li class="arc-user-section">
-      <a href="./users.html" id="sign-in-btn">Sign In</a>
+      <a href="./users.html" id="sign-in-btn" class="btn btn-sm btn-primary">Sign In</a>
       <a href="./users.html" class="d-none arc-profile-link" id="user-profile-link">
-        <img src="./defaultuser.png" class="avatar-sm" alt="Profile" id="user-avatar">
+        <img src="./defaultuser.png" class="avatar-sm rounded-circle" alt="Profile" id="user-avatar" style="width:32px;height:32px;object-fit:cover;">
       </a>
     </li>
   </menu>
@@ -894,13 +919,6 @@ document.addEventListener('alpine:init', () => {
             getLoading(loading => updateSpinnerState(el, loading, isSm));
         });
     });
-    Alpine.effect(() => {
-        const s = Alpine.store('auth');
-        if (s && !s.loading) {
-            updateUserSection(s.user, s.profile, s.isAdmin);
-        }
-    });
-    registerAll();
 });
 
 function updateSpinnerState(el, loading, isSm) {
@@ -915,4 +933,5 @@ document.addEventListener('DOMContentLoaded', initLayout);
 const projectId = "arcator-v2";
 const appId = "1:171774915460:web:2fc364da8a1bd095eae3d1";
 
-export { auth, db, projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection };
+export {projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection };
+export {auth, db} from './js/firebase.js';

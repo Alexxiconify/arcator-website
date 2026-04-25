@@ -7,8 +7,8 @@
     <title>Forums - Arcator</title>
     <link href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
-    <link href="./styles.css" rel="stylesheet">
-    <link href="./favicon.png" rel="icon" type="image/png">
+    <link href="/styles.css" rel="stylesheet">
+    <link href="/favicon.png" rel="icon" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.3.3/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.24"></script>
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
@@ -40,8 +40,8 @@
                     <form @submit.prevent="createThread">
                         <div class="mb-3"><input x-model="newThread.title" placeholder="Title" required></div>
                         <div class="mb-3">
-                            <label class="small">Description</label>
-                            <div x-ref="createEditor"></div>
+                            <label class="small" id="desc-label">Description</label>
+                            <div x-ref="createEditor" aria-labelledby="desc-label"></div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -83,7 +83,7 @@
                                         <ul class="dropdown-menu" x-show="open" @click.outside="open = false" @click="open = false" x-cloak>
                                             <li><a class="dropdown-item" href="#" @click.prevent="editThread(thread)">Edit</a></li>
                                             <template x-if="$store.auth.isAdmin">
-                                                <li><a class="dropdown-item" href="#" @click.prevent="softDeleteThread(thread)" x-text="thread.censored ? 'Un-censor' : 'Censor'"></a></li>
+                                                <li><a class="dropdown-item" href="#" @click.prevent="softDeleteThread(thread)" x-text="thread.censored ? 'Un-censor' : 'Censor'">Censor</a></li>
                                             </template>
                                             <li><a class="dropdown-item text-danger" href="#" @click.prevent="deleteThread(thread.id)">Delete</a></li>
                                         </ul>
@@ -110,8 +110,8 @@
                                         </div>
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center gap-2 mb-1">
-                                                <img :src="getAuthor(comment.authorId).photoURL || './defaultuser.png'" class="avatar-sm">
-                                                <strong x-text="getAuthor(comment.authorId).displayName || 'Unknown'"></strong>
+                                                <img :src="getAuthor(comment.authorId).photoURL || './defaultuser.png'" class="avatar-sm" alt="Avatar">
+                                                <strong x-text="getAuthor(comment.authorId).displayName || 'Unknown'">Unknown</strong>
                                                 <small class="text-secondary" x-text="formatDate(comment.createdAt)"></small>
                                                 <div class="d-flex gap-1 ms-2">
                                                     <template x-for="(count, emoji) in getReactions(comment)" :key="emoji">
@@ -126,7 +126,7 @@
                                                         <ul class="dropdown-menu" x-show="open" @click.outside="open = false" @click="open = false" x-cloak>
                                                             <li><a class="dropdown-item" href="#" @click.prevent="editComment(thread.id, comment)">Edit</a></li>
                                                             <template x-if="$store.auth.isAdmin">
-                                                                <li><a class="dropdown-item" href="#" @click.prevent="censorComment(thread.id, comment)" x-text="comment.censored ? 'Edit Redaction' : 'Redact'"></a></li>
+                                                                <li><a class="dropdown-item" href="#" @click.prevent="censorComment(thread.id, comment)" x-text="comment.censored ? 'Edit Redaction' : 'Redact'">Redact</a></li>
                                                             </template>
                                                             <li><a class="dropdown-item text-danger" href="#" @click.prevent="deleteComment(thread.id, comment.id)">Delete</a></li>
                                                         </ul>
@@ -315,9 +315,7 @@
     </div>
 </main>
 
-<div id="footer-placeholder"></div>
-
-<script type="module" src="./app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
+<script type="module" src="/app.js"></script>
 </body>
 </html>

@@ -1,6 +1,5 @@
 import intersect from 'https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/+esm';
 import morph from 'https://cdn.jsdelivr.net/npm/@alpinejs/morph@3.x.x/+esm';
-import { PROFILE_STUB_BODY } from './constants.js';
 import {
   auth,
   createUserWithEmailAndPassword,
@@ -12,7 +11,6 @@ import {
   onAuthStateChanged,
   runTransaction,
   sendEmailVerification,
-  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -197,7 +195,11 @@ onAuthStateChanged(auth, async (u) => {
         emailVerified: u.emailVerified,
       }
     : null;
-  store.phase = u ? (u.emailVerified ? 'verified' : 'unverified') : 'signed-out';
+  if (!u) {
+    store.phase = 'signed-out';
+  } else {
+    store.phase = u.emailVerified ? 'verified' : 'unverified';
+  }
   store.loading = !!u; // Set loading true if we have a user and need to fetch profile
 
   if (u) {
@@ -216,6 +218,7 @@ onAuthStateChanged(auth, async (u) => {
       try {
         bodyData = JSON.parse(data.body);
       } catch (e) {
+        console.warn('Profile parse error, using fallbacks:', e);
         bodyData = { bio: data.body };
       }
       const profile = {
@@ -246,7 +249,7 @@ onAuthStateChanged(auth, async (u) => {
 
 //  Session-error handling
 
-window.addEventListener('unhandledrejection', (e) => {
+globalThis.addEventListener('unhandledrejection', (e) => {
   const code = e.reason?.code;
   if (['auth/user-token-expired', 'auth/id-token-revoked', 'auth/user-disabled'].includes(code)) {
     const store = Alpine.store('auth');

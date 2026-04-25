@@ -40,4 +40,4 @@ document.addEventListener('alpine:init', () => {
   });
 });
 
-export {};
+export { parse };
