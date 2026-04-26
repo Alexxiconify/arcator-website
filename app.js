@@ -218,7 +218,7 @@ const encodeProfileBody = (data, optBio) => {
         githubPic: data.githubPic || '',
         githubURL: data.githubURL || ''
     };
-    const b = optBio !== undefined ? optBio : (data.bio || '');
+    const b = optBio === undefined ? (data.bio || '') : optBio;
     const cleanBio = b.replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
     return {
         body: safeBody(cleanBio),
@@ -931,7 +931,7 @@ function wikiApp() {
         renderTab(id) { 
             const container = document.getElementById('wiki-main-container');
             if (container && this.tabContent[id]) { 
-                container.innerHTML = typeof marked !== 'undefined' ? marked.parse(this.tabContent[id]) : this.tabContent[id]; 
+                container.innerHTML = typeof marked === 'undefined' ? this.tabContent[id] : marked.parse(this.tabContent[id]); 
                 container.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); 
             } 
         },

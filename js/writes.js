@@ -28,7 +28,7 @@ export const getCustom = async id => {
 
 export function requireVerified() {
   const u = auth.currentUser;
-  if (!u || !u.emailVerified) throw new Error('verified auth required');
+  if (!u?.emailVerified) throw new Error('verified auth required');
   return u.uid;
 }
 
@@ -179,7 +179,7 @@ export async function getMsgCount(docId, lastReplyAtMs) {
   }
 }
 
-window.hasUnread = (docId, lastReplyAtMs) => {
+globalThis.hasUnread = (docId, lastReplyAtMs) => {
   const raw = localStorage.getItem(`arcator:lastread:${docId}`);
   if (!raw) return lastReplyAtMs > 0;
   return Number(raw) !== lastReplyAtMs;
