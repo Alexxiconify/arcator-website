@@ -245,8 +245,7 @@ const pagePayload = (slug, content, authorId) => ({
     temp: `<!-- ARCATOR_META:${JSON.stringify({ type: 'page', slug, authorId })} -->` 
 });
 const wikiPayload = (sectionId, content, allowedEditors = []) => ({ 
-    core: { body: safeBody(content) }, 
-    temp: `<!-- ARCATOR_META:${JSON.stringify({ type: 'wiki', sectionId, allowedEditors })} -->` 
+    core: { body: `<!-- ARCATOR_META:${JSON.stringify({ type: 'wiki', sectionId, allowedEditors })} -->\n${safeBody(content)}` }
 });
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
@@ -793,8 +792,7 @@ function registerPageWikiManagement() {
             if (v?.id) {
                 const uid = Alpine.store('auth').user?.uid;
                 const payload = wikiPayload(v.id, v.content, []);
-                const res = await addDoc(docsCollection(), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: uid, title: v.id, photoURL: '', allowReplies: false, allowPublicEdits: false, ...payload.core }));
-                await setDoc(customRef(res.id), { temp: payload.temp });
+                await addDoc(docsCollection(), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: uid, title: v.id, photoURL: '', allowReplies: false, allowPublicEdits: false, ...payload.core }));
                 await updateSignal();
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section created', 'success');
@@ -804,14 +802,13 @@ function registerPageWikiManagement() {
             const { value: v } = await Swal.fire({ title: `Edit: ${escapeHtml(s.id)}`, width: '900px', html: `<textarea id="ew-content" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ew-content').value = s.content || ''; }, preConfirm: () => document.getElementById('ew-content').value });
             if (v !== undefined) {
                 await runTransaction(db, async tx => {
-                    const [snap, cSnap] = await Promise.all([tx.get(docsRef(s.id)), tx.get(customRef(s.id))]);
+                    const snap = await tx.get(docsRef(s.id));
                     if (!snap.exists()) throw new Error('NOT_FOUND');
                     if (!snap.data().updatedAt?.isEqual(s.updatedAt)) throw new Error('CONFLICT');
-                    const payloadStr = cSnap.exists() ? cSnap.data().temp : s.temp;
-                    const payload = parseBodyJson(s.body, payloadStr);
+                    const payload = parseBodyJson(s.body);
                     const next = wikiPayload(payload.sectionId || s.id, v, payload.allowedEditors || []);
                     tx.update(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...next.core });
-                    tx.set(customRef(s.id), { temp: next.temp });
+                    tx.delete(customRef(s.id));
                 });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section updated', 'success');
@@ -823,14 +820,13 @@ function registerPageWikiManagement() {
             const { value: v } = await Swal.fire({ title: `Allowed Editors: ${escapeHtml(s.id)}`, html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" multiple size="10">${opts}</select>`, showCancelButton: true, preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value) });
             if (v !== undefined) {
                 await runTransaction(db, async tx => {
-                    const [snap, cSnap] = await Promise.all([tx.get(docsRef(s.id)), tx.get(customRef(s.id))]);
+                    const snap = await tx.get(docsRef(s.id));
                     if (!snap.exists()) throw new Error('NOT_FOUND');
                     if (!snap.data().updatedAt?.isEqual(s.updatedAt)) throw new Error('CONFLICT');
-                    const payloadStr = cSnap.exists() ? cSnap.data().temp : s.temp;
-                    const payload = parseBodyJson(s.body, payloadStr);
+                    const payload = parseBodyJson(s.body);
                     const next = wikiPayload(payload.sectionId || s.id, payload.content || '', v);
                     tx.update(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...next.core });
-                    tx.set(customRef(s.id), { temp: next.temp });
+                    tx.delete(customRef(s.id));
                 });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Editors updated', 'success');
@@ -865,19 +861,17 @@ function wikiApp() {
                     where('allowReplies', '==', false),
                     limit(50)
                 ));
-                const customMap = await getCustomMany(snap.docs.map(d => d.id));
                 const docs = [];
                 snap.forEach(d => {
                     const data = d.data();
-                    const temp = customMap[d.id] || data.temp;
-                    const p = parseBodyJson(data.body, temp);
+                    const p = parseBodyJson(data.body);
                     if (p.type === 'wiki') {
-                        docs.push({ id: d.id, ...data, temp });
+                        docs.push({ id: d.id, ...data });
                     }
                 });
 
                 docs.forEach(doc => {
-                    const payload = parseBodyJson(doc.body, doc.temp);
+                    const payload = parseBodyJson(doc.body);
                     let sectionId = doc.id;
                     if (sectionId.startsWith('wk_')) sectionId = sectionId.substring(3);
                     else if (sectionId.startsWith('wiki_')) sectionId = sectionId.substring(5);
@@ -957,8 +951,8 @@ function wikiApp() {
                 const meta = this.tabMeta[this.tab] || {};
                 const payload = wikiPayload(this.tab, value, meta.allowedEditors || []);
                 const batch = writeBatch(db);
-                batch.update(docsRef(docId), { title: this.tab.slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...payload.core });
-                batch.set(customRef(docId), { temp: payload.temp });
+                batch.update(docsRef(meta.docId), { title: this.tab.slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...payload.core });
+                batch.delete(customRef(meta.docId));
                 await batch.commit();
                 this.tabContent[this.tab] = value; this.renderTab(this.tab); Swal.fire('Saved', 'Wiki section updated', 'success');
             }
@@ -1071,9 +1065,8 @@ function adminDashboard() {
             });
             this.wikiSections = articles.docs.filter(x => isWikiDocId(x.id)).map(x => {
                 const d = x.data();
-                const temp = customMap[x.id] || d.temp;
-                const p = parseBodyJson(d.body, temp);
-                return { id: x.id, ...d, temp, sectionId: p.sectionId || x.id.replace(/^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
+                const p = parseBodyJson(d.body);
+                return { id: x.id, ...d, sectionId: p.sectionId || x.id.replace(/^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
             });
         },
         getAuthorName(uid) { return Alpine.store('users').get(uid).displayName || 'Unknown'; },
