@@ -1,4 +1,5 @@
 import MiniSearch from 'https://cdn.jsdelivr.net/npm/minisearch/+esm';
+import { profileDocId, isProfileDocId } from './firebase.js';
 
 const ms = new MiniSearch({
   fields: ['title', 'body'],
@@ -15,8 +16,8 @@ export function indexDoc(d) {
   if (d.kind === 'profile') {
     href = `/profile/${d.authorId}`;
   } else if (d.kind === 'message') {
-    const isProfile = d.parent.startsWith('u_');
-    href = isProfile ? `/profile/${d.parent.slice(2)}` : `/docs/${d.parent}`;
+    const isProfile = isProfileDocId(d.parent);
+    href = isProfile ? `/profile/${d.parent.replace(/^~u|^u_/, '')}` : `/docs/${d.parent}`;
   }
   const entry = {
     id: d.id,
@@ -41,7 +42,7 @@ export function indexDoc(d) {
 // Lightweight index for author stubs loaded by hydrateAuthors.
 // Does not overwrite a full profile already indexed by indexDoc.
 export function indexStub(uid, title) {
-  const id = `u_${uid}`;
+  const id = profileDocId(uid);
   if (!ms.has(id)) {
     ms.add({ id, title, body: '', kind: 'profile', href: `/profile/${uid}` });
   }

@@ -23,9 +23,18 @@ const srvTs = serverTimestamp;
 // Re-exports
 export { db, auth, srvTs };
 
+export const profileDocId = uid => `u_${uid}`;
+export const pageDocId = slug => `pg_${(slug || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
+export const wikiDocId = id => `~w${(id || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
+export const forumDocId = id => `~f${(id || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
+
+export const isWikiDocId = id => typeof id === 'string' && (id.startsWith('~w') || id.startsWith('wk_') || id.startsWith('wiki_'));
+export const isPageDocId = id => typeof id === 'string' && (id.startsWith('pg_') || id.startsWith('~p'));
+export const isProfileDocId = id => typeof id === 'string' && (id.startsWith('u_') || id.startsWith('~u'));
+
 export {
   collection, doc, query, where, orderBy, limit, startAfter,
-  getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+  getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
   onSnapshot, runTransaction, writeBatch, serverTimestamp, deleteField,
   getCountFromServer, FieldPath
 } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js';

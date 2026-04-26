@@ -18,7 +18,8 @@ import {
   srvTs,
   unlink,
   updateProfile,
-  writeBatch
+  writeBatch,
+  profileDocId
 } from './firebase.js';
 import { cacheUser, updateTheme } from './ui.js';
 import { safePhoto } from './sanitize.js';
@@ -100,8 +101,10 @@ document.addEventListener('alpine:init', () => {
 
     // Profile management
     async saveProfile(uid, data) {
-      const ref = doc(db, 'docs', `u_${uid}`);
-      const cRef = doc(db, 'custom', `u_${uid}`);
+      const id = profileDocId(uid);
+      console.log(`[Auth] Saving profile to: docs/${id} and custom/${id}`, data);
+      const ref = doc(db, 'docs', id);
+      const cRef = doc(db, 'custom', id);
       const bio = data.bio === undefined ? (this.profile?.bio || '') : data.bio;
       
       const meta = { 
@@ -116,7 +119,7 @@ document.addEventListener('alpine:init', () => {
       delete meta.temp;
       delete meta.body;
       
-      const cleanBio = bio.replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
+      const cleanBio = String(bio || '').replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
 
       const batch = writeBatch(db);
       batch.update(ref, {
@@ -124,9 +127,7 @@ document.addEventListener('alpine:init', () => {
         body: cleanBio || '...',
         updatedAt: srvTs()
       });
-      batch.set(cRef, {
-        temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`
-      });
+      batch.set(cRef, meta);
       await batch.commit();
     },
 
@@ -154,7 +155,8 @@ let _pendingDisplayName = null;
 let _pendingHandle = null;
 
 async function ensureProfile(u) {
-  const ref = doc(db, 'docs', `u_${u.uid}`);
+  const id = profileDocId(u.uid);
+  const ref = doc(db, 'docs', id);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     if (snap.exists()) {
@@ -184,13 +186,25 @@ async function ensureProfile(u) {
       updatedAt: srvTs(),
       lastReplyAt: srvTs(),
     });
-    tx.set(doc(db, 'custom', `u_${u.uid}`), {
-      temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`
-    });
+    tx.set(doc(db, 'custom', profileDocId(u.uid)), meta);
   });
 }
 
-//  Live auth state 
+//  Live auth state
+
+// Merges legacy ARCATOR_META HTML-comment metadata with customData
+function mergeLegacyMeta(data, customData, bio) {
+  let bodyData = customData || {};
+  const src = typeof data.temp === 'string' ? data.temp : bio;
+  const metaMatch = src.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
+  if (!metaMatch) return { bodyData, bio };
+  try {
+    const parsed = JSON.parse(metaMatch[1]);
+    bodyData = Object.keys(bodyData).length > 0 ? { ...parsed, ...bodyData } : parsed;
+    if (src === bio) bio = bio.replace(metaMatch[0], '').trim();
+  } catch(e) { console.error('Meta parse error', e); }
+  return { bodyData, bio };
+}
 
 onAuthStateChanged(auth, async (u) => {
   const store = Alpine.store('auth');
@@ -213,7 +227,7 @@ onAuthStateChanged(auth, async (u) => {
   } else {
     store.phase = 'signed-out';
   }
-  store.loading = !!u; // Set loading true if we have a user and need to fetch profile
+  store.loading = !!u;
   if (u) {
     // Use cache for immediate feedback
     const cache = localStorage.getItem('arcator_user_cache');
@@ -229,7 +243,7 @@ onAuthStateChanged(auth, async (u) => {
 
     // Admin sync
     const adminUnsub = onSnapshot(doc(db, 'admins', u.uid), (snap) => {
-        store.admin = snap.exists() && snap.data().isAdmin === true;
+        store.admin = snap.exists() ? snap.data().isAdmin === true : false;
     });
 
     // Subscribe to real-time updates
@@ -238,30 +252,20 @@ onAuthStateChanged(auth, async (u) => {
     const sync = () => {
         if (!docData) return;
         const data = docData;
-        const temp = customData?.temp || data.temp;
-        let bodyData = {};
-        let bio = (data.body || '').trim();
-        const metaStr = (temp || bio || '').trim();
-        const metaMatch = metaStr.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
-        
-        if (metaMatch) {
-            try { 
-                bodyData = JSON.parse(metaMatch[1]); 
-                if (!temp) bio = bio.replace(metaMatch[0], '').trim(); 
-            } catch(e) { console.error('Meta parse error', e); }
-        } else {
-            try { bodyData = JSON.parse(metaStr); bio = bodyData.bio || bio; } catch(e) { console.error('Body parse error', e); }
-        }
+        let bio = (customData?.bio !== undefined) ? customData.bio : (data.body || '').trim();
+        const merged = mergeLegacyMeta(data, customData, bio);
+        const bodyData = merged.bodyData;
+        bio = merged.bio;
         bodyData.bio = bio;
-        if (!bodyData.glassColor || bodyData.glassColor.trim() === '') bodyData.glassColor = '#000000';
+        bodyData.glassColor = bodyData.glassColor?.trim() || '#000000';
 
-        const profile = { 
-            displayName: data.title || '', 
-            handle: data.handle || '', 
+        const profile = {
+            displayName: data.title || '',
+            handle: data.handle || '',
             photoURL: safePhoto(data.photoURL),
-            ...data, 
-            ...bodyData, 
-            id: `u_${u.uid}`
+            ...data,
+            ...bodyData,
+            id: profileDocId(u.uid)
         };
         store.profile = profile;
         if (profile.admin) store.admin = true;
@@ -270,12 +274,13 @@ onAuthStateChanged(auth, async (u) => {
         cacheUser(u, profile);
     };
 
-    const unsub = onSnapshot(doc(db, 'docs', `u_${u.uid}`), (snap) => {
+    const unsub = onSnapshot(doc(db, 'docs', profileDocId(u.uid)), (snap) => {
+        console.log(`[Auth] Profile snapshot update for: ${snap.id} (exists: ${snap.exists()})`);
         if (!snap.exists()) { ensureProfile(u); return; }
         docData = snap.data();
         sync();
     });
-    const customUnsub = onSnapshot(doc(db, 'custom', `u_${u.uid}`), (snap) => {
+    const customUnsub = onSnapshot(doc(db, 'custom', profileDocId(u.uid)), (snap) => {
         customData = snap.exists() ? snap.data() : null;
         sync();
     });
@@ -284,10 +289,8 @@ onAuthStateChanged(auth, async (u) => {
   } else {
     store.profile = null;
     store.loading = false;
-    if (globalThis._authUnsubs) {
-        globalThis._authUnsubs.forEach(un => un());
-        globalThis._authUnsubs = null;
-    }
+    globalThis._authUnsubs?.forEach(un => un());
+    globalThis._authUnsubs = null;
   }
 });
 

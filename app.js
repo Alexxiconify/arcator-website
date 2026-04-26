@@ -4,7 +4,9 @@ import {
   db, auth, srvTs as serverTimestamp,
   collection, doc, query, where, orderBy,
   getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  onSnapshot, writeBatch, getCountFromServer
+  onSnapshot, writeBatch, getCountFromServer, limit, runTransaction,
+  profileDocId, pageDocId, wikiDocId, forumDocId,
+  isWikiDocId, isPageDocId
 } from './js/firebase.js';
 import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
 import './js/keys.js';
@@ -110,11 +112,7 @@ const COLLECTIONS = {
 };
 
 const DOC_KIND = { ARTICLE: 'article', PROFILE: 'profile', MESSAGE: 'message' };
-const profileDocId = uid => `u_${uid}`;
-const pageDocId = slug => `pg_${(slug || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
-const wikiDocId = id => `~w2601-${(id || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
-const isWikiDocId = id => typeof id === 'string' && (id.startsWith('wk_') || id.startsWith('wiki_') || id.startsWith('~w'));
-const isPageDocId = id => typeof id === 'string' && id.startsWith('pg_');
+
 
 const updateSignal = async () => {
     try {
@@ -127,14 +125,14 @@ const docsCollection = () => collection(db, COLLECTIONS.DOCS);
 const docsRef = id => doc(db, COLLECTIONS.DOCS, id);
 const customRef = id => doc(db, 'custom', id);
 const getCustom = async id => {
-    try { const snap = await getDoc(customRef(id)); return snap.exists() ? snap.data().temp : null; }
+    try { const snap = await getDoc(customRef(id)); return snap.exists() ? snap.data() : null; }
     catch(e) { return null;}
 };
 const getCustomMany = async ids => {
     try {
         const snaps = await Promise.all(ids.map(id => getDoc(customRef(id))));
         const res = {};
-        snaps.forEach(s => { if (s.exists()) res[s.id] = s.data().temp; });
+        snaps.forEach(s => { if (s.exists()) res[s.id] = s.data(); });
         return res;
     } catch(e) { return {}; }
 };
@@ -176,17 +174,19 @@ function makeDocShape({ kind, authorId, title = '', body = '', photoURL = '', pa
 function parseProfileData(d, uid) {
     let payload = {};
     let bio = (d?.body || '').trim();
-    const metaStr = (d?.temp || bio || '').trim();
-    const metaMatch = metaStr.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
-    if (metaMatch) {
-        try { 
-            payload = JSON.parse(metaMatch[1]); 
-            if (!d?.temp) {
-                bio = bio.replace(metaMatch[0], '').trim(); 
-            }
-        } catch(e) {}
+    if (typeof d?.temp === 'string') {
+        const metaMatch = d.temp.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
+        if (metaMatch) {
+            try { payload = JSON.parse(metaMatch[1]); } catch(e) {}
+        }
     } else {
-        try { payload = JSON.parse(metaStr); bio = payload.bio || bio; } catch(e) {}
+        const metaMatch = bio.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
+        if (metaMatch) {
+            try { 
+                payload = JSON.parse(metaMatch[1]); 
+                bio = bio.replace(metaMatch[0], '').trim(); 
+            } catch(e) {}
+        }
     }
     return {
         uid,
@@ -222,30 +222,36 @@ const encodeProfileBody = (data, optBio) => {
     const cleanBio = b.replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
     return {
         body: safeBody(cleanBio),
-        temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`
+        meta: meta
     };
 };
 
 const safeBody = value => (value || '').toString().trim() || '...';
-const parseBodyJson = (body, temp) => {
-    const str = String(temp || body || '');
-    if (!str) return {};
+const parseBodyJson = (body, customData) => {
+    // customData: plain object from custom/ collection (fields: type, slug/sectionId, allowedEditors, etc.)
+    if (customData && typeof customData === 'object' && Object.keys(customData).length > 0) {
+        return { ...customData, content: String(body || '').trim() };
+    }
+    // Legacy: metadata embedded in body as HTML comment
+    const str = String(body || '').trim();
+    if (!str) return { content: '' };
     const metaMatch = str.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
     if (metaMatch) {
-         try {
-             const payload = JSON.parse(metaMatch[1]);
-             payload.content = temp ? String(body || '') : str.replace(metaMatch[0], '').trim();
-             return payload;
-         } catch(e) {}
+        try {
+            const payload = JSON.parse(metaMatch[1]);
+            payload.content = str.replace(metaMatch[0], '').trim();
+            return payload;
+        } catch(e) {}
     }
-    try { return JSON.parse(str); } catch { return { content: String(body || '') }; }
+    return { content: str };
 };
-const pagePayload = (slug, content, authorId) => ({ 
-    core: { body: safeBody(content) }, 
-    temp: `<!-- ARCATOR_META:${JSON.stringify({ type: 'page', slug, authorId })} -->` 
+const pagePayload = (slug, content, authorId) => ({
+    core: { body: safeBody(content) },
+    meta: { type: 'page', slug, authorId }
 });
-const wikiPayload = (sectionId, content, allowedEditors = []) => ({ 
-    core: { body: `<!-- ARCATOR_META:${JSON.stringify({ type: 'wiki', sectionId, allowedEditors })} -->\n${safeBody(content)}` }
+const wikiPayload = (sectionId, content, allowedEditors = []) => ({
+    core: { body: safeBody(content) },
+    meta: { type: 'wiki', sectionId, allowedEditors }
 });
 
 const firebaseReadyPromise = new Promise(r => { const u = auth.onAuthStateChanged(() => { u(); r(true); }); });
@@ -403,6 +409,7 @@ function forumData() {
                 orderBy('lastReplyAt', 'desc'),
                 limit(50)
             ));
+            console.log(`[Forum] Found ${snap.docs.length} thread documents in docs/`);
             this.threads = await Promise.all(snap.docs.map(d => this.mapThreadDoc(d)));
             // No longer filtering by ID prefix, using flags in query above
             this.threads.forEach(t => indexDoc({ kind: 'thread', id: t.id, title: t.title, body: (t.description || '').replaceAll(/<[^>]+>/g, ' ') }));
@@ -450,7 +457,10 @@ function forumData() {
             if (!this.quill) { return; }
             const u = Alpine.store('auth').user;
             if (!u) { return; }
-            const docRef = await addDoc(docsCollection(), makeDocShape({
+            const id = forumDocId(this.newThread.title || 'Untitled');
+            const threadRef = docsRef(id);
+            console.log(`[Forum] Creating thread at: docs/${id}`, this.newThread);
+            await setDoc(threadRef, makeDocShape({
                 kind: DOC_KIND.ARTICLE,
                 authorId: u.uid,
                 title: this.newThread.title || 'Untitled',
@@ -462,7 +472,6 @@ function forumData() {
                 featured: false,
                 spoiler: false
             }));
-            await setDoc(customRef(docRef.id), { temp: '' });
             await updateSignal();
             this.showCreateModal = false; this.newThread = { title: '', category: '', tags: '' }; this.quill.root.innerHTML = ''; this.loadThreads();
         },
@@ -511,7 +520,6 @@ function forumData() {
                 body: safeBody(c),
                 photoURL: ''
             }));
-            batch.set(customRef(newCommentRef.id), { temp: '' });
             batch.update(docsRef(fid), { lastReplyAt: serverTimestamp() });
             await batch.commit();
             t.quill.root.innerHTML = '';
@@ -573,7 +581,6 @@ function forumData() {
                     body: safeBody(c),
                     photoURL: ''
                 }));
-                batch.set(customRef(newCommentRef.id), { temp: '' });
                 batch.update(docsRef(t.id), { lastReplyAt: serverTimestamp() });
                 await batch.commit();
                 const snap = await getDocs(query(
@@ -626,7 +633,6 @@ function forumData() {
                     if (!snap.exists()) throw new Error('NOT_FOUND');
                     if (!snap.data().updatedAt?.isEqual(t.updatedAt)) throw new Error('CONFLICT');
                     tx.update(docsRef(t.id), { title: (v[0] || '').slice(0, 500), body: safeBody(v[3]), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
-                    tx.set(customRef(t.id), { temp: '' });
                 });
                 Object.assign(t, { title: v[0], tags: v[1], category: v[2], description: v[3], updatedAt: new Date() });
             }
@@ -639,7 +645,6 @@ function forumData() {
                     if (!snap.exists()) throw new Error('NOT_FOUND');
                     if (!snap.data().updatedAt?.isEqual(c.updatedAt)) throw new Error('CONFLICT');
                     tx.update(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
-                    tx.set(customRef(c.id), { temp: '' });
                 });
                 c.content = res; c.updatedAt = new Date();
             } 
@@ -652,7 +657,6 @@ function forumData() {
                     if (!snap.exists()) throw new Error('NOT_FOUND');
                     if (!snap.data().updatedAt?.isEqual(c.updatedAt)) throw new Error('CONFLICT');
                     tx.update(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
-                    tx.set(customRef(c.id), { temp: '' });
                 });
                 c.content = res; c.censored = true; c.updatedAt = new Date();
             } 
@@ -711,7 +715,6 @@ function messageData() {
             if (!this.newMessage.trim() || !this.selectedConv) return;
             const u = Alpine.store('auth').user, batch = writeBatch(db), newMsgRef = doc(docsCollection());
             batch.set(newMsgRef, makeDocShape({ kind: DOC_KIND.MESSAGE, authorId: u.uid, parent: this.selectedConv.id, title: '', body: safeBody(this.newMessage), photoURL: '' }));
-            batch.set(customRef(newMsgRef.id), { temp: '' });
             batch.update(docsRef(this.selectedConv.id), { lastReplyAt: serverTimestamp() });
             await batch.commit(); this.newMessage = '';
         },
@@ -738,7 +741,6 @@ function messageData() {
                     allowReplies: true,
                     allowPublicEdits: false
                 }));
-                batch.set(customRef(cid), { temp: '' });
                 await batch.commit();
                 await updateSignal();
                 this.loadConversations();
@@ -756,8 +758,13 @@ function registerPageWikiManagement() {
             const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="mb-2" placeholder="Title"><input id="np-slug" class="mb-2" placeholder="Slug"><textarea id="np-content" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, authorId: Alpine.store('auth').user.uid }) });
             if (v) {
                 const payload = pagePayload(v.slug, v.content, v.authorId);
-                const res = await addDoc(docsCollection(), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: v.authorId, title: v.title || 'Untitled', photoURL: '', allowReplies: false, allowPublicEdits: false, ...payload.core }));
-                await setDoc(customRef(res.id), { temp: payload.temp });
+                const id = pageDocId(v.slug);
+                const newRef = docsRef(id);
+                console.log(`[MGMT] Creating page at: docs/${id} and custom/${id}`, v);
+                const batch = writeBatch(db);
+                batch.set(newRef, makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: v.authorId, title: v.title || 'Untitled', photoURL: '', allowReplies: false, allowPublicEdits: false, ...payload.core }));
+                batch.set(customRef(newRef.id), payload.meta);
+                await batch.commit();
                 await updateSignal();
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Page created', 'success');
@@ -772,7 +779,7 @@ function registerPageWikiManagement() {
                     if (!snap.data().updatedAt?.isEqual(p.updatedAt)) throw new Error('CONFLICT');
                     const payload = pagePayload(v.slug, v.content, p.authorId);
                     tx.update(docsRef(p.id), { title: (v.title || '').slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...payload.core });
-                    tx.set(customRef(p.id), { temp: payload.temp });
+                    tx.set(customRef(p.id), payload.meta);
                 });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Page updated', 'success');
@@ -792,7 +799,13 @@ function registerPageWikiManagement() {
             if (v?.id) {
                 const uid = Alpine.store('auth').user?.uid;
                 const payload = wikiPayload(v.id, v.content, []);
-                await addDoc(docsCollection(), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: uid, title: v.id, photoURL: '', allowReplies: false, allowPublicEdits: false, ...payload.core }));
+                const id = wikiDocId(v.id);
+                const newRef = docsRef(id);
+                console.log(`[MGMT] Creating wiki section at: docs/${id} and custom/${id}`, v);
+                const batch = writeBatch(db);
+                batch.set(newRef, makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: uid, title: v.id, photoURL: '', allowReplies: false, allowPublicEdits: false, ...payload.core }));
+                batch.set(customRef(newRef.id), payload.meta);
+                await batch.commit();
                 await updateSignal();
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section created', 'success');
@@ -805,10 +818,11 @@ function registerPageWikiManagement() {
                     const snap = await tx.get(docsRef(s.id));
                     if (!snap.exists()) throw new Error('NOT_FOUND');
                     if (!snap.data().updatedAt?.isEqual(s.updatedAt)) throw new Error('CONFLICT');
-                    const payload = parseBodyJson(s.body);
+                    const cSnap = await tx.get(customRef(s.id));
+                    const payload = parseBodyJson(snap.data().body, cSnap.exists() ? cSnap.data() : null);
                     const next = wikiPayload(payload.sectionId || s.id, v, payload.allowedEditors || []);
                     tx.update(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...next.core });
-                    tx.delete(customRef(s.id));
+                    tx.set(customRef(s.id), next.meta);
                 });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section updated', 'success');
@@ -823,10 +837,11 @@ function registerPageWikiManagement() {
                     const snap = await tx.get(docsRef(s.id));
                     if (!snap.exists()) throw new Error('NOT_FOUND');
                     if (!snap.data().updatedAt?.isEqual(s.updatedAt)) throw new Error('CONFLICT');
-                    const payload = parseBodyJson(s.body);
+                    const cSnap = await tx.get(customRef(s.id));
+                    const payload = parseBodyJson(snap.data().body, cSnap.exists() ? cSnap.data() : null);
                     const next = wikiPayload(payload.sectionId || s.id, payload.content || '', v);
                     tx.update(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...next.core });
-                    tx.delete(customRef(s.id));
+                    tx.set(customRef(s.id), next.meta);
                 });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Editors updated', 'success');
@@ -857,25 +872,29 @@ function wikiApp() {
                 const snap = await getDocs(query(
                     docsCollection(),
                     where('kind', '==', DOC_KIND.ARTICLE),
-                    where('allowPublicEdits', '==', false),
-                    where('allowReplies', '==', false),
                     limit(50)
                 ));
-                const docs = [];
-                snap.forEach(d => {
-                    const data = d.data();
-                    const p = parseBodyJson(data.body);
-                    if (p.type === 'wiki') {
-                        docs.push({ id: d.id, ...data });
-                    }
+                const rawDocs = [];
+                snap.forEach(d => rawDocs.push({ id: d.id, ...d.data() }));
+                console.log(`[Wiki] Found ${rawDocs.length} candidate documents in docs/`);
+
+                const customDataMap = await getCustomMany(rawDocs.map(d => d.id));
+
+                const docs = rawDocs.filter(d => {
+                    const cd = customDataMap[d.id];
+                    const p = parseBodyJson(d.body, cd || null);
+                    const isWiki = p.type === 'wiki' || isWikiDocId(d.id);
+                    if (!isWiki) console.log(`[Wiki] Document ${d.id} is NOT wiki-related`);
+                    return isWiki;
                 });
+                console.log(`[Wiki] ${docs.length} documents identified as wiki sections`);
 
                 docs.forEach(doc => {
-                    const payload = parseBodyJson(doc.body);
-                    let sectionId = doc.id;
-                    if (sectionId.startsWith('wk_')) sectionId = sectionId.substring(3);
+                    const payload = parseBodyJson(doc.body, customDataMap[doc.id] || null);
+                    let sectionId = payload.sectionId || doc.id;
+                    if (sectionId.startsWith('~w')) sectionId = sectionId.replace(/^~w(\d*-)?/, '');
+                    else if (sectionId.startsWith('wk_')) sectionId = sectionId.substring(3);
                     else if (sectionId.startsWith('wiki_')) sectionId = sectionId.substring(5);
-                    else if (sectionId.startsWith('~w')) sectionId = sectionId.replace(/^~w\d*-/, '');
 
                     const content = payload.content || doc.body;
                     this.tabContent[sectionId] = content;
@@ -977,15 +996,19 @@ function pagesData() {
                 orderBy('createdAt', 'desc'),
                 limit(50)
             ));
-            const customMap = await getCustomMany(snap.docs.map(d => d.id));
             this.pages = snap.docs
                 .map(d => {
                     const raw = d.data();
-                    const temp = customMap[d.id] || raw.temp;
-                    const payload = parseBodyJson(raw.body, temp);
-                    return { id: d.id, ...raw, temp, type: payload.type, slug: payload.slug || d.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
+                    const payload = parseBodyJson(raw.body);
+                    const p = { id: d.id, ...raw, type: payload.type, slug: payload.slug || d.id.replace(/^~p|^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
+                    return p;
                 })
-                .filter(p => p.type === 'page');
+                .filter(p => {
+                    const isPage = p.type === 'page';
+                    if (!isPage) console.log(`[Pages] Document ${p.id} is NOT type:page (type: ${p.type})`);
+                    return isPage;
+                });
+            console.log(`[Pages] ${this.pages.length} pages loaded`);
             this.pages.forEach(p => indexDoc({ kind: 'page', id: p.id, title: p.title, body: (p.content || '').replaceAll(/<[^>]+>/g, ' ') }));
             if (!this.currentPageId) this.loading = false;
             markSearchReady();
@@ -994,9 +1017,8 @@ function pagesData() {
             const snap = await getDoc(docsRef(id));
             if (snap.exists()) {
                 const raw = snap.data();
-                const temp = await getCustom(id);
-                const payload = parseBodyJson(raw.body, temp || raw.temp);
-                this.currentPage = { id: snap.id, ...raw, temp: temp || raw.temp, slug: payload.slug || snap.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
+                const payload = parseBodyJson(raw.body);
+                this.currentPage = { id: snap.id, ...raw, slug: payload.slug || snap.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
                 document.title = `${this.currentPage.title || 'Page'} - Arcator`;
                 await this.loadAuthor(this.currentPage.authorId);
             }
@@ -1054,7 +1076,7 @@ function adminDashboard() {
                 const d = x.data();
                 const temp = customMap[x.id] || d.temp;
                 const p = parseBodyJson(d.body, temp);
-                return { id: x.id, ...d, temp, slug: p.slug || x.id.replace(/^pg_/, ''), content: p.content || '', authorId: p.authorId || d.authorId };
+                return { id: x.id, ...d, temp, slug: p.slug || x.id.replace(/^~p|^pg_/, ''), content: p.content || '', authorId: p.authorId || d.authorId };
             });
             this.threads = articles.docs.filter(x => !isPageDocId(x.id) && !isWikiDocId(x.id) && !x.id.startsWith('cv_')).map(x => ({ id: x.id, ...x.data(), description: x.data().body || '' }));
             this.dms = articles.docs.filter(x => x.id.startsWith('cv_')).map(x => {
@@ -1066,7 +1088,7 @@ function adminDashboard() {
             this.wikiSections = articles.docs.filter(x => isWikiDocId(x.id)).map(x => {
                 const d = x.data();
                 const p = parseBodyJson(d.body);
-                return { id: x.id, ...d, sectionId: p.sectionId || x.id.replace(/^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
+                return { id: x.id, ...d, sectionId: p.sectionId || x.id.replace(/^~w|^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
             });
         },
         getAuthorName(uid) { return Alpine.store('users').get(uid).displayName || 'Unknown'; },
@@ -1318,4 +1340,4 @@ const projectId = "arcator-v2";
 const appId = "1:171774915460:web:2fc364da8a1bd095eae3d1";
 
 export {projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection };
-export {auth, db} from './js/firebase.js';
+export {auth, db, limit} from './js/firebase.js';

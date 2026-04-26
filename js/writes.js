@@ -14,15 +14,10 @@ import {
   updateDoc,
   where,
   writeBatch,
+  profileDocId
 } from './firebase.js';
 import { PROFILE_ZEROED } from './constants.js';
 import { isValidEmojiKey } from './sanitize.js';
-
-export const customRef = id => doc(db, 'custom', id);
-export const getCustom = async id => {
-  try { const snap = await getDoc(customRef(id)); return snap.exists() ? snap.data().temp : null; }
-  catch(e) { return null; /* */ }
-};
 
 //  Helpers 
 
@@ -63,7 +58,6 @@ export async function createArticle(input) {
     lastReplyAt: srvTs()
   };
   await setDoc(ref, data);
-  await setDoc(customRef(ref.id), { temp: input.temp ?? '' });
   signalCron();
   return ref.id;
 }
@@ -91,7 +85,6 @@ export async function createMessage(parentId, body) {
   await preflightParent(parentId);
   const batch = writeBatch(db);
   batch.set(msgRef, data);
-  batch.set(customRef(msgRef.id), { temp: '' });
   batch.update(doc(db, 'docs', parentId), { lastReplyAt: srvTs() });
   await batch.commit();
   return msgRef.id;
@@ -99,7 +92,7 @@ export async function createMessage(parentId, body) {
 
 export async function zeroProfile() {
   const uid = requireVerified();
-  const ref = doc(db, 'docs', `u_${uid}`);
+  const ref = doc(db, 'docs', profileDocId(uid));
   await updateDoc(ref, { ...PROFILE_ZEROED, updatedAt: srvTs() });
   delete Alpine.store('profiles')[uid];
   signalCron();
@@ -128,9 +121,7 @@ async function saveWithConflictDetection(ref, localUpdatedAt, fields) {
     if (!snap.exists()) throw new Error('NOT_FOUND');
     const live = snap.data();
     if (!live.updatedAt.isEqual(localUpdatedAt)) throw new Error('CONFLICT');
-    const { temp, ...core } = fields;
-    tx.update(ref, { ...core, updatedAt: srvTs() });
-    if (temp !== undefined) tx.set(customRef(ref.id), { temp });
+    tx.update(ref, { ...fields, updatedAt: srvTs() });
   });
 }
 
@@ -140,13 +131,16 @@ async function gatedSave(opName, allowed, ref, ts, changes) {
   await saveWithConflictDetection(ref, ts, changes);
 }
 
-export const editContent = (ref, ts, c) =>
-  gatedSave('editContent', ['title', 'body', 'photoURL', 'bodyIsHTML', 'temp'], ref, ts, {
-    ...c,
-    title: c.title ? c.title.slice(0, 500) : undefined,
-    photoURL: c.photoURL ? (c.photoURL.startsWith('https://') ? c.photoURL.slice(0, 492) : '') : undefined,
-    bodyIsHTML: false,
-  });
+export const editContent = (ref, ts, c) => {
+  const fields = { ...c, bodyIsHTML: false };
+  if (fields.title) fields.title = fields.title.slice(0, 500);
+  if (fields.photoURL) {
+    fields.photoURL = fields.photoURL.startsWith('https://') 
+      ? fields.photoURL.slice(0, 492) 
+      : '';
+  }
+  return gatedSave('editContent', ['title', 'body', 'photoURL', 'bodyIsHTML'], ref, ts, fields);
+};
 export const editFlags = (ref, ts, c) =>
   gatedSave(
     'editFlags',
