@@ -161,7 +161,7 @@ function parseProfileData(d, uid) {
     let payload = {};
     let bio = (d?.body || '').trim();
     const metaStr = (d?.temp || bio || '').trim();
-    const metaMatch = metaStr.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
+    const metaMatch = metaStr.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
     if (metaMatch) {
         try { 
             payload = JSON.parse(metaMatch[1]); 
@@ -214,7 +214,7 @@ const safeBody = value => (value || '').toString().trim() || '...';
 const parseBodyJson = (body, temp) => {
     const str = String(temp || body || '');
     if (!str) return {};
-    const metaMatch = str.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
+    const metaMatch = str.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
     if (metaMatch) {
          try {
              const payload = JSON.parse(metaMatch[1]);

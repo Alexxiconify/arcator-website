@@ -439,6 +439,7 @@ window.pageGlitch = pageGlitch;
   let pendingCapture = null;
 
   window.addEventListener('keydown', (e) => {
+    if (!e.key) return;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     const next = key === sequence[pos] ? pos + 1 : key === sequence[0] ? 1 : 0;
     if (next < pos) pendingCapture = null; // sequence broken, discard stale capture

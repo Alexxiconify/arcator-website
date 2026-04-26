@@ -220,6 +220,11 @@ onAuthStateChanged(auth, async (u) => {
         } catch (e) { console.warn('Cache load error', e); }
     }
 
+    // Admin sync
+    const adminUnsub = onSnapshot(doc(db, 'admins', u.uid), (snap) => {
+        store.admin = snap.exists() && snap.data().isAdmin === true;
+    });
+
     // Subscribe to real-time updates
     const unsub = onSnapshot(doc(db, 'docs', `u_${u.uid}`), (snap) => {
         if (!snap.exists()) {
@@ -230,7 +235,7 @@ onAuthStateChanged(auth, async (u) => {
         let bodyData = {};
         let bio = (data.body || '').trim();
         const metaStr = (data.temp || bio || '').trim();
-        const metaMatch = metaStr.match(/<!--\s*ARCATOR_META:\s*({.*})\s*-->/);
+        const metaMatch = metaStr.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
         
         if (metaMatch) {
             try { 
@@ -246,21 +251,31 @@ onAuthStateChanged(auth, async (u) => {
             bodyData.glassColor = '#000000';
         }
 
-        const profile = { ...data, ...bodyData, id: snap.id };
+        const profile = { 
+            displayName: data.title || '', 
+            handle: data.handle || '', 
+            photoURL: safePhoto(data.photoURL),
+            ...data, 
+            ...bodyData, 
+            id: snap.id 
+        };
         store.profile = profile;
+        // Fallback admin check from profile if not in admins collection
+        if (profile.admin) store.admin = true;
+        
         store.loading = false;
 
         updateTheme(profile.themePreference, profile.fontScaling, profile.customCSS, profile.backgroundImage, profile.glassColor, profile.glassOpacity, profile.glassBlur);
         cacheUser(u, profile);
     });
-    // Store unsub in global for logout cleanup
-    globalThis._authUnsub = unsub;
+    // Store unsubs in global for logout cleanup
+    globalThis._authUnsubs = [adminUnsub, unsub];
   } else {
     store.profile = null;
     store.loading = false;
-    if (globalThis._authUnsub) {
-        globalThis._authUnsub();
-        globalThis._authUnsub = null;
+    if (globalThis._authUnsubs) {
+        globalThis._authUnsubs.forEach(un => un());
+        globalThis._authUnsubs = null;
     }
   }
 });
