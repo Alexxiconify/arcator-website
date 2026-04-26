@@ -19,6 +19,22 @@ const db = initializeFirestore(app, {
 });
 const auth = getAuth(app);
 const srvTs = serverTimestamp;
+export const COLLECTIONS = {
+    DOCS: 'docs',
+    ADMINS: 'admins',
+    BANS: 'bans',
+    GLOBAL: 'global',
+    USERS: 'docs',
+    USER_PROFILES: 'docs',
+    FORMS: 'docs',
+    SUBMISSIONS: () => 'docs',
+    CONVERSATIONS: 'docs',
+    CONV_MESSAGES: () => 'docs',
+    THEMES: 'docs',
+    PAGES: 'docs',
+    WIKI_CONFIG: 'docs',
+    WIKI_PAGES: 'docs'
+};
 
 // Re-exports
 export { db, auth, srvTs };
@@ -29,6 +45,7 @@ export const wikiDocId = id => `~w${(id || '').toLowerCase().replaceAll(/[^a-z0-
 export const forumDocId = id => `~f${(id || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
 
 export const isWikiDocId = id => typeof id === 'string' && (id.startsWith('~w') || id.startsWith('wk_') || id.startsWith('wiki_'));
+export const isForumDocId = id => typeof id === 'string' && (id.startsWith('~f') || id.startsWith('fr_') || id.startsWith('forum_'));
 export const isPageDocId = id => typeof id === 'string' && (id.startsWith('pg_') || id.startsWith('~p'));
 export const isProfileDocId = id => typeof id === 'string' && (id.startsWith('u_') || id.startsWith('~u'));
 

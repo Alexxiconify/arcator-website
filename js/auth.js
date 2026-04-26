@@ -206,29 +206,8 @@ function mergeLegacyMeta(data, customData, bio) {
   return { bodyData, bio };
 }
 
-onAuthStateChanged(auth, async (u) => {
-  const store = Alpine.store('auth');
-  if (!store) return;
-
-  // user and phase are safe to set synchronously — emailVerified is current
-  // in the user object delivered by onAuthStateChanged.
-  store.admin = false;
-  store.user = u
-    ? {
-        uid: u.uid,
-        displayName: u.displayName,
-        photoURL: u.photoURL,
-        email: u.email,
-        emailVerified: u.emailVerified,
-      }
-    : null;
-  if (u) {
-    store.phase = u.emailVerified ? 'verified' : 'unverified';
-  } else {
-    store.phase = 'signed-out';
-  }
-  store.loading = !!u;
-  if (u) {
+async function syncUserSession(u) {
+    const store = Alpine.store('auth');
     // Use cache for immediate feedback
     const cache = localStorage.getItem('arcator_user_cache');
     if (cache) {
@@ -242,7 +221,7 @@ onAuthStateChanged(auth, async (u) => {
     }
 
     // Admin sync
-    const adminUnsub = onSnapshot(doc(db, 'admins', u.uid), (snap) => {
+    const adminUnsub = onSnapshot(doc(db, COLLECTIONS.ADMINS, u.uid), (snap) => {
         store.admin = snap.exists() ? snap.data().isAdmin === true : false;
     });
 
@@ -250,31 +229,32 @@ onAuthStateChanged(auth, async (u) => {
     let docData = null;
     let customData = null;
     const sync = () => {
-        if (!docData) return;
-        const data = docData;
-        let bio = (customData?.bio !== undefined) ? customData.bio : (data.body || '').trim();
-        const merged = mergeLegacyMeta(data, customData, bio);
-        const bodyData = merged.bodyData;
-        bio = merged.bio;
-        bodyData.bio = bio;
-        bodyData.glassColor = bodyData.glassColor?.trim() || '#000000';
+        if (docData) {
+            const data = docData;
+            let bio = (customData?.bio !== undefined) ? customData.bio : (data.body || '').trim();
+            const merged = mergeLegacyMeta(data, customData, bio);
+            const bodyData = merged.bodyData;
+            bio = merged.bio;
+            bodyData.bio = bio;
+            bodyData.glassColor = bodyData.glassColor?.trim() || '#000000';
 
-        const profile = {
-            displayName: data.title || '',
-            handle: data.handle || '',
-            photoURL: safePhoto(data.photoURL),
-            ...data,
-            ...bodyData,
-            id: profileDocId(u.uid)
-        };
-        store.profile = profile;
-        if (profile.admin) store.admin = true;
-        store.loading = false;
-        updateTheme(profile.themePreference, profile.fontScaling, profile.customCSS, profile.backgroundImage, profile.glassColor, profile.glassOpacity, profile.glassBlur);
-        cacheUser(u, profile);
+            const profile = {
+                displayName: data.title || '',
+                handle: data.handle || '',
+                photoURL: safePhoto(data.photoURL),
+                ...data,
+                ...bodyData,
+                id: profileDocId(u.uid)
+            };
+            store.profile = profile;
+            if (profile.admin) store.admin = true;
+            store.loading = false;
+            updateTheme(profile.themePreference, profile.fontScaling, profile.customCSS, profile.backgroundImage, profile.glassColor, profile.glassOpacity, profile.glassBlur);
+            cacheUser(u, profile);
+        }
     };
 
-    const unsub = onSnapshot(doc(db, 'docs', profileDocId(u.uid)), (snap) => {
+    const unsub = onSnapshot(doc(db, COLLECTIONS.USERS, profileDocId(u.uid)), (snap) => {
         console.log(`[Auth] Profile snapshot update for: ${snap.id} (exists: ${snap.exists()})`);
         if (!snap.exists()) { ensureProfile(u); return; }
         docData = snap.data();
@@ -286,11 +266,27 @@ onAuthStateChanged(auth, async (u) => {
     });
     // Store unsubs in global for logout cleanup
     globalThis._authUnsubs = [adminUnsub, unsub, customUnsub];
+}
+
+onAuthStateChanged(auth, async (u) => {
+  const store = Alpine.store('auth');
+  if (!store) return;
+
+  store.admin = false;
+  store.user = u ? { uid: u.uid, displayName: u.displayName, photoURL: u.photoURL, email: u.email, emailVerified: u.emailVerified } : null;
+  store.loading = !!u;
+
+  if (u) {
+    store.phase = u.emailVerified ? 'verified' : 'unverified';
+    syncUserSession(u);
   } else {
+    store.phase = 'signed-out';
     store.profile = null;
     store.loading = false;
-    globalThis._authUnsubs?.forEach(un => un());
-    globalThis._authUnsubs = null;
+    if (globalThis._authUnsubs) {
+        globalThis._authUnsubs.forEach(un => un());
+        globalThis._authUnsubs = null;
+    }
   }
 });
 

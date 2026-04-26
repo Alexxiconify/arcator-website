@@ -6,7 +6,7 @@ import {
   getDoc, getDocs, setDoc, updateDoc, deleteDoc,
   onSnapshot, writeBatch, getCountFromServer, limit, runTransaction,
   profileDocId, pageDocId, wikiDocId, forumDocId,
-  isWikiDocId, isPageDocId
+  isWikiDocId, isPageDocId, COLLECTIONS
 } from './js/firebase.js';
 import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
 import './js/keys.js';
@@ -93,23 +93,6 @@ if (globalThis.Alpine) {
 }
 const DEFAULT_PROFILE_PIC = './defaultuser.png';
 const DEFAULT_THEME_NAME = 'dark';
-
-const COLLECTIONS = {
-    DOCS: 'docs',
-    ADMINS: 'admins',
-    BANS: 'bans',
-    GLOBAL: 'global',
-    USERS: 'docs',
-    USER_PROFILES: 'docs',
-    FORMS: 'docs',
-    SUBMISSIONS: () => 'docs',
-    CONVERSATIONS: 'docs',
-    CONV_MESSAGES: () => 'docs',
-    THEMES: 'docs',
-    PAGES: 'docs',
-    WIKI_CONFIG: 'docs',
-    WIKI_PAGES: 'docs'
-};
 
 const DOC_KIND = { ARTICLE: 'article', PROFILE: 'profile', MESSAGE: 'message' };
 
@@ -872,7 +855,7 @@ function wikiApp() {
                 const snap = await getDocs(query(
                     docsCollection(),
                     where('kind', '==', DOC_KIND.ARTICLE),
-                    limit(50)
+                    limit(500)
                 ));
                 const rawDocs = [];
                 snap.forEach(d => rawDocs.push({ id: d.id, ...d.data() }));
@@ -933,7 +916,7 @@ function wikiApp() {
                 }
 
                 this.loading = false;
-                this.$nextTick(() => this.renderTab(this.tab));
+                this.$nextTick(() => this.selectTab(this.tab));
             } catch (err) {
                 console.error("Wiki error:", err);
                 this.loading = false;
@@ -941,40 +924,34 @@ function wikiApp() {
                 markSearchReady();
             }
         },
-        renderTab(id) { 
-            const container = document.getElementById('wiki-main-container');
-            if (container && this.tabContent[id]) { 
-                container.innerHTML = typeof marked === 'undefined' ? this.tabContent[id] : marked.parse(this.tabContent[id]); 
-                container.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x)); 
-            } 
-        },
+
         isTransitioning: false,
         selectTab(id) {
             if (this.tab === id || this.isTransitioning) return;
+            const doUpdate = () => {
+                this.tab = id;
+                const container = document.getElementById('wiki-main-container');
+                if (container && this.tabContent[id]) {
+                    const content = this.tabContent[id];
+                    const isHtml = /<[a-z][\s\S]*>/i.test(content);
+                    container.innerHTML = DOMPurify.sanitize(isHtml ? content : marked.parse(content));
+                    container.querySelectorAll('[x-data]').forEach(x => Alpine.initTree(x));
+                    const url = new URL(globalThis.location.href);
+                    url.searchParams.set('page', id);
+                    globalThis.history.replaceState({}, '', url);
+                }
+            };
             if (document.startViewTransition) {
                 this.isTransitioning = true;
-                const transition = document.startViewTransition(() => {
-                    this.tab = id;
-                    this.$nextTick(() => this.renderTab(id));
-                });
+                const transition = document.startViewTransition(doUpdate);
                 transition.finished.finally(() => this.isTransitioning = false).catch(()=>{});
             } else {
-                this.tab = id;
-                this.$nextTick(() => this.renderTab(id));
+                doUpdate();
             }
         },
         async editCurrentTab() {
-            const content = this.tabContent[this.tab] || '';
-            const { value } = await Swal.fire({ title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`, width: '900px', html: `<textarea id="wiki-edit" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('wiki-edit').value = content; }, preConfirm: () => document.getElementById('wiki-edit').value });
-            if (value !== undefined) {
-                const meta = this.tabMeta[this.tab] || {};
-                const payload = wikiPayload(this.tab, value, meta.allowedEditors || []);
-                const batch = writeBatch(db);
-                batch.update(docsRef(meta.docId), { title: this.tab.slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...payload.core });
-                batch.delete(customRef(meta.docId));
-                await batch.commit();
-                this.tabContent[this.tab] = value; this.renderTab(this.tab); Swal.fire('Saved', 'Wiki section updated', 'success');
-            }
+            const m = this.tabMeta[this.tab];
+            if (m) Alpine.store('mgmt').editWikiSection({ id: m.docId, ...m }, () => globalThis.location.reload());
         }
     };
 }
@@ -1339,5 +1316,5 @@ if (document.readyState === 'loading') {
 const projectId = "arcator-v2";
 const appId = "1:171774915460:web:2fc364da8a1bd095eae3d1";
 
-export {projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME, COLLECTIONS, firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection };
-export {auth, db, limit} from './js/firebase.js';
+export {projectId, appId, DEFAULT_PROFILE_PIC, DEFAULT_THEME_NAME,  firebaseReadyPromise, getCurrentUser, formatDate, generateProfilePic, randomIdentity, initLayout, updateUserSection };
+export {auth, db, limit, COLLECTIONS} from './js/firebase.js';

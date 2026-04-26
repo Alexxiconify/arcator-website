@@ -28,7 +28,7 @@ export function requireVerified() {
 }
 
 async function preflightParent(parentId) {
-  const snap = await getDoc(doc(db, 'docs', parentId));
+  const snap = await getDoc(doc(db, COLLECTIONS.DOCS, parentId));
   if (!snap.exists()) throw new Error(`parent ${parentId} does not exist`);
   const parent = snap.data();
   if (!['article', 'profile'].includes(parent.kind))
@@ -40,7 +40,7 @@ async function preflightParent(parentId) {
 
 export async function createArticle(input) {
   const uid = requireVerified();
-  const ref = doc(collection(db, 'docs'));
+  const ref = doc(collection(db, COLLECTIONS.DOCS));
   const data = {
     kind: 'article',
     authorId: uid,
@@ -64,7 +64,7 @@ export async function createArticle(input) {
 
 export async function createMessage(parentId, body) {
   const uid = requireVerified();
-  const msgRef = doc(collection(db, 'docs'));
+  const msgRef = doc(collection(db, COLLECTIONS.DOCS));
   const data = {
     kind: 'message',
     parent: parentId,
@@ -85,14 +85,14 @@ export async function createMessage(parentId, body) {
   await preflightParent(parentId);
   const batch = writeBatch(db);
   batch.set(msgRef, data);
-  batch.update(doc(db, 'docs', parentId), { lastReplyAt: srvTs() });
+  batch.update(doc(db, COLLECTIONS.DOCS, parentId), { lastReplyAt: srvTs() });
   await batch.commit();
   return msgRef.id;
 }
 
 export async function zeroProfile() {
   const uid = requireVerified();
-  const ref = doc(db, 'docs', profileDocId(uid));
+  const ref = doc(db, COLLECTIONS.DOCS, profileDocId(uid));
   await updateDoc(ref, { ...PROFILE_ZEROED, updatedAt: srvTs() });
   delete Alpine.store('profiles')[uid];
   signalCron();
@@ -112,7 +112,7 @@ export async function toggleReaction(ref, emoji, reactions) {
 }
 
 export function signalCron() {
-  updateDoc(doc(db, 'global', 'lastUpdate'), { clientSignal: srvTs() }).catch(() => {});
+  updateDoc(doc(db, COLLECTIONS.GLOBAL, 'lastUpdate'), { clientSignal: srvTs() }).catch(() => {});
 }
 
 async function saveWithConflictDetection(ref, localUpdatedAt, fields) {
@@ -163,7 +163,7 @@ export async function getMsgCount(docId, lastReplyAtMs) {
       if (ts === lastReplyAtMs) return count;
     }
     const snap = await getCountFromServer(
-      query(collection(db, 'docs'), where('parent', '==', docId), where('kind', '==', 'message')),
+      query(collection(db, COLLECTIONS.DOCS), where('parent', '==', docId), where('kind', '==', 'message')),
     );
     const count = snap.data().count;
     localStorage.setItem(key, JSON.stringify({ ts: lastReplyAtMs, count }));
