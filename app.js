@@ -128,7 +128,7 @@ const docsRef = id => doc(db, COLLECTIONS.DOCS, id);
 const customRef = id => doc(db, 'custom', id);
 const getCustom = async id => {
     try { const snap = await getDoc(customRef(id)); return snap.exists() ? snap.data().temp : null; }
-    catch(e) { return null; }
+    catch(e) { return null;}
 };
 const getCustomMany = async ids => {
     try {
@@ -719,7 +719,7 @@ function messageData() {
         async deleteMessage(id) { if (confirm('Delete?')) await deleteDoc(docsRef(id)); },
         async editMessage(m) { const c = await promptEditor('Edit', '', m.content); if (c) await updateDoc(docsRef(m.id), { title: '', body: safeBody(c), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); },
         async createConversation() {
-            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.PROFILE), orderBy('title', 'asc'))), u = Alpine.store('auth').user, others = snap.docs.map(d => ({ id: d.data().authorId, ...parseProfileData(d.data(), d.data().authorId) })).filter(x => x.id !== u.uid);
+            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.PROFILE), orderBy('title', 'asc'), limit(50))), u = Alpine.store('auth').user, others = snap.docs.map(d => ({ id: d.data().authorId, ...parseProfileData(d.data(), d.data().authorId) })).filter(x => x.id !== u.uid);
             if (!others.length) return Swal.fire('No users', '', 'info');
             const opts = others.map(x => `<option value="${x.id}">${x.displayName || x.email}</option>`).join('');
             const { value: id } = await Swal.fire({ title: 'New Conversation', html: `<select id="new-conv">${opts}</select>`, preConfirm: () => document.getElementById('new-conv').value, showCancelButton: true });
