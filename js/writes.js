@@ -18,6 +18,12 @@ import {
 import { PROFILE_ZEROED } from './constants.js';
 import { isValidEmojiKey } from './sanitize.js';
 
+export const customRef = id => doc(db, 'custom', id);
+export const getCustom = async id => {
+  try { const snap = await getDoc(customRef(id)); return snap.exists() ? snap.data().temp : null; }
+  catch(e) { return null; /* */ }
+};
+
 //  Helpers 
 
 export function requireVerified() {
@@ -43,9 +49,9 @@ export async function createArticle(input) {
   const data = {
     kind: 'article',
     authorId: uid,
-    title: input.title,
+    title: (input.title || 'Untitled').slice(0, 500),
     body: input.body,
-    photoURL: input.photoURL ?? '',
+    photoURL: (input.photoURL || '').startsWith('https://') ? input.photoURL.slice(0, 492) : '',
     allowReplies: input.allowReplies ?? true,
     allowPublicEdits: input.allowPublicEdits ?? false,
     pinned: false,
@@ -54,9 +60,10 @@ export async function createArticle(input) {
     reactions: {},
     createdAt: srvTs(),
     updatedAt: srvTs(),
-    lastReplyAt: srvTs(),
+    lastReplyAt: srvTs()
   };
   await setDoc(ref, data);
+  await setDoc(customRef(ref.id), { temp: input.temp ?? '' });
   signalCron();
   return ref.id;
 }
@@ -79,11 +86,12 @@ export async function createMessage(parentId, body) {
     reactions: {},
     createdAt: srvTs(),
     updatedAt: srvTs(),
-    lastReplyAt: srvTs(),
+    lastReplyAt: srvTs()
   };
   await preflightParent(parentId);
   const batch = writeBatch(db);
   batch.set(msgRef, data);
+  batch.set(customRef(msgRef.id), { temp: '' });
   batch.update(doc(db, 'docs', parentId), { lastReplyAt: srvTs() });
   await batch.commit();
   return msgRef.id;
@@ -120,7 +128,9 @@ async function saveWithConflictDetection(ref, localUpdatedAt, fields) {
     if (!snap.exists()) throw new Error('NOT_FOUND');
     const live = snap.data();
     if (!live.updatedAt.isEqual(localUpdatedAt)) throw new Error('CONFLICT');
-    tx.update(ref, { ...fields, updatedAt: srvTs() });
+    const { temp, ...core } = fields;
+    tx.update(ref, { ...core, updatedAt: srvTs() });
+    if (temp !== undefined) tx.set(customRef(ref.id), { temp });
   });
 }
 
@@ -131,8 +141,10 @@ async function gatedSave(opName, allowed, ref, ts, changes) {
 }
 
 export const editContent = (ref, ts, c) =>
-  gatedSave('editContent', ['title', 'body', 'photoURL', 'bodyIsHTML'], ref, ts, {
+  gatedSave('editContent', ['title', 'body', 'photoURL', 'bodyIsHTML', 'temp'], ref, ts, {
     ...c,
+    title: c.title ? c.title.slice(0, 500) : undefined,
+    photoURL: c.photoURL ? (c.photoURL.startsWith('https://') ? c.photoURL.slice(0, 492) : '') : undefined,
     bodyIsHTML: false,
   });
 export const editFlags = (ref, ts, c) =>

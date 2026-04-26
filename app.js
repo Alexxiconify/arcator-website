@@ -115,15 +115,35 @@ const pageDocId = slug => `pg_${(slug || '').toLowerCase().replaceAll(/[^a-z0-9-
 const wikiDocId = id => `~w2601-${(id || '').toLowerCase().replaceAll(/[^a-z0-9-]/g, '-') || crypto.randomUUID()}`;
 const isWikiDocId = id => typeof id === 'string' && (id.startsWith('wk_') || id.startsWith('wiki_') || id.startsWith('~w'));
 const isPageDocId = id => typeof id === 'string' && id.startsWith('pg_');
+
+const updateSignal = async () => {
+    try {
+        await updateDoc(doc(db, COLLECTIONS.GLOBAL, 'lastUpdate'), { clientSignal: serverTimestamp() });
+    } catch (e) {
+        console.error('Signal failed:', e);
+    }
+};
 const docsCollection = () => collection(db, COLLECTIONS.DOCS);
 const docsRef = id => doc(db, COLLECTIONS.DOCS, id);
+const customRef = id => doc(db, 'custom', id);
+const getCustom = async id => {
+    try { const snap = await getDoc(customRef(id)); return snap.exists() ? snap.data().temp : null; }
+    catch(e) { return null; }
+};
+const getCustomMany = async ids => {
+    try {
+        const snaps = await Promise.all(ids.map(id => getDoc(customRef(id))));
+        const res = {};
+        snaps.forEach(s => { if (s.exists()) res[s.id] = s.data().temp; });
+        return res;
+    } catch(e) { return {}; }
+};
 
 function makeDocShape({ kind, authorId, title = '', body = '', photoURL = '', parent = null, allowReplies = false, allowPublicEdits = false, pinned = false, featured = false, spoiler = false }) {
     const isProfile = kind === DOC_KIND.PROFILE;
     const isMessage = kind === DOC_KIND.MESSAGE;
     const isArticle = kind === DOC_KIND.ARTICLE;
 
-    // Enforce validPhotoURL: empty or https://... up to 492 chars
     const safePhotoURL = (photoURL || '').startsWith('https://') ? photoURL.slice(0, 492) : '';
 
     const base = {
@@ -131,18 +151,14 @@ function makeDocShape({ kind, authorId, title = '', body = '', photoURL = '', pa
         authorId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        // Rule: Message title empty. Article max 500. Profile max 100.
         title: (() => {
             if (isMessage) return '';
             if (isArticle) return title.slice(0, 500);
             return title.slice(0, 100);
         })(),
         body,
-        // Rule: Message photoURL empty.
         photoURL: isMessage ? '' : safePhotoURL,
-        // Rule: allowReplies == false unless article/profile
         allowReplies: (isArticle || isProfile) ? !!allowReplies : false,
-        // Rule: allowPublicEdits == false unless article
         allowPublicEdits: isArticle ? !!allowPublicEdits : false,
         pinned: !!pinned,
         featured: !!featured,
@@ -225,11 +241,11 @@ const parseBodyJson = (body, temp) => {
     try { return JSON.parse(str); } catch { return { content: String(body || '') }; }
 };
 const pagePayload = (slug, content, authorId) => ({ 
-    body: safeBody(content), 
+    core: { body: safeBody(content) }, 
     temp: `<!-- ARCATOR_META:${JSON.stringify({ type: 'page', slug, authorId })} -->` 
 });
 const wikiPayload = (sectionId, content, allowedEditors = []) => ({ 
-    body: safeBody(content), 
+    core: { body: safeBody(content) }, 
     temp: `<!-- ARCATOR_META:${JSON.stringify({ type: 'wiki', sectionId, allowedEditors })} -->` 
 });
 
@@ -315,8 +331,13 @@ function registerUsersStore() {
         async fetch(uid) {
             if (!uid || this.cache[uid]) return;
             try {
-                const snap = await getDoc(docsRef(profileDocId(uid)));
-                const data = snap.exists() ? parseProfileData(snap.data(), uid) : { displayName: 'Unknown User', photoURL: './defaultuser.png', uid };
+                const [docSnap, customSnap] = await Promise.all([
+                    getDoc(docsRef(profileDocId(uid))),
+                    getDoc(customRef(profileDocId(uid)))
+                ]);
+                const docData = docSnap.exists() ? docSnap.data() : null;
+                if (customSnap.exists()) docData.temp = customSnap.data().temp;
+                const data = docData ? parseProfileData(docData, uid) : { displayName: 'Unknown User', photoURL: DEFAULT_PROFILE_PIC, body: 'They have not made a profile yet.', uid };
                 this.cache = { ...this.cache, [uid]: data };
             } catch (e) { console.error(`Fetch error ${uid}:`, e); }
         },
@@ -375,9 +396,16 @@ function forumData() {
             });
         },
         async loadThreads() {
-            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('createdAt', 'desc')));
+            const snap = await getDocs(query(
+                docsCollection(),
+                where('kind', '==', DOC_KIND.ARTICLE),
+                where('allowPublicEdits', '==', false),
+                where('allowReplies', '==', true),
+                orderBy('lastReplyAt', 'desc'),
+                limit(50)
+            ));
             this.threads = await Promise.all(snap.docs.map(d => this.mapThreadDoc(d)));
-            this.threads = this.threads.filter(t => !isPageDocId(t.id) && !isWikiDocId(t.id));
+            // No longer filtering by ID prefix, using flags in query above
             this.threads.forEach(t => indexDoc({ kind: 'thread', id: t.id, title: t.title, body: (t.description || '').replaceAll(/<[^>]+>/g, ' ') }));
             const ids = this.getUniqueAuthorIds();
             await Promise.all(ids.map(fetchAuthor));
@@ -423,7 +451,7 @@ function forumData() {
             if (!this.quill) { return; }
             const u = Alpine.store('auth').user;
             if (!u) { return; }
-            await addDoc(docsCollection(), makeDocShape({
+            const docRef = await addDoc(docsCollection(), makeDocShape({
                 kind: DOC_KIND.ARTICLE,
                 authorId: u.uid,
                 title: this.newThread.title || 'Untitled',
@@ -435,13 +463,21 @@ function forumData() {
                 featured: false,
                 spoiler: false
             }));
+            await setDoc(customRef(docRef.id), { temp: '' });
+            await updateSignal();
             this.showCreateModal = false; this.newThread = { title: '', category: '', tags: '' }; this.quill.root.innerHTML = ''; this.loadThreads();
         },
         async toggleThread(t) {
             t.expanded = !t.expanded;
             if (t.expanded && !t.comments.length && t.commentCount > 0) {
                 t.loadingComments = true;
-                const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', t.id), orderBy('createdAt', 'asc')));
+                const snap = await getDocs(query(
+                    docsCollection(),
+                    where('kind', '==', DOC_KIND.MESSAGE),
+                    where('parent', '==', t.id),
+                    orderBy('createdAt', 'asc'),
+                    limit(50)
+                ));
                 t.comments = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
                 t.commentCount = t.comments.length;
                 await Promise.all([...new Set(t.comments.map(c => c.authorId).filter(Boolean))].map(fetchAuthor));
@@ -462,7 +498,7 @@ function forumData() {
                 t.spoiler = !t.spoiler;
             }
         },
-        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(docsRef(id)); removeDoc(id); this.threads = this.threads.filter(t => t.id !== id); } },
+        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(docsRef(id)); removeDoc(id); await updateSignal(); this.threads = this.threads.filter(t => t.id !== id); } },
         async postComment(fid) {
             const t = this.threads.find(t => t.id === fid); if (!t?.quill) return;
             const c = t.quill.root.innerHTML; if (!c || c === '<p><br></p>') return;
@@ -476,10 +512,17 @@ function forumData() {
                 body: safeBody(c),
                 photoURL: ''
             }));
+            batch.set(customRef(newCommentRef.id), { temp: '' });
             batch.update(docsRef(fid), { lastReplyAt: serverTimestamp() });
             await batch.commit();
             t.quill.root.innerHTML = '';
-            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', fid), orderBy('createdAt', 'asc')));
+            const snap = await getDocs(query(
+                docsCollection(),
+                where('kind', '==', DOC_KIND.MESSAGE),
+                where('parent', '==', fid),
+                orderBy('createdAt', 'asc'),
+                limit(50)
+            ));
             t.comments = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
             t.commentCount = t.comments.length;
         },
@@ -531,9 +574,16 @@ function forumData() {
                     body: safeBody(c),
                     photoURL: ''
                 }));
+                batch.set(customRef(newCommentRef.id), { temp: '' });
                 batch.update(docsRef(t.id), { lastReplyAt: serverTimestamp() });
                 await batch.commit();
-                const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', t.id), orderBy('createdAt', 'asc')));
+                const snap = await getDocs(query(
+                    docsCollection(),
+                    where('kind', '==', DOC_KIND.MESSAGE),
+                    where('parent', '==', t.id),
+                    orderBy('createdAt', 'asc'),
+                    limit(50)
+                ));
                 t.comments = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
                 t.commentCount = t.comments.length;
             }
@@ -543,7 +593,13 @@ function forumData() {
             await deleteDoc(docsRef(cid));
             const t = this.threads.find(t => t.id === fid);
             if (t) {
-                const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', fid), orderBy('createdAt', 'asc')));
+                const snap = await getDocs(query(
+                    docsCollection(),
+                    where('kind', '==', DOC_KIND.MESSAGE),
+                    where('parent', '==', fid),
+                    orderBy('createdAt', 'asc'),
+                    limit(50)
+                ));
                 t.comments = snap.docs.map(d => ({ id: d.id, ...d.data(), content: d.data().body || '', parentCommentId: null }));
                 t.commentCount = t.comments.length;
             }
@@ -566,12 +622,42 @@ function forumData() {
                 ]
             });
             if (v) {
-                await updateDoc(docsRef(t.id), { title: (v[0] || '').slice(0, 500), body: safeBody(v[3]), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
-                Object.assign(t, { title: v[0], tags: v[1], category: v[2], description: v[3] });
+                await runTransaction(db, async tx => {
+                    const snap = await tx.get(docsRef(t.id));
+                    if (!snap.exists()) throw new Error('NOT_FOUND');
+                    if (!snap.data().updatedAt?.isEqual(t.updatedAt)) throw new Error('CONFLICT');
+                    tx.update(docsRef(t.id), { title: (v[0] || '').slice(0, 500), body: safeBody(v[3]), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                    tx.set(customRef(t.id), { temp: '' });
+                });
+                Object.assign(t, { title: v[0], tags: v[1], category: v[2], description: v[3], updatedAt: new Date() });
             }
         },
-        async editComment(fid, c) { const res = await promptEditor('Edit', '', c.content); if (res) { await updateDoc(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); c.content = res; } },
-        async censorComment(fid, c) { const res = await promptEditor('Redact', '', c.content); if (res) { await updateDoc(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); c.content = res; c.censored = true; } }
+        async editComment(fid, c) { 
+            const res = await promptEditor('Edit', '', c.content); 
+            if (res) { 
+                await runTransaction(db, async tx => {
+                    const snap = await tx.get(docsRef(c.id));
+                    if (!snap.exists()) throw new Error('NOT_FOUND');
+                    if (!snap.data().updatedAt?.isEqual(c.updatedAt)) throw new Error('CONFLICT');
+                    tx.update(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                    tx.set(customRef(c.id), { temp: '' });
+                });
+                c.content = res; c.updatedAt = new Date();
+            } 
+        },
+        async censorComment(fid, c) { 
+            const res = await promptEditor('Redact', '', c.content); 
+            if (res) { 
+                await runTransaction(db, async tx => {
+                    const snap = await tx.get(docsRef(c.id));
+                    if (!snap.exists()) throw new Error('NOT_FOUND');
+                    if (!snap.data().updatedAt?.isEqual(c.updatedAt)) throw new Error('CONFLICT');
+                    tx.update(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                    tx.set(customRef(c.id), { temp: '' });
+                });
+                c.content = res; c.censored = true; c.updatedAt = new Date();
+            } 
+        }
     };
 }
 function registerForumData() {
@@ -584,7 +670,12 @@ function messageData() {
         init() { this.$watch('$store.auth.user', u => u ? this.loadConversations() : (this.conversations = [], this.selectedConv = null)); if (Alpine.store('auth').user) this.loadConversations(); },
         async loadConversations() {
             const u = Alpine.store('auth').user; if (!u) return;
-            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('updatedAt', 'desc')));
+            const snap = await getDocs(query(
+                docsCollection(),
+                where('kind', '==', DOC_KIND.ARTICLE),
+                orderBy('updatedAt', 'desc'),
+                limit(50)
+            ));
             this.conversations = snap.docs
                 .map(d => {
                     let payload = {};
@@ -621,6 +712,7 @@ function messageData() {
             if (!this.newMessage.trim() || !this.selectedConv) return;
             const u = Alpine.store('auth').user, batch = writeBatch(db), newMsgRef = doc(docsCollection());
             batch.set(newMsgRef, makeDocShape({ kind: DOC_KIND.MESSAGE, authorId: u.uid, parent: this.selectedConv.id, title: '', body: safeBody(this.newMessage), photoURL: '' }));
+            batch.set(customRef(newMsgRef.id), { temp: '' });
             batch.update(docsRef(this.selectedConv.id), { lastReplyAt: serverTimestamp() });
             await batch.commit(); this.newMessage = '';
         },
@@ -636,7 +728,9 @@ function messageData() {
                 if (ex) return this.selectConv(ex);
                 const me = getAuthor(u.uid).displayName || 'Me';
                 const other = getAuthor(id).displayName || 'User';
-                await setDoc(docsRef(`cv_${crypto.randomUUID()}`), makeDocShape({
+                const cid = `cv_${crypto.randomUUID()}`;
+                const batch = writeBatch(db);
+                batch.set(docsRef(cid), makeDocShape({
                     kind: DOC_KIND.ARTICLE,
                     authorId: u.uid,
                     title: `${me}, ${other}`,
@@ -645,6 +739,9 @@ function messageData() {
                     allowReplies: true,
                     allowPublicEdits: false
                 }));
+                batch.set(customRef(cid), { temp: '' });
+                await batch.commit();
+                await updateSignal();
                 this.loadConversations();
             }
         }
@@ -659,8 +756,10 @@ function registerPageWikiManagement() {
         async createPage(cb) {
             const { value: v } = await Swal.fire({ title: 'Create Page', html: '<input id="np-title" class="mb-2" placeholder="Title"><input id="np-slug" class="mb-2" placeholder="Slug"><textarea id="np-content" rows="10" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ title: document.getElementById('np-title').value, slug: document.getElementById('np-slug').value, content: document.getElementById('np-content').value, authorId: Alpine.store('auth').user.uid }) });
             if (v) {
-                const id = pageDocId(v.slug);
-                await setDoc(docsRef(id), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: v.authorId, title: v.title || 'Untitled', photoURL: '', allowReplies: false, allowPublicEdits: false, ...pagePayload(v.slug, v.content, v.authorId) }));
+                const payload = pagePayload(v.slug, v.content, v.authorId);
+                const res = await addDoc(docsCollection(), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: v.authorId, title: v.title || 'Untitled', photoURL: '', allowReplies: false, allowPublicEdits: false, ...payload.core }));
+                await setDoc(customRef(res.id), { temp: payload.temp });
+                await updateSignal();
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Page created', 'success');
             }
@@ -668,7 +767,14 @@ function registerPageWikiManagement() {
         async editPage(p, cb) {
             const { value: v } = await Swal.fire({ title: 'Edit Page', width: '800px', html: `<input id="ep-title" class="mb-2" placeholder="Title"><input id="ep-slug" class="mb-2" placeholder="Slug"><textarea id="ep-content" class="font-monospace" rows="15" placeholder="HTML Content"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ep-title').value = p.title; document.getElementById('ep-slug').value = p.slug; document.getElementById('ep-content').value = p.content; }, preConfirm: () => ({ title: document.getElementById('ep-title').value, slug: document.getElementById('ep-slug').value, content: document.getElementById('ep-content').value, updatedAt: serverTimestamp() }) });
             if (v) {
-                await updateDoc(docsRef(p.id), { title: (v.title || '').slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...pagePayload(v.slug, v.content, p.authorId) });
+                await runTransaction(db, async tx => {
+                    const snap = await tx.get(docsRef(p.id));
+                    if (!snap.exists()) throw new Error('NOT_FOUND');
+                    if (!snap.data().updatedAt?.isEqual(p.updatedAt)) throw new Error('CONFLICT');
+                    const payload = pagePayload(v.slug, v.content, p.authorId);
+                    tx.update(docsRef(p.id), { title: (v.title || '').slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...payload.core });
+                    tx.set(customRef(p.id), { temp: payload.temp });
+                });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Page updated', 'success');
             }
@@ -677,6 +783,7 @@ function registerPageWikiManagement() {
             if ((await Swal.fire({ title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning', showCancelButton: true })).isConfirmed) {
                 await deleteDoc(docsRef(id));
                 removeDoc(id);
+                await updateSignal();
                 if (cb) { cb(); }
                 Swal.fire('Deleted', 'Page has been deleted.', 'success');
             }
@@ -685,7 +792,10 @@ function registerPageWikiManagement() {
             const { value: v } = await Swal.fire({ title: 'Create Wiki Section', html: '<input id="nw-id" class="mb-2" placeholder="Section ID (e.g. servers)"><textarea id="nw-content" class="font-monospace" rows="12" placeholder="HTML Content"></textarea>', showCancelButton: true, preConfirm: () => ({ id: document.getElementById('nw-id').value.toLowerCase().replaceAll(/\s+/g, '-'), content: document.getElementById('nw-content').value }) });
             if (v?.id) {
                 const uid = Alpine.store('auth').user?.uid;
-                await setDoc(docsRef(wikiDocId(v.id)), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: uid, title: v.id, photoURL: '', allowReplies: false, allowPublicEdits: false, ...wikiPayload(v.id, v.content, []) }));
+                const payload = wikiPayload(v.id, v.content, []);
+                const res = await addDoc(docsCollection(), makeDocShape({ kind: DOC_KIND.ARTICLE, authorId: uid, title: v.id, photoURL: '', allowReplies: false, allowPublicEdits: false, ...payload.core }));
+                await setDoc(customRef(res.id), { temp: payload.temp });
+                await updateSignal();
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section created', 'success');
             }
@@ -693,8 +803,16 @@ function registerPageWikiManagement() {
         async editWikiSection(s, cb) {
             const { value: v } = await Swal.fire({ title: `Edit: ${escapeHtml(s.id)}`, width: '900px', html: `<textarea id="ew-content" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('ew-content').value = s.content || ''; }, preConfirm: () => document.getElementById('ew-content').value });
             if (v !== undefined) {
-                const payload = parseBodyJson(s.body, s.temp);
-                await updateDoc(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...wikiPayload(payload.sectionId || s.id, v, payload.allowedEditors || []) });
+                await runTransaction(db, async tx => {
+                    const [snap, cSnap] = await Promise.all([tx.get(docsRef(s.id)), tx.get(customRef(s.id))]);
+                    if (!snap.exists()) throw new Error('NOT_FOUND');
+                    if (!snap.data().updatedAt?.isEqual(s.updatedAt)) throw new Error('CONFLICT');
+                    const payloadStr = cSnap.exists() ? cSnap.data().temp : s.temp;
+                    const payload = parseBodyJson(s.body, payloadStr);
+                    const next = wikiPayload(payload.sectionId || s.id, v, payload.allowedEditors || []);
+                    tx.update(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...next.core });
+                    tx.set(customRef(s.id), { temp: next.temp });
+                });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Wiki section updated', 'success');
             }
@@ -704,8 +822,16 @@ function registerPageWikiManagement() {
             const opts = users.map(u => `<option value="${escapeHtml(u.id)}" ${cur.includes(u.id) ? 'selected' : ''}>${escapeHtml(u.displayName || u.email)}</option>`).join('');
             const { value: v } = await Swal.fire({ title: `Allowed Editors: ${escapeHtml(s.id)}`, html: `<p class="text-muted small">Admins can always edit. Select users who can also edit this section:</p><select id="ew-editors" multiple size="10">${opts}</select>`, showCancelButton: true, preConfirm: () => Array.from(document.getElementById('ew-editors').selectedOptions).map(o => o.value) });
             if (v !== undefined) {
-                const payload = parseBodyJson(s.body, s.temp);
-                await updateDoc(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...wikiPayload(payload.sectionId || s.id, payload.content || '', v) });
+                await runTransaction(db, async tx => {
+                    const [snap, cSnap] = await Promise.all([tx.get(docsRef(s.id)), tx.get(customRef(s.id))]);
+                    if (!snap.exists()) throw new Error('NOT_FOUND');
+                    if (!snap.data().updatedAt?.isEqual(s.updatedAt)) throw new Error('CONFLICT');
+                    const payloadStr = cSnap.exists() ? cSnap.data().temp : s.temp;
+                    const payload = parseBodyJson(s.body, payloadStr);
+                    const next = wikiPayload(payload.sectionId || s.id, payload.content || '', v);
+                    tx.update(docsRef(s.id), { title: (payload.sectionId || s.id.replace(/^wk_/, '')).slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...next.core });
+                    tx.set(customRef(s.id), { temp: next.temp });
+                });
                 if (cb) { cb(); }
                 Swal.fire('Success', 'Editors updated', 'success');
             }
@@ -714,6 +840,7 @@ function registerPageWikiManagement() {
             if ((await Swal.fire({ title: 'Delete Wiki Section?', text: 'This cannot be undone!', icon: 'warning', showCancelButton: true })).isConfirmed) {
                 await deleteDoc(docsRef(id));
                 removeDoc(id);
+                await updateSignal();
                 if (cb) { cb(); }
                 Swal.fire('Deleted', 'Section removed.', 'success');
             }
@@ -731,12 +858,21 @@ function wikiApp() {
             await firebaseReadyPromise;
             this.loading = true;
             try {
-                const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE)));
+                const snap = await getDocs(query(
+                    docsCollection(),
+                    where('kind', '==', DOC_KIND.ARTICLE),
+                    where('allowPublicEdits', '==', false),
+                    where('allowReplies', '==', false),
+                    limit(50)
+                ));
+                const customMap = await getCustomMany(snap.docs.map(d => d.id));
                 const docs = [];
                 snap.forEach(d => {
-                    const id = d.id;
-                    if (id.startsWith('wk_') || id.startsWith('wiki_') || id.startsWith('~w')) {
-                        docs.push({ id: d.id, ...d.data() });
+                    const data = d.data();
+                    const temp = customMap[d.id] || data.temp;
+                    const p = parseBodyJson(data.body, temp);
+                    if (p.type === 'wiki') {
+                        docs.push({ id: d.id, ...data, temp });
                     }
                 });
 
@@ -819,8 +955,11 @@ function wikiApp() {
             const { value } = await Swal.fire({ title: `Edit: ${this.tabs.find(t => t.id === this.tab)?.label}`, width: '900px', html: `<textarea id="wiki-edit" class="font-monospace" rows="20"></textarea>`, showCancelButton: true, didOpen: () => { document.getElementById('wiki-edit').value = content; }, preConfirm: () => document.getElementById('wiki-edit').value });
             if (value !== undefined) {
                 const meta = this.tabMeta[this.tab] || {};
-                const docId = meta.docId || wikiDocId(this.tab);
-                await updateDoc(docsRef(docId), { title: this.tab.slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...wikiPayload(this.tab, value, meta.allowedEditors || []) });
+                const payload = wikiPayload(this.tab, value, meta.allowedEditors || []);
+                const batch = writeBatch(db);
+                batch.update(docsRef(docId), { title: this.tab.slice(0, 500), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp(), ...payload.core });
+                batch.set(customRef(docId), { temp: payload.temp });
+                await batch.commit();
                 this.tabContent[this.tab] = value; this.renderTab(this.tab); Swal.fire('Saved', 'Wiki section updated', 'success');
             }
         }
@@ -836,14 +975,23 @@ function pagesData() {
         get canEdit() { return this.currentUser && (this.isAdmin || this.currentPage?.authorId === this.currentUser.uid); },
         async init() { await firebaseReadyPromise; await this.loadPagesList(); if (this.currentPageId) await this.loadSinglePage(this.currentPageId); },
         async loadPagesList() {
-            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('createdAt', 'desc')));
+            const snap = await getDocs(query(
+                docsCollection(),
+                where('kind', '==', DOC_KIND.ARTICLE),
+                where('allowPublicEdits', '==', false),
+                where('allowReplies', '==', false),
+                orderBy('createdAt', 'desc'),
+                limit(50)
+            ));
+            const customMap = await getCustomMany(snap.docs.map(d => d.id));
             this.pages = snap.docs
-                .filter(d => isPageDocId(d.id))
                 .map(d => {
                     const raw = d.data();
-                    const payload = parseBodyJson(raw.body, raw.temp);
-                    return { id: d.id, ...raw, slug: payload.slug || d.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
-                });
+                    const temp = customMap[d.id] || raw.temp;
+                    const payload = parseBodyJson(raw.body, temp);
+                    return { id: d.id, ...raw, temp, type: payload.type, slug: payload.slug || d.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
+                })
+                .filter(p => p.type === 'page');
             this.pages.forEach(p => indexDoc({ kind: 'page', id: p.id, title: p.title, body: (p.content || '').replaceAll(/<[^>]+>/g, ' ') }));
             if (!this.currentPageId) this.loading = false;
             markSearchReady();
@@ -852,8 +1000,9 @@ function pagesData() {
             const snap = await getDoc(docsRef(id));
             if (snap.exists()) {
                 const raw = snap.data();
-                const payload = parseBodyJson(raw.body, raw.temp);
-                this.currentPage = { id: snap.id, ...raw, slug: payload.slug || snap.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
+                const temp = await getCustom(id);
+                const payload = parseBodyJson(raw.body, temp || raw.temp);
+                this.currentPage = { id: snap.id, ...raw, temp: temp || raw.temp, slug: payload.slug || snap.id.replace(/^pg_/, ''), content: payload.content || '', authorId: payload.authorId || raw.authorId };
                 document.title = `${this.currentPage.title || 'Page'} - Arcator`;
                 await this.loadAuthor(this.currentPage.authorId);
             }
@@ -895,22 +1044,36 @@ function adminDashboard() {
         },
         async refreshAll() {
             const [profiles, articles] = await Promise.all([
-                getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.PROFILE))),
-                getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('createdAt', 'desc')))
+                getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.PROFILE), limit(50))),
+                getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('createdAt', 'desc'), limit(50)))
             ]);
-            this.users = profiles.docs.map(x => ({ id: x.data().authorId, docId: x.id, ...parseProfileData(x.data(), x.data().authorId) }));
+            const profilesIds = profiles.docs.map(x => x.id);
+            const articlesIds = articles.docs.map(x => x.id);
+            const customMap = await getCustomMany([...profilesIds, ...articlesIds]);
+
+            this.users = profiles.docs.map(x => {
+                const docData = x.data();
+                const temp = customMap[x.id] || docData.temp;
+                return { id: docData.authorId, docId: x.id, ...parseProfileData({ ...docData, temp }, docData.authorId) };
+            });
             this.pages = articles.docs.filter(x => isPageDocId(x.id)).map(x => {
-                const p = parseBodyJson(x.data().body, x.data().temp);
-                return { id: x.id, ...x.data(), slug: p.slug || x.id.replace(/^pg_/, ''), content: p.content || '', authorId: p.authorId || x.data().authorId };
+                const d = x.data();
+                const temp = customMap[x.id] || d.temp;
+                const p = parseBodyJson(d.body, temp);
+                return { id: x.id, ...d, temp, slug: p.slug || x.id.replace(/^pg_/, ''), content: p.content || '', authorId: p.authorId || d.authorId };
             });
             this.threads = articles.docs.filter(x => !isPageDocId(x.id) && !isWikiDocId(x.id) && !x.id.startsWith('cv_')).map(x => ({ id: x.id, ...x.data(), description: x.data().body || '' }));
             this.dms = articles.docs.filter(x => x.id.startsWith('cv_')).map(x => {
-                const p = parseBodyJson(x.data().body, x.data().temp);
-                return { id: x.id, ...x.data(), participants: p.participants || [], participantNames: p.participantNames || {} };
+                const d = x.data();
+                const temp = customMap[x.id] || d.temp;
+                const p = parseBodyJson(d.body, temp);
+                return { id: x.id, ...d, temp, participants: p.participants || [], participantNames: p.participantNames || {} };
             });
             this.wikiSections = articles.docs.filter(x => isWikiDocId(x.id)).map(x => {
-                const p = parseBodyJson(x.data().body, x.data().temp);
-                return { id: x.id, ...x.data(), sectionId: p.sectionId || x.id.replace(/^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
+                const d = x.data();
+                const temp = customMap[x.id] || d.temp;
+                const p = parseBodyJson(d.body, temp);
+                return { id: x.id, ...d, temp, sectionId: p.sectionId || x.id.replace(/^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
             });
         },
         getAuthorName(uid) { return Alpine.store('users').get(uid).displayName || 'Unknown'; },
@@ -947,18 +1110,58 @@ function adminDashboard() {
             return `<h6 class="text-primary mb-3 border-top pt-3">Flags</h6><div class="row g-2">${checks}</div>`;
         },
         getEditUserFormValues() {
+            const photoVal = document.getElementById('eu-photo').value;
             return {
-                displayName: document.getElementById('eu-name').value, handle: document.getElementById('eu-handle').value, email: document.getElementById('eu-email').value, photoURL: document.getElementById('eu-photo').value, role: document.getElementById('eu-role').value, admin: document.getElementById('eu-role').value === 'admin', customCSS: document.getElementById('eu-css').value, discordId: document.getElementById('eu-discordId').value, discordTag: document.getElementById('eu-discordTag').value, discordPic: document.getElementById('eu-discordPic').value, discordURL: document.getElementById('eu-discordURL').value, githubPic: document.getElementById('eu-githubPic').value, githubURL: document.getElementById('eu-githubURL').value, themePreference: document.getElementById('eu-theme').value, fontScaling: document.getElementById('eu-font').value, dataRetention: Number.parseInt(document.getElementById('eu-retention').value, 10), glassColor: document.getElementById('eu-glassColor').value, glassOpacity: Number.parseFloat(document.getElementById('eu-glassOpacity').value), glassBlur: Number.parseInt(document.getElementById('eu-glassBlur').value, 10), backgroundImage: document.getElementById('eu-bgImg').value, activityTracking: document.getElementById('eu-activity').checked, debugMode: document.getElementById('eu-debug').checked, discordLinked: document.getElementById('eu-discordLinked').checked, discordNotifications: document.getElementById('eu-discordNotif').checked, emailNotifications: document.getElementById('eu-emailNotif').checked, focusIndicators: document.getElementById('eu-focus').checked, highContrast: document.getElementById('eu-contrast').checked, profileVisible: document.getElementById('eu-visible').checked, pushNotifications: document.getElementById('eu-push').checked, reducedMotion: document.getElementById('eu-motion').checked, screenReader: document.getElementById('eu-reader').checked, thirdPartySharing: document.getElementById('eu-sharing').checked, updatedAt: serverTimestamp()
+                displayName: document.getElementById('eu-name').value, 
+                handle: document.getElementById('eu-handle').value, 
+                email: document.getElementById('eu-email').value, 
+                photoURL: (photoVal || '').startsWith('https://') ? photoVal.slice(0, 492) : '',
+                role: document.getElementById('eu-role').value, 
+                admin: document.getElementById('eu-role').value === 'admin', 
+                customCSS: document.getElementById('eu-css').value, 
+                discordId: document.getElementById('eu-discordId').value, 
+                discordTag: document.getElementById('eu-discordTag').value, 
+                discordPic: document.getElementById('eu-discordPic').value, 
+                discordURL: document.getElementById('eu-discordURL').value, 
+                githubPic: document.getElementById('eu-githubPic').value, 
+                githubURL: document.getElementById('eu-githubURL').value, 
+                themePreference: document.getElementById('eu-theme').value, 
+                fontScaling: document.getElementById('eu-font').value, 
+                dataRetention: Number.parseInt(document.getElementById('eu-retention').value, 10), 
+                glassColor: document.getElementById('eu-glassColor').value, 
+                glassOpacity: Number.parseFloat(document.getElementById('eu-glassOpacity').value), 
+                glassBlur: Number.parseInt(document.getElementById('eu-glassBlur').value, 10), 
+                backgroundImage: document.getElementById('eu-bgImg').value, 
+                activityTracking: document.getElementById('eu-activity').checked, 
+                debugMode: document.getElementById('eu-debug').checked, 
+                discordLinked: document.getElementById('eu-discordLinked').checked, 
+                discordNotifications: document.getElementById('eu-discordNotif').checked, 
+                emailNotifications: document.getElementById('eu-emailNotif').checked, 
+                focusIndicators: document.getElementById('eu-focus').checked, 
+                highContrast: document.getElementById('eu-contrast').checked, 
+                profileVisible: document.getElementById('eu-visible').checked, 
+                pushNotifications: document.getElementById('eu-push').checked, 
+                reducedMotion: document.getElementById('eu-motion').checked, 
+                screenReader: document.getElementById('eu-reader').checked, 
+                thirdPartySharing: document.getElementById('eu-sharing').checked, 
+                updatedAt: serverTimestamp()
             };
         },
         async saveUserEdit(uid, v) {
             const merged = { ...this.users.find(x => x.id === uid), ...v };
-            await updateDoc(docsRef(profileDocId(uid)), {
-                title: (merged.displayName || 'User').slice(0, 100),
-                photoURL: merged.photoURL?.startsWith('https://') ? merged.photoURL : '',
-                bodyIsHTML: false,
-                updatedAt: serverTimestamp(),
-                ...encodeProfileBody(merged)
+            await runTransaction(db, async tx => {
+                const snap = await tx.get(docsRef(profileDocId(uid)));
+                if (!snap.exists()) throw new Error('NOT_FOUND');
+                // No conflict guard for admin profile edits as they are often async/batch
+                const payload = encodeProfileBody(merged);
+                tx.update(docsRef(profileDocId(uid)), {
+                    title: (merged.displayName || 'User').slice(0, 100),
+                    photoURL: merged.photoURL,
+                    bodyIsHTML: false,
+                    updatedAt: serverTimestamp(),
+                    body: payload.body
+                });
+                tx.set(customRef(profileDocId(uid)), { temp: payload.temp });
             });
             if (v.admin) await setDoc(doc(db, COLLECTIONS.ADMINS, uid), { appointedAt: serverTimestamp() }).catch(e => console.error('Failed to add admin', e));
             else await deleteDoc(doc(db, COLLECTIONS.ADMINS, uid)).catch(e => console.error('Failed to remove admin', e));
@@ -966,11 +1169,27 @@ function adminDashboard() {
         },
         async editThread(t) {
             const { value: v } = await Swal.fire({ title: 'Edit Thread', html: `<input id="et-title" class="mb-2" placeholder="Title"><input id="et-tags" class="mb-2" placeholder="Tags"><select id="et-cat" class="mb-2"><option value="General">General</option><option value="Announcements">Announcements</option><option value="Support">Support</option><option value="Gaming">Gaming</option><option value="Discussion">Discussion</option></select><div class="form-check text-start mb-2"><input type="checkbox" id="et-locked"><label >Lock</label></div><textarea id="et-desc" rows="5"></textarea>`, didOpen: () => { document.getElementById('et-title').value = t.title; document.getElementById('et-tags').value = t.tags || ''; document.getElementById('et-cat').value = t.category || 'General'; document.getElementById('et-locked').checked = t.locked || false; document.getElementById('et-desc').value = t.description; }, showCancelButton: true, preConfirm: () => ({ title: document.getElementById('et-title').value, tags: document.getElementById('et-tags').value, category: document.getElementById('et-cat').value, locked: document.getElementById('et-locked').checked, description: document.getElementById('et-desc').value }) });
-            if (v) { await updateDoc(docsRef(t.id), { title: (v.title || '').slice(0, 500), body: safeBody(v.description), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); this.refreshAll(); }
+            if (v) { 
+                await runTransaction(db, async tx => {
+                    const snap = await tx.get(docsRef(t.id));
+                    if (!snap.exists()) throw new Error('NOT_FOUND');
+                    if (!snap.data().updatedAt?.isEqual(t.updatedAt)) throw new Error('CONFLICT');
+                    tx.update(docsRef(t.id), { title: (v.title || '').slice(0, 500), body: safeBody(v.description), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                    tx.set(customRef(t.id), { temp: '' });
+                });
+                this.refreshAll(); 
+            }
         },
-        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(docsRef(id)); this.refreshAll(); } },
+        async deleteThread(id) { if (confirm('Delete?')) { await deleteDoc(docsRef(id)); await updateSignal(); this.refreshAll(); } },
         async viewThread(t) {
-            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', t.id), orderBy('createdAt', 'asc'))), Html = snap.docs.map(d => this.renderCommentForAdmin(t.id, d)).join('');
+            const snap = await getDocs(query(
+                docsCollection(),
+                where('kind', '==', DOC_KIND.MESSAGE),
+                where('parent', '==', t.id),
+                orderBy('createdAt', 'asc'),
+                limit(50)
+            ));
+            const Html = snap.docs.map(d => this.renderCommentForAdmin(t.id, d)).join('');
             Swal.fire({ title: escapeHtml(t.title), html: `<div class="text-start">${DOMPurify.sanitize(t.description)}</div><hr><div class="text-start admin-list-scroll">${Html || 'No comments'}</div>`, width: 800, didOpen: () => this.setupAdminCommentEvents(Swal.getHtmlContainer(), t.id, snap.docs) });
         },
         renderCommentForAdmin(tid, d) {
@@ -984,7 +1203,14 @@ function adminDashboard() {
         dispatchEditComment(cid, tid, docs) { const d = docs.find(x => x.id === cid); if (d) document.dispatchEvent(new CustomEvent('admin-edit-comment', { detail: { tid, cid: d.id, content: d.data().body || '' } })); },
         dispatchDeleteComment(cid, tid) { document.dispatchEvent(new CustomEvent('admin-del-comment', { detail: { tid, cid } })); },
         async viewDM(dm) {
-            const snap = await getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.MESSAGE), where('parent', '==', dm.id), orderBy('createdAt', 'asc'))), Html = snap.docs.map(d => this.renderMessageForAdmin(dm, d)).join('');
+            const snap = await getDocs(query(
+                docsCollection(),
+                where('kind', '==', DOC_KIND.MESSAGE),
+                where('parent', '==', dm.id),
+                orderBy('createdAt', 'asc'),
+                limit(50)
+            ));
+            const Html = snap.docs.map(d => this.renderMessageForAdmin(dm, d)).join('');
             Swal.fire({ title: 'Conversation Log', html: `<div class="text-start admin-list-scroll">${Html || 'No messages'}</div>`, width: 600, didOpen: () => this.setupAdminMessageEvents(Swal.getHtmlContainer(), dm.id, snap.docs) });
         },
         renderMessageForAdmin(dm, d) {
@@ -997,11 +1223,33 @@ function adminDashboard() {
         },
         dispatchEditMessage(mid, cid, docs) { const d = docs.find(x => x.id === mid); if (d) document.dispatchEvent(new CustomEvent('admin-edit-msg', { detail: { cid, mid: d.id, content: d.data().body || '' } })); },
         dispatchDeleteMessage(mid, cid) { document.dispatchEvent(new CustomEvent('admin-del-msg', { detail: { cid, mid } })); },
-        async deleteDM(id) { if (confirm('Delete?')) { await deleteDoc(docsRef(id)); this.refreshAll(); } },
+        async deleteDM(id) { if (confirm('Delete?')) { await deleteDoc(docsRef(id)); await updateSignal(); this.refreshAll(); } },
         async deleteMessage(cid, mid) { if (confirm('Delete?')) { await deleteDoc(docsRef(mid)); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
-        async editMessage(cid, m) { const res = await promptEditor('Edit', '', m.content); if (res) { await updateDoc(docsRef(m.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); } },
+        async editMessage(cid, m) { 
+            const res = await promptEditor('Edit', '', m.content); 
+            if (res) { 
+                await runTransaction(db, async tx => {
+                    const snap = await tx.get(docsRef(m.id));
+                    if (!snap.exists()) throw new Error('NOT_FOUND');
+                    if (!snap.data().updatedAt?.isEqual(m.updatedAt)) throw new Error('CONFLICT');
+                    tx.update(docsRef(m.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                });
+                const dm = this.dms.find(d => d.id === cid); if (dm) this.viewDM(dm); 
+            } 
+        },
         async deleteComment(tid, cid) { if (confirm('Delete?')) { await deleteDoc(docsRef(cid)); const t = this.threads.find(x => x.id === tid); if (t) this.viewThread(t); } },
-        async editComment(tid, c) { const res = await promptEditor('Edit', '', c.content); if (res) { await updateDoc(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() }); const t = this.threads.find(x => x.id === tid); if (t) this.viewThread(t); } }
+        async editComment(tid, c) { 
+            const res = await promptEditor('Edit', '', c.content); 
+            if (res) { 
+                await runTransaction(db, async tx => {
+                    const snap = await tx.get(docsRef(c.id));
+                    if (!snap.exists()) throw new Error('NOT_FOUND');
+                    if (!snap.data().updatedAt?.isEqual(c.updatedAt)) throw new Error('CONFLICT');
+                    tx.update(docsRef(c.id), { title: '', body: safeBody(res), photoURL: '', bodyIsHTML: false, updatedAt: serverTimestamp() });
+                });
+                const t = this.threads.find(x => x.id === tid); if (t) this.viewThread(t); 
+            } 
+        }
     };
 }
 function registerAdminDashboard() { Alpine.data('adminDashboard', adminDashboard); }

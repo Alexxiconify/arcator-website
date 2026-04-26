@@ -17,8 +17,8 @@ import {
   signOut,
   srvTs,
   unlink,
-  updateDoc,
   updateProfile,
+  writeBatch
 } from './firebase.js';
 import { cacheUser, updateTheme } from './ui.js';
 import { safePhoto } from './sanitize.js';
@@ -101,10 +101,11 @@ document.addEventListener('alpine:init', () => {
     // Profile management
     async saveProfile(uid, data) {
       const ref = doc(db, 'docs', `u_${uid}`);
+      const cRef = doc(db, 'custom', `u_${uid}`);
       const bio = data.bio === undefined ? (this.profile?.bio || '') : data.bio;
       
       const meta = { 
-        ...(this.profile || {}), 
+        ...this.profile, 
         ...data, 
         bio: bio,
         updatedAt: new Date().toISOString() 
@@ -117,12 +118,16 @@ document.addEventListener('alpine:init', () => {
       
       const cleanBio = bio.replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
 
-      await updateDoc(ref, {
+      const batch = writeBatch(db);
+      batch.update(ref, {
         title: (meta.displayName || 'User').slice(0, 100),
         body: cleanBio || '...',
-        temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`,
         updatedAt: srvTs()
       });
+      batch.set(cRef, {
+        temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`
+      });
+      await batch.commit();
     },
 
     resendEmailVerification: async () => {
@@ -168,7 +173,6 @@ async function ensureProfile(u) {
       authorId: u.uid,
       title: (_pendingDisplayName || u.displayName || 'New User').slice(0, 100),
       body: '...',
-      temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`,
       photoURL: safePhoto(u.photoURL),
       allowReplies: true,
       allowPublicEdits: false,
@@ -179,6 +183,9 @@ async function ensureProfile(u) {
       createdAt: srvTs(),
       updatedAt: srvTs(),
       lastReplyAt: srvTs(),
+    });
+    tx.set(doc(db, 'custom', `u_${u.uid}`), {
+      temp: `<!-- ARCATOR_META:${JSON.stringify(meta)} -->`
     });
   });
 }
@@ -226,30 +233,27 @@ onAuthStateChanged(auth, async (u) => {
     });
 
     // Subscribe to real-time updates
-    const unsub = onSnapshot(doc(db, 'docs', `u_${u.uid}`), (snap) => {
-        if (!snap.exists()) {
-            ensureProfile(u);
-            return;
-        }
-        const data = snap.data();
+    let docData = null;
+    let customData = null;
+    const sync = () => {
+        if (!docData) return;
+        const data = docData;
+        const temp = customData?.temp || data.temp;
         let bodyData = {};
         let bio = (data.body || '').trim();
-        const metaStr = (data.temp || bio || '').trim();
+        const metaStr = (temp || bio || '').trim();
         const metaMatch = metaStr.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
         
         if (metaMatch) {
             try { 
                 bodyData = JSON.parse(metaMatch[1]); 
-                if (!data.temp) bio = bio.replace(metaMatch[0], '').trim(); 
+                if (!temp) bio = bio.replace(metaMatch[0], '').trim(); 
             } catch(e) { console.error('Meta parse error', e); }
         } else {
             try { bodyData = JSON.parse(metaStr); bio = bodyData.bio || bio; } catch(e) { console.error('Body parse error', e); }
         }
         bodyData.bio = bio;
-
-        if (!bodyData.glassColor || bodyData.glassColor.trim() === '') {
-            bodyData.glassColor = '#000000';
-        }
+        if (!bodyData.glassColor || bodyData.glassColor.trim() === '') bodyData.glassColor = '#000000';
 
         const profile = { 
             displayName: data.title || '', 
@@ -257,19 +261,26 @@ onAuthStateChanged(auth, async (u) => {
             photoURL: safePhoto(data.photoURL),
             ...data, 
             ...bodyData, 
-            id: snap.id 
+            id: `u_${u.uid}`
         };
         store.profile = profile;
-        // Fallback admin check from profile if not in admins collection
         if (profile.admin) store.admin = true;
-        
         store.loading = false;
-
         updateTheme(profile.themePreference, profile.fontScaling, profile.customCSS, profile.backgroundImage, profile.glassColor, profile.glassOpacity, profile.glassBlur);
         cacheUser(u, profile);
+    };
+
+    const unsub = onSnapshot(doc(db, 'docs', `u_${u.uid}`), (snap) => {
+        if (!snap.exists()) { ensureProfile(u); return; }
+        docData = snap.data();
+        sync();
+    });
+    const customUnsub = onSnapshot(doc(db, 'custom', `u_${u.uid}`), (snap) => {
+        customData = snap.exists() ? snap.data() : null;
+        sync();
     });
     // Store unsubs in global for logout cleanup
-    globalThis._authUnsubs = [adminUnsub, unsub];
+    globalThis._authUnsubs = [adminUnsub, unsub, customUnsub];
   } else {
     store.profile = null;
     store.loading = false;
