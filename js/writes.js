@@ -1,20 +1,6 @@
 import {
-  auth,
-  collection,
-  db,
-  deleteField,
-  doc,
-  FieldPath,
-  getCountFromServer,
-  getDoc,
-  query,
-  runTransaction,
-  setDoc,
-  srvTs,
-  updateDoc,
-  where,
-  writeBatch,
-  profileDocId
+  auth, collection, db, deleteField, doc, FieldPath, getCountFromServer, getDoc, query, runTransaction, setDoc, srvTs, updateDoc, where,
+  writeBatch, profileDocId, COLLECTIONS, getCollectionRef
 } from './firebase.js';
 import { PROFILE_ZEROED } from './constants.js';
 import { isValidEmojiKey } from './sanitize.js';
@@ -28,7 +14,7 @@ export function requireVerified() {
 }
 
 async function preflightParent(parentId) {
-  const snap = await getDoc(doc(db, COLLECTIONS.DOCS, parentId));
+  const snap = await getDoc(getCollectionRef(parentId));
   if (!snap.exists()) throw new Error(`parent ${parentId} does not exist`);
   const parent = snap.data();
   if (!['article', 'profile'].includes(parent.kind))
@@ -64,7 +50,7 @@ export async function createArticle(input) {
 
 export async function createMessage(parentId, body) {
   const uid = requireVerified();
-  const msgRef = doc(collection(db, COLLECTIONS.DOCS));
+  const msgRef = doc(collection(db, COLLECTIONS.MESSAGES));
   const data = {
     kind: 'message',
     parent: parentId,
@@ -85,14 +71,14 @@ export async function createMessage(parentId, body) {
   await preflightParent(parentId);
   const batch = writeBatch(db);
   batch.set(msgRef, data);
-  batch.update(doc(db, COLLECTIONS.DOCS, parentId), { lastReplyAt: srvTs() });
+  batch.update(getCollectionRef(parentId), { lastReplyAt: srvTs() });
   await batch.commit();
   return msgRef.id;
 }
 
 export async function zeroProfile() {
   const uid = requireVerified();
-  const ref = doc(db, COLLECTIONS.DOCS, profileDocId(uid));
+  const ref = doc(db, COLLECTIONS.USERS, profileDocId(uid));
   await updateDoc(ref, { ...PROFILE_ZEROED, updatedAt: srvTs() });
   delete Alpine.store('profiles')[uid];
   signalCron();

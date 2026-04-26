@@ -1,17 +1,14 @@
-
-
 import { 
-  db, auth, srvTs as serverTimestamp,
-  collection, doc, query, where, orderBy,
-  getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  onSnapshot, writeBatch, getCountFromServer, limit, runTransaction,
-  profileDocId, pageDocId, wikiDocId, forumDocId,
-  isWikiDocId, isPageDocId, COLLECTIONS
+  auth, db, COLLECTIONS, getCollectionRef,
+  getDoc, getDocs, setDoc, deleteDoc, updateDoc,
+  query, where, orderBy, limit, collection, onSnapshot,
+  serverTimestamp, runTransaction,
+  profileDocId, pageDocId, wikiDocId, forumDocId
 } from './js/firebase.js';
 import { indexDoc, removeDoc, markSearchReady } from './js/search.js';
 import './js/keys.js';
 import './js/glitch.js';
-import './js/auth.js?v=20260425';
+import './js/auth.js';
 // Delay Alpine dependent logic until it's ready
 let Alpine, Swal, Quill;
 
@@ -105,15 +102,15 @@ const updateSignal = async () => {
     }
 };
 const docsCollection = () => collection(db, COLLECTIONS.DOCS);
-const docsRef = id => doc(db, COLLECTIONS.DOCS, id);
-const customRef = id => doc(db, 'custom', id);
+const docsRef = id => getCollectionRef(id);
 const getCustom = async id => {
-    try { const snap = await getDoc(customRef(id)); return snap.exists() ? snap.data() : null; }
+    try { const snap = await getDoc(getCollectionRef(id)); return snap.exists() ? snap.data() : null; }
     catch(e) { return null;}
 };
 const getCustomMany = async ids => {
+    if (!ids.length) return {};
     try {
-        const snaps = await Promise.all(ids.map(id => getDoc(customRef(id))));
+        const snaps = await Promise.all(ids.map(id => getDoc(getCollectionRef(id))));
         const res = {};
         snaps.forEach(s => { if (s.exists()) res[s.id] = s.data(); });
         return res;
@@ -155,22 +152,8 @@ function makeDocShape({ kind, authorId, title = '', body = '', photoURL = '', pa
 }
 
 function parseProfileData(d, uid) {
-    let payload = {};
-    let bio = (d?.body || '').trim();
-    if (typeof d?.temp === 'string') {
-        const metaMatch = d.temp.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
-        if (metaMatch) {
-            try { payload = JSON.parse(metaMatch[1]); } catch(e) {}
-        }
-    } else {
-        const metaMatch = bio.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
-        if (metaMatch) {
-            try { 
-                payload = JSON.parse(metaMatch[1]); 
-                bio = bio.replace(metaMatch[0], '').trim(); 
-            } catch(e) {}
-        }
-    }
+    const payload = d?.custom || {};
+    const bio = (d?.body || '').trim();
     return {
         uid,
         bio,
@@ -202,32 +185,14 @@ const encodeProfileBody = (data, optBio) => {
         githubURL: data.githubURL || ''
     };
     const b = optBio === undefined ? (data.bio || '') : optBio;
-    const cleanBio = b.replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
     return {
-        body: safeBody(cleanBio),
+        body: safeBody(b),
         meta: meta
     };
 };
 
 const safeBody = value => (value || '').toString().trim() || '...';
-const parseBodyJson = (body, customData) => {
-    // customData: plain object from custom/ collection (fields: type, slug/sectionId, allowedEditors, etc.)
-    if (customData && typeof customData === 'object' && Object.keys(customData).length > 0) {
-        return { ...customData, content: String(body || '').trim() };
-    }
-    // Legacy: metadata embedded in body as HTML comment
-    const str = String(body || '').trim();
-    if (!str) return { content: '' };
-    const metaMatch = str.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
-    if (metaMatch) {
-        try {
-            const payload = JSON.parse(metaMatch[1]);
-            payload.content = str.replace(metaMatch[0], '').trim();
-            return payload;
-        } catch(e) {}
-    }
-    return { content: str };
-};
+const parseBodyJson = (body, customData) => ({ ...customData, content: String(body || '').trim() });
 const pagePayload = (slug, content, authorId) => ({
     core: { body: safeBody(content) },
     meta: { type: 'page', slug, authorId }
@@ -853,27 +818,22 @@ function wikiApp() {
             this.loading = true;
             try {
                 const snap = await getDocs(query(
-                    docsCollection(),
-                    where('kind', '==', DOC_KIND.ARTICLE),
+                    collection(db, COLLECTIONS.WIKI),
                     limit(500)
                 ));
                 const rawDocs = [];
                 snap.forEach(d => rawDocs.push({ id: d.id, ...d.data() }));
-                console.log(`[Wiki] Found ${rawDocs.length} candidate documents in docs/`);
+                console.log(`[Wiki] Found ${rawDocs.length} documents in wiki/`);
 
-                const customDataMap = await getCustomMany(rawDocs.map(d => d.id));
-
-                const docs = rawDocs.filter(d => {
-                    const cd = customDataMap[d.id];
-                    const p = parseBodyJson(d.body, cd || null);
-                    const isWiki = p.type === 'wiki' || isWikiDocId(d.id);
-                    if (!isWiki) console.log(`[Wiki] Document ${d.id} is NOT wiki-related`);
-                    return isWiki;
+                const docs = rawDocs.map(d => {
+                    const cd = d.custom || {};
+                    const p = parseBodyJson(d.body, cd);
+                    return { ...d, payload: p, custom: cd };
                 });
                 console.log(`[Wiki] ${docs.length} documents identified as wiki sections`);
 
                 docs.forEach(doc => {
-                    const payload = parseBodyJson(doc.body, customDataMap[doc.id] || null);
+                    const payload = doc.payload;
                     let sectionId = payload.sectionId || doc.id;
                     if (sectionId.startsWith('~w')) sectionId = sectionId.replace(/^~w(\d*-)?/, '');
                     else if (sectionId.startsWith('wk_')) sectionId = sectionId.substring(3);
@@ -881,7 +841,7 @@ function wikiApp() {
 
                     const content = payload.content || doc.body;
                     this.tabContent[sectionId] = content;
-                    this.tabMeta[sectionId] = { ...payload, docId: doc.id };
+                    this.tabMeta[sectionId] = { ...payload, docId: doc.id, custom: doc.custom };
 
                     this.tabs.push({ 
                         id: sectionId, 
@@ -1036,35 +996,31 @@ function adminDashboard() {
             Alpine.effect(async () => { const s = Alpine.store('auth'); if (!s.loading) { if (s.user) { this.currentUser = s.user; this.isAdmin = s.isAdmin; if (this.isAdmin) await this.refreshAll(); } this.loading = false; } });
         },
         async refreshAll() {
-            const [profiles, articles] = await Promise.all([
-                getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.PROFILE), limit(50))),
-                getDocs(query(docsCollection(), where('kind', '==', DOC_KIND.ARTICLE), orderBy('createdAt', 'desc'), limit(50)))
+            const [usersSnap, pagesSnap, wikiSnap, docsSnap] = await Promise.all([
+                getDocs(query(collection(db, COLLECTIONS.USERS), limit(100))),
+                getDocs(query(collection(db, COLLECTIONS.PAGES), limit(100))),
+                getDocs(query(collection(db, COLLECTIONS.WIKI), limit(100))),
+                getDocs(query(collection(db, COLLECTIONS.DOCS), orderBy('createdAt', 'desc'), limit(100)))
             ]);
-            const profilesIds = profiles.docs.map(x => x.id);
-            const articlesIds = articles.docs.map(x => x.id);
-            const customMap = await getCustomMany([...profilesIds, ...articlesIds]);
 
-            this.users = profiles.docs.map(x => {
+            this.users = usersSnap.docs.map(x => {
                 const docData = x.data();
-                const temp = customMap[x.id] || docData.temp;
-                return { id: docData.authorId, docId: x.id, ...parseProfileData({ ...docData, temp }, docData.authorId) };
+                return { id: docData.authorId, docId: x.id, ...parseProfileData(docData, docData.authorId) };
             });
-            this.pages = articles.docs.filter(x => isPageDocId(x.id)).map(x => {
+            this.pages = pagesSnap.docs.map(x => {
                 const d = x.data();
-                const temp = customMap[x.id] || d.temp;
-                const p = parseBodyJson(d.body, temp);
-                return { id: x.id, ...d, temp, slug: p.slug || x.id.replace(/^~p|^pg_/, ''), content: p.content || '', authorId: p.authorId || d.authorId };
+                const p = parseBodyJson(d.body, d.custom);
+                return { id: x.id, ...d, slug: p.slug || x.id.replace(/^~p|^pg_/, ''), content: p.content || '', authorId: p.authorId || d.authorId };
             });
-            this.threads = articles.docs.filter(x => !isPageDocId(x.id) && !isWikiDocId(x.id) && !x.id.startsWith('cv_')).map(x => ({ id: x.id, ...x.data(), description: x.data().body || '' }));
-            this.dms = articles.docs.filter(x => x.id.startsWith('cv_')).map(x => {
+            this.threads = docsSnap.docs.filter(x => x.id.startsWith('~f') || x.id.startsWith('~b')).map(x => ({ id: x.id, ...x.data(), description: x.data().body || '' }));
+            this.dms = docsSnap.docs.filter(x => x.id.startsWith('cv_')).map(x => {
                 const d = x.data();
-                const temp = customMap[x.id] || d.temp;
-                const p = parseBodyJson(d.body, temp);
-                return { id: x.id, ...d, temp, participants: p.participants || [], participantNames: p.participantNames || {} };
+                const p = parseBodyJson(d.body, d.custom);
+                return { id: x.id, ...d, participants: p.participants || [], participantNames: p.participantNames || {} };
             });
-            this.wikiSections = articles.docs.filter(x => isWikiDocId(x.id)).map(x => {
+            this.wikiSections = wikiSnap.docs.map(x => {
                 const d = x.data();
-                const p = parseBodyJson(d.body);
+                const p = parseBodyJson(d.body, d.custom);
                 return { id: x.id, ...d, sectionId: p.sectionId || x.id.replace(/^~w|^wk_/, ''), content: p.content || '', allowedEditors: p.allowedEditors || [] };
             });
         },

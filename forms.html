@@ -117,7 +117,7 @@
                                         </div>
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center gap-2 mb-1">
-                                                <img :src="getAuthor(comment.authorId).photoURL || './defaultuser.png'" class="avatar-sm" alt="User avatar">
+                                                <img :src="getAuthor(comment.authorId).photoURL || './defaultuser.png'" class="avatar-sm" alt="User avatar" style="width: 24px !important; height: 24px !important; object-fit: cover !important;">
                                                 <strong x-text="getAuthor(comment.authorId).displayName || 'Unknown'">Unknown</strong>
                                                 <small class="text-secondary" x-text="formatDate(comment.createdAt)"></small>
                                                 <div class="d-flex gap-1 ms-2">
@@ -173,7 +173,7 @@
                                                             </div>
                                                             <div class="flex-grow-1">
                                                                 <div class="d-flex align-items-center gap-2 mb-1">
-                                                                    <img :src="getAuthor(reply.authorId).photoURL || './defaultuser.png'" class="avatar-sm" alt="User avatar">
+                                                                    <img :src="getAuthor(reply.authorId).photoURL || './defaultuser.png'" class="avatar-sm" alt="User avatar" style="width: 24px !important; height: 24px !important; object-fit: cover !important;">
                                                                     <strong x-text="getAuthor(reply.authorId).displayName || 'Unknown'"></strong>
                                                                     <small class="text-secondary" x-text="formatDate(reply.createdAt)"></small>
                                                                     <div class="d-flex gap-1 ms-2">
@@ -189,7 +189,7 @@
                                                                             <ul class="dropdown-menu" x-show="open" @click.outside="open = false" @click="open = false" x-cloak>
                                                                                 <li><a class="dropdown-item" href="#" @click.prevent="editComment(thread.id, reply)">Edit</a></li>
                                                                                 <template x-if="$store.auth.isAdmin">
-                                                                                    <li><a class="dropdown-item" href="#" @click.prevent="censorComment(thread.id, reply)" x-text="reply.censored ? 'Edit Redaction' : 'Redact'"></a></li>
+                                                                                    <li><a class="dropdown-item" href="#" @click.prevent="censorComment(thread.id, reply)" x-text="reply.censored ? 'Edit Redaction' : 'Redact'">Redact</a></li>
                                                                                 </template>
                                                                                 <li><a class="dropdown-item text-danger" href="#" @click.prevent="deleteComment(thread.id, reply.id)">Delete</a></li>
                                                                             </ul>
@@ -264,7 +264,7 @@
                             <template x-for="conv in conversations" :key="conv.id">
                                 <a href="#" class="list-group-item list-group-item-action" :class="{ 'active': selectedConv?.id === conv.id }" @click.prevent="selectConv(conv)">
                                     <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1" x-text="getConvName(conv) || 'Conversation'"></h6>
+                            <h6 class="mb-1" x-text="getConvName(conv) || 'Conversation'">Conversation</h6>
                                         <small x-text="formatDate(conv.lastMessageTime)"></small>
                                     </div>
                                     <p class="mb-1 small text-truncate" x-text="conv.lastMessage || 'No messages'"></p>
@@ -287,7 +287,7 @@
                                             <div class="d-flex flex-column" :class="msg.senderId === $store.auth.user.uid ? 'align-items-end' : 'align-items-start'">
                                                 <small class="text-secondary mb-1" style="font-size: 0.75em;" x-text="getAuthor(msg.senderId).displayName"></small>
                                                 <div class="d-flex gap-2" :class="msg.senderId === $store.auth.user.uid ? 'flex-row-reverse' : 'flex-row'">
-                                                    <img :src="getAuthor(msg.senderId).photoURL" class="avatar-sm" alt="User avatar">
+                                                    <img :src="getAuthor(msg.senderId).photoURL || './defaultuser.png'" class="avatar-sm" alt="User avatar" style="width: 24px !important; height: 24px !important; object-fit: cover !important;">
                                                     <div class="message-bubble p-2 rounded" :class="msg.senderId === $store.auth.user.uid ? 'bg-primary text-white' : 'bg-secondary'">
                                                         <div x-html="DOMPurify.sanitize(msg.content)"></div>
                                                         <small class="d-block text-end" style="font-size: 0.7em; opacity: 0.7;" x-text="formatDate(msg.createdAt)"></small>

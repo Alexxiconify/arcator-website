@@ -20,20 +20,15 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app);
 const srvTs = serverTimestamp;
 export const COLLECTIONS = {
-    DOCS: 'docs',
+    DOCS: 'docs', // Blogs (~b) and Forums (~f)
+    USERS: 'users', // Profiles (u_...)
+    PAGES: 'pages', // Standard pages (pg_...)
+    WIKI: 'wiki', // Wiki entries (~w...)
+    CONVERSATIONS: 'conversations', // Direct messages (cv_...)
+    MESSAGES: 'messages', // Replies/comments
     ADMINS: 'admins',
     BANS: 'bans',
     GLOBAL: 'global',
-    USERS: 'docs',
-    USER_PROFILES: 'docs',
-    FORMS: 'docs',
-    SUBMISSIONS: () => 'docs',
-    CONVERSATIONS: 'docs',
-    CONV_MESSAGES: () => 'docs',
-    THEMES: 'docs',
-    PAGES: 'docs',
-    WIKI_CONFIG: 'docs',
-    WIKI_PAGES: 'docs'
 };
 
 // Re-exports
@@ -48,6 +43,15 @@ export const isWikiDocId = id => typeof id === 'string' && (id.startsWith('~w') 
 export const isForumDocId = id => typeof id === 'string' && (id.startsWith('~f') || id.startsWith('fr_') || id.startsWith('forum_'));
 export const isPageDocId = id => typeof id === 'string' && (id.startsWith('pg_') || id.startsWith('~p'));
 export const isProfileDocId = id => typeof id === 'string' && (id.startsWith('u_') || id.startsWith('~u'));
+
+export const getCollectionRef = (id, kind = null) => {
+    if (kind === 'message') return doc(db, COLLECTIONS.MESSAGES, id);
+    if (kind === 'profile' || isProfileDocId(id)) return doc(db, COLLECTIONS.USERS, id);
+    if (isWikiDocId(id)) return doc(db, COLLECTIONS.WIKI, id);
+    if (isPageDocId(id)) return doc(db, COLLECTIONS.PAGES, id);
+    if (id?.startsWith('cv_')) return doc(db, COLLECTIONS.CONVERSATIONS, id);
+    return doc(db, COLLECTIONS.DOCS, id);
+};
 
 export {
   collection, doc, query, where, orderBy, limit, startAfter,

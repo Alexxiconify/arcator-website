@@ -19,7 +19,8 @@ import {
   unlink,
   updateProfile,
   writeBatch,
-  profileDocId
+  profileDocId,
+  COLLECTIONS
 } from './firebase.js';
 import { cacheUser, updateTheme } from './ui.js';
 import { safePhoto } from './sanitize.js';
@@ -102,9 +103,8 @@ document.addEventListener('alpine:init', () => {
     // Profile management
     async saveProfile(uid, data) {
       const id = profileDocId(uid);
-      console.log(`[Auth] Saving profile to: docs/${id} and custom/${id}`, data);
-      const ref = doc(db, 'docs', id);
-      const cRef = doc(db, 'custom', id);
+      console.log(`[Auth] Saving profile to: ${COLLECTIONS.USERS}/${id}`, data);
+      const ref = doc(db, COLLECTIONS.USERS, id);
       const bio = data.bio === undefined ? (this.profile?.bio || '') : data.bio;
       
       const meta = { 
@@ -119,15 +119,17 @@ document.addEventListener('alpine:init', () => {
       delete meta.temp;
       delete meta.body;
       
-      const cleanBio = String(bio || '').replaceAll(/<!--\s*ARCATOR_META:.*?-->/g, '').trim();
+      const cleanBio = String(bio || '').trim();
 
       const batch = writeBatch(db);
-      batch.update(ref, {
+      batch.set(ref, {
         title: (meta.displayName || 'User').slice(0, 100),
         body: cleanBio || '...',
-        updatedAt: srvTs()
-      });
-      batch.set(cRef, meta);
+        updatedAt: srvTs(),
+        kind: 'profile',
+        authorId: uid,
+        custom: meta
+      }, { merge: true });
       await batch.commit();
     },
 
@@ -156,7 +158,7 @@ let _pendingHandle = null;
 
 async function ensureProfile(u) {
   const id = profileDocId(u.uid);
-  const ref = doc(db, 'docs', id);
+  const ref = doc(db, COLLECTIONS.USERS, id);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     if (snap.exists()) {
@@ -185,26 +187,12 @@ async function ensureProfile(u) {
       createdAt: srvTs(),
       updatedAt: srvTs(),
       lastReplyAt: srvTs(),
+      custom: meta
     });
-    tx.set(doc(db, 'custom', profileDocId(u.uid)), meta);
   });
 }
 
 //  Live auth state
-
-// Merges legacy ARCATOR_META HTML-comment metadata with customData
-function mergeLegacyMeta(data, customData, bio) {
-  let bodyData = customData || {};
-  const src = typeof data.temp === 'string' ? data.temp : bio;
-  const metaMatch = src.match(/<!--\s*ARCATOR_META:\s*([\s\S]*?)\s*-->/);
-  if (!metaMatch) return { bodyData, bio };
-  try {
-    const parsed = JSON.parse(metaMatch[1]);
-    bodyData = Object.keys(bodyData).length > 0 ? { ...parsed, ...bodyData } : parsed;
-    if (src === bio) bio = bio.replace(metaMatch[0], '').trim();
-  } catch(e) { console.error('Meta parse error', e); }
-  return { bodyData, bio };
-}
 
 async function syncUserSession(u) {
     const store = Alpine.store('auth');
@@ -225,47 +213,32 @@ async function syncUserSession(u) {
         store.admin = snap.exists() ? snap.data().isAdmin === true : false;
     });
 
-    // Subscribe to real-time updates
-    let docData = null;
-    let customData = null;
-    const sync = () => {
-        if (docData) {
-            const data = docData;
-            let bio = (customData?.bio !== undefined) ? customData.bio : (data.body || '').trim();
-            const merged = mergeLegacyMeta(data, customData, bio);
-            const bodyData = merged.bodyData;
-            bio = merged.bio;
-            bodyData.bio = bio;
-            bodyData.glassColor = bodyData.glassColor?.trim() || '#000000';
-
-            const profile = {
-                displayName: data.title || '',
-                handle: data.handle || '',
-                photoURL: safePhoto(data.photoURL),
-                ...data,
-                ...bodyData,
-                id: profileDocId(u.uid)
-            };
-            store.profile = profile;
-            if (profile.admin) store.admin = true;
-            store.loading = false;
-            updateTheme(profile.themePreference, profile.fontScaling, profile.customCSS, profile.backgroundImage, profile.glassColor, profile.glassOpacity, profile.glassBlur);
-            cacheUser(u, profile);
-        }
-    };
-
     const unsub = onSnapshot(doc(db, COLLECTIONS.USERS, profileDocId(u.uid)), (snap) => {
         console.log(`[Auth] Profile snapshot update for: ${snap.id} (exists: ${snap.exists()})`);
         if (!snap.exists()) { ensureProfile(u); return; }
-        docData = snap.data();
-        sync();
+        
+        const data = snap.data();
+        const custom = data.custom || {};
+        const profile = {
+            displayName: data.title || '',
+            handle: data.handle || '',
+            photoURL: safePhoto(data.photoURL),
+            bio: (data.body || '').trim(),
+            ...data,
+            ...custom,
+            id: profileDocId(u.uid)
+        };
+        
+        store.profile = profile;
+        if (profile.admin) store.admin = true;
+        store.loading = false;
+        
+        updateTheme(profile.themePreference, profile.fontScaling, profile.customCSS, profile.backgroundImage, profile.glassColor, profile.glassOpacity, profile.glassBlur);
+        cacheUser(u, profile);
     });
-    const customUnsub = onSnapshot(doc(db, 'custom', profileDocId(u.uid)), (snap) => {
-        customData = snap.exists() ? snap.data() : null;
-        sync();
-    });
+
     // Store unsubs in global for logout cleanup
-    globalThis._authUnsubs = [adminUnsub, unsub, customUnsub];
+    globalThis._authUnsubs = [adminUnsub, unsub];
 }
 
 onAuthStateChanged(auth, async (u) => {
